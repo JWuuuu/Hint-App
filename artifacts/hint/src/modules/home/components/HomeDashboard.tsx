@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import {
@@ -16,10 +16,17 @@ import { useGetUserStats } from "@workspace/api-client-react";
 import { ACCENT, GOLD } from "../../hold/atmosphere";
 import { getAnonId } from "../../../lib/identity";
 import { getDailyReport } from "../data/dailyReport";
+import {
+  getRitualProgress,
+  recordRitualCompletion,
+  subscribeToRitualProgress,
+  type RitualProgressSnapshot,
+} from "../data/localRitualProgress";
 import { ModuleGrid } from "./ModuleGrid";
 import { FeedCards } from "./FeedCards";
 import { CardSigil } from "../../hold/components/CardSigil";
 import { useLanguage } from "../../../lib/i18n";
+import { saveLocalDailyReading } from "../../readings/localDailyReadings";
 import type { DailyReport, DailyScore } from "../types/home.types";
 
 type PortalCardData = {
@@ -234,9 +241,30 @@ function ThemeAwareDailyCard({
   );
 }
 
-function DailyHintSection({ report }: { report: DailyReport }) {
-  const [revealed, setRevealed] = useState(false);
+function DailyHintSection({
+  report,
+  todayCompleted,
+  onReveal,
+}: {
+  report: DailyReport;
+  todayCompleted: boolean;
+  onReveal: () => void;
+}) {
+  const [revealed, setRevealed] = useState(todayCompleted);
   const keywords = [report.scores[0]?.label, report.scores[2]?.label, "Clarity"].filter(Boolean);
+
+  useEffect(() => {
+    setRevealed(todayCompleted);
+  }, [report.date, todayCompleted]);
+
+  function revealDailyCard() {
+    if (!revealed) {
+      setRevealed(true);
+    }
+    if (!todayCompleted) {
+      onReveal();
+    }
+  }
 
   return (
     <motion.section
@@ -264,7 +292,7 @@ function DailyHintSection({ report }: { report: DailyReport }) {
       <div className="relative grid items-center gap-8 lg:grid-cols-[0.78fr_1fr]">
         <button
           type="button"
-          onClick={() => setRevealed(true)}
+          onClick={revealDailyCard}
           className="group rounded-[22px] outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--hint-aqua)_80%,white)]"
           aria-label={revealed ? `Daily card: ${report.card.cardName}` : "Reveal daily card"}
         >
@@ -288,7 +316,7 @@ function DailyHintSection({ report }: { report: DailyReport }) {
               </p>
               <button
                 type="button"
-                onClick={() => setRevealed(true)}
+                onClick={revealDailyCard}
                 className="mt-5 inline-flex items-center gap-3 rounded-full px-1 font-sans text-[13px] font-semibold uppercase tracking-[0.26em] transition hover:translate-x-1"
                 style={{ color: "var(--hint-faint)" }}
               >
@@ -344,9 +372,15 @@ function DailyHintSection({ report }: { report: DailyReport }) {
   );
 }
 
-function RitualStreakPanel({ report }: { report: DailyReport }) {
-  const progress = Math.min(96, Math.max(40, report.overallScore + 6));
-  const days = ["M", "T", "W", "T", "F", "S", "S"];
+function RitualStreakPanel({ ritual }: { ritual: RitualProgressSnapshot }) {
+  const progress = ritual.progressPercent;
+  const rewardText =
+    ritual.daysUntilCredit === 0
+      ? "Deeper reading unlocked"
+      : `${ritual.daysUntilCredit} ${ritual.daysUntilCredit === 1 ? "day" : "days"} to a deeper reading`;
+  const ritualStatus = ritual.todayCompleted
+    ? "today's ritual is complete"
+    : "draw today's card to keep the thread";
 
   return (
     <motion.section
@@ -392,32 +426,40 @@ function RitualStreakPanel({ report }: { report: DailyReport }) {
               viewport={{ once: true }}
               transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              6
+              {ritual.currentStreak}
             </motion.p>
             <div>
               <p className="font-serif text-[23px] leading-tight" style={{ color: "var(--hint-text)" }}>
                 day streak
               </p>
               <p className="font-sans text-[16px]" style={{ color: "var(--hint-muted)" }}>
-                one ritual at a time
+                {ritualStatus}
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-7 items-start gap-2">
-            {days.map((day, index) => {
-              const done = index < 6;
+            {ritual.week.map((day, index) => {
+              const done = day.completed;
               return (
-                <div key={`${day}-${index}`} className="text-center">
+                <div key={day.date} className="text-center">
                   <motion.div
                     className="mx-auto grid size-11 place-items-center rounded-full"
                     style={{
                       background: done
                         ? "linear-gradient(135deg, #e2a245, #f09974)"
                         : "color-mix(in srgb, var(--hint-surface-soft) 86%, transparent)",
-                      border: done ? "0" : "2px solid rgba(218, 163, 71, 0.72)",
+                      border: done
+                        ? "0"
+                        : day.today
+                          ? "2px solid rgba(218, 163, 71, 0.92)"
+                          : "1px solid color-mix(in srgb, var(--hint-border-strong) 72%, transparent)",
                       color: done ? "#231d2a" : ACCENT.gold,
-                      boxShadow: done ? "0 14px 28px rgba(224, 146, 80, 0.24)" : "none",
+                      boxShadow: done
+                        ? "0 14px 28px rgba(224, 146, 80, 0.24)"
+                        : day.today
+                          ? "0 0 0 7px rgba(218, 163, 71, 0.1)"
+                          : "none",
                     }}
                     initial={{ scale: 0.7, opacity: 0 }}
                     whileInView={{ scale: 1, opacity: 1 }}
@@ -427,7 +469,7 @@ function RitualStreakPanel({ report }: { report: DailyReport }) {
                     {done ? <Check size={16} /> : <Sparkles size={16} />}
                   </motion.div>
                   <p className="mt-3 font-sans text-[12px] font-semibold" style={{ color: "var(--hint-muted)" }}>
-                    {day}
+                    {day.label}
                   </p>
                 </div>
               );
@@ -437,7 +479,7 @@ function RitualStreakPanel({ report }: { report: DailyReport }) {
           <div className="mt-8">
             <div className="mb-3 flex items-center justify-between gap-4">
               <p className="font-sans text-[15px]" style={{ color: "var(--hint-text)" }}>
-                1 day to a deeper reading
+                {rewardText}
               </p>
               <p className="font-sans text-[14px]" style={{ color: "var(--hint-faint)" }}>
                 {progress}%
@@ -458,14 +500,15 @@ function RitualStreakPanel({ report }: { report: DailyReport }) {
 
         <div className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <RewardStat icon={Star} value="24" label="Aura stars" />
-            <RewardStat icon={Gift} value="3" label="Reading credits" />
+            <RewardStat icon={Star} value={`${ritual.auraStars}`} label="Aura stars" />
+            <RewardStat icon={Gift} value={`${ritual.readingCredits}`} label="Reading credits" />
           </div>
           <div
             className="flex flex-col gap-4 rounded-[22px] border p-5 sm:flex-row sm:items-center sm:justify-between"
             style={{
-              background: "linear-gradient(135deg, rgba(255,246,220,0.58), rgba(239,229,247,0.42))",
-              borderColor: "rgba(218, 163, 71, 0.28)",
+              background: "var(--hint-me-plus-surface)",
+              borderColor: "var(--hint-me-plus-border)",
+              boxShadow: "var(--hint-me-plus-shadow)",
             }}
           >
             <div className="flex items-center gap-4">
@@ -843,10 +886,21 @@ function SectionHeader({
 
 export function HomeDashboard() {
   const { language, t } = useLanguage();
+  const [ritual, setRitual] = useState(() => getRitualProgress());
   const report = useMemo(
     () => getDailyReport({ anonId: getAnonId(), language }),
     [language],
   );
+
+  useEffect(() => {
+    return subscribeToRitualProgress(() => setRitual(getRitualProgress()));
+  }, []);
+
+  function completeDailyRitual() {
+    saveLocalDailyReading(report.card);
+    setRitual(recordRitualCompletion(report.date));
+  }
+
   const startCards = [
     {
       title: t("home.card.tarot.title"),
@@ -902,17 +956,21 @@ export function HomeDashboard() {
         </motion.section>
 
         <div className="mb-10">
-          <DailyHintSection report={report} />
+          <DailyHintSection
+            report={report}
+            todayCompleted={ritual.todayCompleted}
+            onReveal={completeDailyRitual}
+          />
         </div>
 
-        <div className="mb-10">
-          <RitualStreakPanel report={report} />
-        </div>
-
-        <section id="signals" className="mb-8 scroll-mt-28">
-          <SectionHeader title="Today’s signals" />
+        <section id="signals" className="mb-10 scroll-mt-28">
+          <SectionHeader title="Today's signals" />
           <ScoreSummaryGrid scores={report.scores} />
         </section>
+
+        <div className="mb-10">
+          <RitualStreakPanel ritual={ritual} />
+        </div>
 
         <section className="mb-7">
           <div className="grid gap-3 md:grid-cols-3">
