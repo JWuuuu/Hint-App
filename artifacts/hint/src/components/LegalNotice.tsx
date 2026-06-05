@@ -27,6 +27,9 @@ export function LegalNotice() {
         <Link href="/terms" style={{ color: "var(--hint-text)" }}>
           Terms
         </Link>
+        <Link href="/disclaimer" style={{ color: "var(--hint-text)" }}>
+          Disclaimer
+        </Link>
         <Link href="/contact" style={{ color: "var(--hint-text)" }}>
           Contact
         </Link>

@@ -14,6 +14,7 @@ import {
 import { BottomNav } from "./components/BottomNav";
 import { LanguageToggle } from "./components/LanguageToggle";
 import { CelestialBackdrop } from "./components/app/CelestialBackdrop";
+import { HintLogo } from "./components/app/HintLogo";
 import { trackEvent } from "./lib/analytics";
 import {
   getInitialHintTheme,
@@ -37,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const showNav = !IMMERSIVE_ROUTES.some(
     (r) => location === r || location.startsWith(r + "/"),
   );
-  const showWebsiteNav = location === "/";
+  const showWebsiteNav = false;
 
   useEffect(() => {
     trackEvent("app_opened", {
@@ -144,16 +145,7 @@ function WebsiteHomeNav({
           style={{ color: "var(--hint-text)" }}
           aria-label="Hint home"
         >
-          <span
-            className="grid size-9 place-items-center rounded-[12px] border"
-            style={{
-              background: "linear-gradient(135deg, rgba(229, 161, 93, 0.92), rgba(122, 212, 202, 0.88))",
-              borderColor: "rgba(255,255,255,0.7)",
-              boxShadow: "0 10px 24px rgba(224, 146, 80, 0.22)",
-            }}
-          >
-            <SparkleMark />
-          </span>
+          <HintLogo className="size-10 rounded-[13px] border border-white/25 shadow-[0_10px_24px_rgba(0,0,0,0.2)]" />
           Hint
         </Link>
 
@@ -261,16 +253,6 @@ function ThemePillButton({
     >
       {children}
     </button>
-  );
-}
-
-function SparkleMark() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="#fffaf2" strokeWidth="1.8">
-      <path d="M12 4.5 14.1 9.9 19.5 12l-5.4 2.1L12 19.5l-2.1-5.4L4.5 12l5.4-2.1L12 4.5Z" />
-      <path d="M18 4.5v4" />
-      <path d="M20 6.5h-4" />
-    </svg>
   );
 }
 

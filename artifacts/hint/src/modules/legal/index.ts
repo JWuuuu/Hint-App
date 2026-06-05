@@ -1,1 +1,1 @@
-export { ContactView, PrivacyPolicyView, TermsView } from "./LegalPages";
+export { ContactView, DisclaimerView, PrivacyPolicyView, TermsView } from "./LegalPages";

@@ -30,7 +30,7 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
       initial={{ opacity: 0, y: -14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: "easeOut" }}
-      className="fixed inset-x-0 bottom-0 z-50 border-t px-4 pb-[max(env(safe-area-inset-bottom),0.5rem)] pointer-events-auto"
+      className="fixed inset-x-0 bottom-0 z-50 border-t px-4 pb-[max(env(safe-area-inset-bottom),0.5rem)] pointer-events-auto md:bottom-auto md:top-0 md:border-b md:border-t-0 md:pb-0"
       style={{
         background: "rgba(8,11,20,0.74)",
         borderColor: "rgba(255,255,255,0.07)",
@@ -39,12 +39,12 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
       }}
     >
       <div
-          className="mx-auto flex min-h-[92px] w-full max-w-2xl flex-col gap-2 py-2"
+          className="mx-auto flex min-h-[92px] w-full max-w-6xl flex-col gap-2 py-2 md:min-h-[64px] md:flex-row md:items-center md:justify-between md:gap-6 md:py-0"
         style={{
           color: "var(--hint-text)",
         }}
       >
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 md:contents">
           <Link href="/" aria-label={t("nav.homeAria")} className="flex items-center">
             <HintLogo className="h-11 w-11 shadow-[0_10px_26px_rgba(8,18,36,0.16)]" />
           </Link>
@@ -57,7 +57,7 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
           />
         </div>
 
-        <div className="flex min-w-0 items-center justify-around gap-3 overflow-x-auto">
+        <div className="flex min-w-0 items-center justify-around gap-3 overflow-x-auto md:flex-1 md:justify-center md:gap-6">
           {navItems.map((item) => {
             const active = location === item.href;
 

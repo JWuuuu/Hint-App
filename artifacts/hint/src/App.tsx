@@ -9,7 +9,7 @@ import { AskHint } from "./modules/ask";
 import { RoomsLibrary } from "./modules/rooms";
 import { ReadingsView } from "./modules/readings";
 import { MeView } from "./modules/me";
-import { ContactView, PrivacyPolicyView, TermsView } from "./modules/legal";
+import { ContactView, DisclaimerView, PrivacyPolicyView, TermsView } from "./modules/legal";
 import {
   AstrologyView,
   CompatibilityView,
@@ -52,6 +52,7 @@ function App() {
             <Switch>
               <Route path="/privacy" component={PrivacyPolicyView} />
               <Route path="/terms" component={TermsView} />
+              <Route path="/disclaimer" component={DisclaimerView} />
               <Route path="/contact" component={ContactView} />
               <Route path="*">
                 <OnboardingGate>

@@ -56,6 +56,7 @@ export function SettingsList() {
     { icon: Palette, label: t("me.more.appearance"), detail: t("me.settings.appearanceDetail") },
     { icon: Lock, label: t("me.privacyPolicy"), detail: t("me.settings.privacyDetail"), href: "/privacy" },
     { icon: Info, label: t("me.terms"), detail: t("me.termsDetail"), href: "/terms" },
+    { icon: ShieldAlert, label: "Disclaimer", detail: "Entertainment-only boundaries and professional advice limits.", href: "/disclaimer" },
     { icon: LifeBuoy, label: t("me.support"), detail: t("me.supportDetail") },
     { icon: Mail, label: t("me.contact"), detail: t("me.contactDetail"), href: "/contact" },
     {

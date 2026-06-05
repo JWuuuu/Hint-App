@@ -2,9 +2,7 @@ import { Link } from "wouter";
 import { Mail, ShieldCheck, ScrollText } from "lucide-react";
 import { ACCENT, GLASS } from "../hold/atmosphere";
 import { AppScreen, GlassPanel, ScreenHeader, SectionLabel } from "../../components/app/AppChrome";
-
-const DISCLAIMER =
-  "For entertainment and self-reflection only. This is not medical, legal, financial, or mental health advice.";
+import { CONTACT_EMAIL, LEGAL_DISCLAIMER } from "../../components/LegalNotice";
 
 function LegalText({ children }: { children: string }) {
   return (
@@ -33,6 +31,7 @@ function LegalLinks() {
       {[
         { href: "/privacy", label: "Privacy Policy" },
         { href: "/terms", label: "Terms" },
+        { href: "/disclaimer", label: "Disclaimer" },
         { href: "/contact", label: "Contact" },
       ].map((item) => (
         <Link
@@ -56,7 +55,7 @@ function DisclaimerPanel() {
   return (
     <GlassPanel hero className="mb-6">
       <p className="font-serif text-[16px] leading-snug" style={{ color: GLASS.text }}>
-        {DISCLAIMER}
+        {LEGAL_DISCLAIMER}
       </p>
     </GlassPanel>
   );
@@ -83,7 +82,7 @@ export function PrivacyPolicyView() {
               "Hint uses an anonymous browser id to keep your profile, readings, daily pulls, and journal entries connected to this device.",
               "Profile details and emotional notes are used to make the app feel continuous and personal inside your own Hint experience.",
               "You can clear local and saved Hint history from the Me page settings.",
-              "For beta support or privacy questions, contact support@hint.app.",
+              `For beta support or privacy questions, contact ${CONTACT_EMAIL}.`,
             ]}
           />
         </GlassPanel>
@@ -126,6 +125,38 @@ export function TermsView() {
   );
 }
 
+export function DisclaimerView() {
+  return (
+    <AppScreen>
+      <ScreenHeader
+        eyebrow="Legal"
+        title="Disclaimer"
+        subtitle="The boundaries for using Hint during beta."
+        sigil={ShieldCheck}
+        backHref="/me"
+        backLabel="Me"
+      />
+      <DisclaimerPanel />
+
+      <section className="mb-6">
+        <SectionLabel>Use Boundaries</SectionLabel>
+        <GlassPanel>
+          <LegalList
+            items={[
+              "Hint is for entertainment, journaling, tarot-inspired reflection, and self-inquiry.",
+              "Hint does not diagnose, treat, advise, or replace qualified medical, mental health, legal, financial, or emergency professionals.",
+              "Do not use Hint as the only basis for decisions involving safety, health, money, legal rights, employment, housing, or urgent personal risk.",
+              "If you are in immediate danger or crisis, contact local emergency services or a qualified crisis resource.",
+            ]}
+          />
+        </GlassPanel>
+      </section>
+
+      <LegalLinks />
+    </AppScreen>
+  );
+}
+
 export function ContactView() {
   return (
     <AppScreen>
@@ -143,10 +174,10 @@ export function ContactView() {
         <SectionLabel>Contact Email</SectionLabel>
         <GlassPanel>
           <LegalText>
-            For support, privacy questions, feedback, or beta issues, email support@hint.app.
+            {`For support, privacy questions, feedback, or beta issues, email ${CONTACT_EMAIL}.`}
           </LegalText>
           <a
-            href="mailto:support@hint.app"
+            href={`mailto:${CONTACT_EMAIL}`}
             className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-[8px] font-serif text-[12px] uppercase tracking-[0.24em] transition-opacity hover:opacity-90"
             style={{
               background: "rgba(100,156,158,0.16)",
