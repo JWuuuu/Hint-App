@@ -123,6 +123,7 @@
   --hint-chat-placeholder: rgba(244, 240, 228, 0.42);
   --hint-stat-bg: rgba(0, 0, 0, 0.2);
   --hint-deck-card-bg: linear-gradient(160deg, #131D32, #0A0F1C 62%, #080B14);
+  --hint-daily-card-face-bg: linear-gradient(160deg, #131D32, #0A0F1C 62%, #080B14);
   --hint-deck-label: var(--hint-ivory);
   --hint-nav-bg: rgba(5, 8, 14, 0.78);
   --hint-nav-shadow: 0 18px 44px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.08);
@@ -192,6 +193,7 @@
   --hint-chat-placeholder: rgba(76, 68, 88, 0.48);
   --hint-stat-bg: rgba(255, 255, 255, 0.42);
   --hint-deck-card-bg: linear-gradient(160deg, rgba(38, 31, 50, 0.98), rgba(17, 19, 31, 0.98) 60%, rgba(25, 41, 45, 0.98));
+  --hint-daily-card-face-bg: linear-gradient(160deg, #30283d 0%, #171827 48%, #0c1b21 100%);
   --hint-deck-label: #f9f6f0;
   --hint-nav-bg: rgba(255, 251, 244, 0.78);
   --hint-nav-shadow: 0 18px 44px rgba(70, 49, 88, 0.18), inset 0 1px 0 rgba(255,255,255,0.82);

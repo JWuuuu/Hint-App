@@ -1,6 +1,7 @@
 ﻿import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
+import { Moon, Sun } from "lucide-react";
 import {
   PointerProvider,
   RoomLight,
@@ -19,6 +20,7 @@ import {
   HINT_THEME_STORAGE_KEY,
   type HintTheme,
 } from "./components/app/theme";
+import { useLanguage } from "./lib/i18n";
 
 /** Immersive room routes own the full screen (their own back link + pinned
  *  inputs), so the global bottom nav is hidden there. */
@@ -35,6 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const showNav = !IMMERSIVE_ROUTES.some(
     (r) => location === r || location.startsWith(r + "/"),
   );
+  const showWebsiteNav = location === "/";
 
   useEffect(() => {
     trackEvent("app_opened", {
@@ -93,7 +96,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </div>
 
-        {showNav ? (
+        {showWebsiteNav ? (
+          <WebsiteHomeNav theme={theme} onThemeSelect={setTheme} />
+        ) : showNav ? (
           <BottomNav theme={theme} onThemeToggle={toggleTheme} />
         ) : (
           <div className="fixed right-5 top-5 z-50">
@@ -102,5 +107,178 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       </div>
     </PointerProvider>
+  );
+}
+
+function WebsiteHomeNav({
+  theme,
+  onThemeSelect,
+}: {
+  theme: HintTheme;
+  onThemeSelect: (theme: HintTheme) => void;
+}) {
+  const isDark = theme === "dark";
+
+  return (
+    <div className="pointer-events-none fixed left-0 right-0 top-0 z-50 px-3 py-3 sm:px-5">
+      <nav
+        aria-label="Primary"
+        className="pointer-events-auto mx-auto flex w-full max-w-6xl flex-wrap items-center gap-3 rounded-[999px] border px-3 py-2 sm:flex-nowrap sm:gap-5 sm:px-4"
+        style={{
+          background: isDark
+            ? "rgba(12, 16, 28, 0.78)"
+            : "rgba(255, 249, 239, 0.78)",
+          borderColor: isDark
+            ? "rgba(229, 205, 149, 0.22)"
+            : "rgba(255,255,255,0.84)",
+          backdropFilter: "blur(24px) saturate(1.22)",
+          WebkitBackdropFilter: "blur(24px) saturate(1.22)",
+          boxShadow: isDark
+            ? "0 16px 42px rgba(0, 0, 0, 0.24)"
+            : "0 18px 44px rgba(80, 54, 42, 0.12)",
+        }}
+      >
+        <Link
+          href="/"
+          className="order-1 inline-flex shrink-0 items-center gap-3 rounded-full pr-2 font-serif text-[22px] leading-none sm:order-none sm:text-[24px]"
+          style={{ color: "var(--hint-text)" }}
+          aria-label="Hint home"
+        >
+          <span
+            className="grid size-9 place-items-center rounded-[12px] border"
+            style={{
+              background: "linear-gradient(135deg, rgba(229, 161, 93, 0.92), rgba(122, 212, 202, 0.88))",
+              borderColor: "rgba(255,255,255,0.7)",
+              boxShadow: "0 10px 24px rgba(224, 146, 80, 0.22)",
+            }}
+          >
+            <SparkleMark />
+          </span>
+          Hint
+        </Link>
+
+        <div className="order-3 flex w-full min-w-0 items-center gap-2 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:order-none sm:w-auto sm:flex-1 sm:justify-center sm:gap-6">
+          <HomeNavLink href="#today">
+            Today
+          </HomeNavLink>
+          <HomeNavLink href="#your-card">
+            Your card
+          </HomeNavLink>
+          <HomeNavLink href="#signals">
+            Signals
+          </HomeNavLink>
+          <HomeNavLink href="#rewards">
+            Rewards
+          </HomeNavLink>
+        </div>
+
+        <div className="order-2 ml-auto flex shrink-0 items-center gap-3 sm:order-none sm:ml-0">
+          <div
+            className="hidden items-center gap-1 rounded-full border p-1 sm:flex"
+            style={{
+              background: isDark
+                ? "rgba(255,255,255,0.06)"
+                : "rgba(255,255,255,0.72)",
+              borderColor: "var(--hint-border)",
+            }}
+          >
+            <ThemePillButton active={!isDark} label="Day" onClick={() => onThemeSelect("bright")}>
+              <Sun aria-hidden="true" className="size-4" />
+            </ThemePillButton>
+            <ThemePillButton active={isDark} label="Night" onClick={() => onThemeSelect("dark")}>
+              <Moon aria-hidden="true" className="size-4" />
+            </ThemePillButton>
+          </div>
+          <button
+            type="button"
+            onClick={() => onThemeSelect(isDark ? "bright" : "dark")}
+            aria-label={isDark ? "Switch to day mode" : "Switch to night mode"}
+            className="grid size-10 place-items-center rounded-full border sm:hidden"
+            style={{ borderColor: "var(--hint-border)", color: "var(--hint-text)", background: "var(--hint-surface-soft)" }}
+          >
+            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+          <Link
+            href="/tarot"
+            className="hidden h-12 items-center justify-center gap-2 rounded-full px-6 font-sans text-[14px] font-semibold sm:inline-flex"
+            style={{
+              color: "#fffaf2",
+              background: isDark ? "#f1a66b" : "#292331",
+              boxShadow: isDark ? "0 14px 28px rgba(241,166,107,0.18)" : "0 14px 28px rgba(41,35,49,0.14)",
+            }}
+          >
+            Open app
+            <ArrowMark />
+          </Link>
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+function HomeNavLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      className="shrink-0 rounded-full px-2 py-2 font-sans text-[13px] font-semibold transition hover:-translate-y-0.5 active:translate-y-0"
+      style={{
+        color: "var(--hint-muted)",
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
+function ThemePillButton({
+  active,
+  label,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Switch to ${label.toLowerCase()} mode`}
+      className="grid size-9 place-items-center rounded-full transition"
+      style={{
+        background: active ? "linear-gradient(135deg, #efa260, #f6c28f)" : "transparent",
+        color: active ? "#fffaf2" : "var(--hint-muted)",
+        boxShadow: active ? "0 8px 18px rgba(224, 146, 80, 0.2)" : "none",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SparkleMark() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="#fffaf2" strokeWidth="1.8">
+      <path d="M12 4.5 14.1 9.9 19.5 12l-5.4 2.1L12 19.5l-2.1-5.4L4.5 12l5.4-2.1L12 4.5Z" />
+      <path d="M18 4.5v4" />
+      <path d="M20 6.5h-4" />
+    </svg>
+  );
+}
+
+function ArrowMark() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 10h11" />
+      <path d="m11 5 5 5-5 5" />
+    </svg>
   );
 }
