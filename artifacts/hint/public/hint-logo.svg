@@ -1,0 +1,26 @@
+<svg width="320" height="96" viewBox="0 0 320 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="markGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(49 41) rotate(90) scale(42)">
+      <stop stop-color="#77E6DD" stop-opacity="0.9"/>
+      <stop offset="0.42" stop-color="#243744" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#080C15"/>
+    </radialGradient>
+    <linearGradient id="markStroke" x1="29" y1="22" x2="67" y2="76" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4D891"/>
+      <stop offset="1" stop-color="#68B8B8"/>
+    </linearGradient>
+    <filter id="softGlow" x="0" y="0" width="98" height="98" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+  </defs>
+
+  <rect width="320" height="96" rx="24" fill="#060913"/>
+  <circle cx="49" cy="48" r="32" fill="#68B8B8" opacity="0.12" filter="url(#softGlow)"/>
+  <rect x="18" y="18" width="60" height="60" rx="20" fill="url(#markGlow)"/>
+  <rect x="19" y="19" width="58" height="58" rx="19" stroke="white" stroke-opacity="0.18"/>
+  <path d="M36 60V34M36 47C39.3 42.8 43.8 40.5 49 40.5C56.2 40.5 61 45.5 61 52.9V60" stroke="url(#markStroke)" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M61 28L63 33L68 35L63 37L61 42L59 37L54 35L59 33L61 28Z" fill="#F4D891"/>
+
+  <text x="104" y="59" fill="#F9F6F0" font-family="Cormorant Garamond, Georgia, serif" font-size="38" letter-spacing="8">Hint</text>
+  <text x="108" y="78" fill="#9AA7B8" font-family="Inter, Arial, sans-serif" font-size="10" letter-spacing="4">A QUIET SIGNAL</text>
+</svg>

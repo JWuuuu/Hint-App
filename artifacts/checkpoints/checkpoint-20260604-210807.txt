@@ -1,0 +1,5 @@
+﻿Checkpoint: C:\Users\jackw\Documents\Hint-main\artifacts\checkpoints\checkpoint-20260604-210807.zip
+Created: 2026-06-04T21:08:10.6482767-07:00
+Root: C:\Users\jackw\Documents\Hint-main
+Files: 262
+Excluded: node_modules, dist, artifacts/checkpoints, artifacts/local-run, env files, logs, tsbuildinfo

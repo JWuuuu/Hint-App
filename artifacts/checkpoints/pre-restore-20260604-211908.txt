@@ -1,0 +1,4 @@
+﻿Pre-restore backup: C:\Users\jackw\Documents\Hint-main\artifacts\checkpoints\pre-restore-20260604-211908.zip
+Created: 2026-06-04T21:19:11.9530413-07:00
+Root: C:\Users\jackw\Documents\Hint-main
+Files: 266

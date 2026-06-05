@@ -1,0 +1,18 @@
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import tarotRouter from "./tarot";
+import hintRouter from "./hint";
+import speechRouter from "./speech";
+import profileRouter from "./profile";
+import historyRouter from "./history";
+
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use(tarotRouter);
+router.use(hintRouter);
+router.use(speechRouter);
+router.use(profileRouter);
+router.use(historyRouter);
+
+export default router;

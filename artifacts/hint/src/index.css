@@ -1,0 +1,327 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+}
+
+/* IVORY MODE (Light) */
+:root {
+  --background: 40 33% 96%; /* warm parchment/cream */
+  --foreground: 0 0% 15%; /* dark charcoal */
+  --border: 40 20% 85%;
+  --input: 40 20% 90%;
+  --ring: 40 20% 60%;
+  --accent: 40 40% 85%;
+  
+  --primary: 0 0% 10%;
+  --primary-foreground: 40 33% 96%;
+
+  --app-font-sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --app-font-serif: 'Fraunces', Georgia, serif;
+}
+
+/* HINT MODE (Dark) - default */
+.dark {
+  --background: 220 30% 6%; /* deep obsidian */
+  --foreground: 40 20% 90%; /* silver/cream */
+  --border: 220 20% 15%;
+  --input: 220 20% 15%;
+  --ring: 40 40% 40%;
+  --accent: 220 20% 12%;
+  
+  --primary: 40 20% 90%;
+  --primary-foreground: 220 30% 6%;
+}
+
+[data-hint-theme="dark"] {
+  color-scheme: dark;
+  --hint-obsidian: #080B14;
+  --hint-navy-0: #0A0F1C;
+  --hint-navy-1: #0E1626;
+  --hint-navy-2: #131D32;
+  --hint-ivory: #F2ECDE;
+  --hint-ivory-dim: #C4BCA9;
+  --hint-muted-token: #8C92A3;
+  --hint-gold: #CBA866;
+  --hint-gold-bright: #E6CB8E;
+  --hint-aqua: #86D6C7;
+  --hint-rose: #CBA6C4;
+  --hint-glass: rgba(255,255,255,0.045);
+  --hint-glass-line: rgba(255,255,255,0.10);
+  --hint-page-bg:
+    radial-gradient(600px 360px at 78% 4%, #142a40 0%, transparent 58%),
+    radial-gradient(520px 420px at 12% 96%, #20183a 0%, transparent 55%),
+    linear-gradient(180deg, #0A0F1C 0%, #0B1120 48%, #080B14 100%);
+  --hint-bg-glow-a: rgba(20, 42, 64, 0.42);
+  --hint-bg-glow-b: rgba(10, 44, 56, 0.22);
+  --hint-bg-glow-c: rgba(203, 168, 102, 0.11);
+  --hint-star-ink: rgba(255, 251, 236, 0.72);
+  --hint-star-soft: rgba(148, 226, 219, 0.48);
+  --hint-star-opacity: 0.82;
+  --hint-ornament: rgba(222, 185, 111, 0.38);
+  --hint-ornament-soft: rgba(131, 217, 214, 0.22);
+  --hint-ornament-strong: rgba(229, 198, 132, 0.68);
+  --hint-aqua-line: rgba(117, 218, 216, 0.72);
+  --hint-linework-opacity: 0.84;
+  --hint-foil: rgba(239, 199, 118, 0.56);
+  --hint-top-veil: rgba(2, 2, 5, 0.12);
+  --hint-bottom-veil: rgba(1, 1, 3, 0.46);
+  --hint-vignette-mid: rgba(0, 0, 0, 0.46);
+  --hint-vignette-edge: rgba(0, 0, 0, 0.82);
+
+  --hint-text: var(--hint-ivory);
+  --hint-muted: var(--hint-ivory-dim);
+  --hint-faint: var(--hint-muted-token);
+  --hint-score-ink: var(--hint-aqua);
+  --hint-score-shadow: 0 0 24px rgba(134, 214, 199, 0.22);
+  --hint-ritual-primary: rgba(252, 248, 238, 0.98);
+  --hint-ritual-strong: rgba(250, 246, 236, 0.93);
+  --hint-ritual-body: rgba(248, 244, 234, 0.86);
+  --hint-ritual-muted: rgba(246, 242, 230, 0.66);
+  --hint-ritual-dim: rgba(246, 242, 230, 0.44);
+  --hint-ritual-placeholder: rgba(248, 244, 234, 0.58);
+  --hint-ritual-halo-soft: 0 0 24px rgba(255, 240, 210, 0.10);
+  --hint-ritual-halo-strong: 0 0 30px rgba(255, 238, 205, 0.16);
+  --hint-logo-text: #f9f6f0;
+  --hint-border: var(--hint-glass-line);
+  --hint-border-strong: rgba(255, 255, 255, 0.2);
+  --hint-surface: rgba(14, 22, 38, 0.62);
+  --hint-surface-soft: var(--hint-glass);
+  --hint-surface-strong: linear-gradient(160deg, rgba(14, 22, 38, 0.74), rgba(10, 15, 28, 0.88) 62%, rgba(8, 11, 20, 0.9));
+  --hint-card-surface: linear-gradient(155deg, rgba(19, 29, 50, 0.84), rgba(10, 15, 28, 0.94) 58%, rgba(8, 11, 20, 0.96));
+  --hint-card-surface-muted: rgba(255, 255, 255, 0.035);
+  --hint-card-inner: rgba(0, 0, 0, 0.18);
+  --hint-me-avatar-bg: radial-gradient(circle at 50% 35%, rgba(100,156,158,0.35), rgba(10,15,26,0.9));
+  --hint-me-avatar-shadow: 0 0 22px rgba(100,156,158,0.22);
+  --hint-me-plus-surface: linear-gradient(150deg, rgba(196,169,98,0.18) 0%, rgba(120,98,52,0.10) 40%, rgba(10,15,26,0.6) 100%);
+  --hint-me-plus-border: rgba(196,169,98,0.32);
+  --hint-me-plus-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,235,190,0.12);
+  --hint-me-plus-check-bg: rgba(196,169,98,0.2);
+  --hint-me-archive-surface: linear-gradient(120deg, #0E1626 0%, #0A0F1A 55%, #060913 100%);
+  --hint-me-archive-shadow: 0 10px 36px rgba(0,0,0,0.45);
+  --hint-me-archive-stars: radial-gradient(circle at 88% 18%, rgba(196,169,98,0.16), transparent 45%), radial-gradient(1px 1px at 20% 60%, rgba(255,255,255,0.5), transparent), radial-gradient(1px 1px at 64% 30%, rgba(255,255,255,0.4), transparent), radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.35), transparent);
+  --hint-hero-surface: linear-gradient(155deg, rgba(14, 22, 38, 0.78), rgba(10, 15, 28, 0.9) 58%, rgba(8, 11, 20, 0.96));
+  --hint-input-bg: rgba(10, 15, 28, 0.58);
+  --hint-chat-input-veil: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0));
+  --hint-chat-input-bg: rgba(255, 255, 255, 0.025);
+  --hint-chat-input-border: rgba(255, 255, 255, 0.12);
+  --hint-chat-input-border-focus: rgba(255, 240, 210, 0.3);
+  --hint-chat-input-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 14px rgba(0,0,0,0.35);
+  --hint-chat-input-shadow-focus: inset 0 1px 0 rgba(255,240,210,0.08), 0 6px 28px rgba(0,0,0,0.45), 0 0 32px rgba(255,240,210,0.06);
+  --hint-chat-placeholder: rgba(244, 240, 228, 0.42);
+  --hint-stat-bg: rgba(0, 0, 0, 0.2);
+  --hint-deck-card-bg: linear-gradient(160deg, #131D32, #0A0F1C 62%, #080B14);
+  --hint-deck-label: var(--hint-ivory);
+  --hint-nav-bg: rgba(5, 8, 14, 0.78);
+  --hint-nav-shadow: 0 18px 44px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.08);
+  --hint-elevated-shadow: 0 24px 70px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+[data-hint-theme="bright"] {
+  color-scheme: light;
+  --hint-page-bg:
+    linear-gradient(180deg, #fbf5ea 0%, #f2edf7 48%, #e8f3f1 100%);
+  --hint-bg-glow-a: rgba(244, 176, 152, 0.32);
+  --hint-bg-glow-b: rgba(90, 176, 177, 0.28);
+  --hint-bg-glow-c: rgba(206, 169, 89, 0.18);
+  --hint-star-ink: rgba(70, 50, 91, 0.36);
+  --hint-star-soft: rgba(20, 126, 132, 0.36);
+  --hint-star-opacity: 0.72;
+  --hint-ornament: rgba(142, 102, 63, 0.3);
+  --hint-ornament-soft: rgba(42, 150, 154, 0.22);
+  --hint-ornament-strong: rgba(151, 103, 56, 0.48);
+  --hint-aqua-line: rgba(34, 138, 142, 0.46);
+  --hint-linework-opacity: 0.76;
+  --hint-foil: rgba(174, 124, 54, 0.38);
+  --hint-top-veil: rgba(255, 253, 248, 0.46);
+  --hint-bottom-veil: rgba(245, 234, 214, 0.42);
+  --hint-vignette-mid: rgba(74, 50, 83, 0.08);
+  --hint-vignette-edge: rgba(68, 52, 78, 0.18);
+
+  --hint-text: rgba(29, 25, 34, 0.95);
+  --hint-muted: rgba(75, 68, 82, 0.72);
+  --hint-faint: rgba(75, 68, 82, 0.52);
+  --hint-score-ink: #2f7478;
+  --hint-score-shadow: 0 1px 0 rgba(255, 255, 255, 0.46), 0 0 26px rgba(47, 116, 120, 0.18);
+  --hint-ritual-primary: rgba(29, 25, 34, 0.96);
+  --hint-ritual-strong: rgba(35, 29, 43, 0.92);
+  --hint-ritual-body: rgba(51, 44, 61, 0.82);
+  --hint-ritual-muted: rgba(76, 68, 88, 0.64);
+  --hint-ritual-dim: rgba(86, 77, 96, 0.46);
+  --hint-ritual-placeholder: rgba(74, 65, 84, 0.58);
+  --hint-ritual-halo-soft: 0 10px 30px rgba(255, 255, 255, 0.22);
+  --hint-ritual-halo-strong: 0 12px 34px rgba(255, 255, 255, 0.34);
+  --hint-logo-text: #1e1a25;
+  --hint-border: rgba(54, 42, 61, 0.14);
+  --hint-border-strong: rgba(54, 42, 61, 0.22);
+  --hint-surface: rgba(255, 252, 246, 0.66);
+  --hint-surface-soft: rgba(255, 255, 255, 0.42);
+  --hint-surface-strong: linear-gradient(150deg, rgba(255, 252, 246, 0.82), rgba(243, 232, 245, 0.74) 46%, rgba(224, 244, 240, 0.74));
+  --hint-card-surface: linear-gradient(155deg, rgba(255, 252, 246, 0.9), rgba(239, 247, 245, 0.88) 56%, rgba(245, 235, 247, 0.86));
+  --hint-card-surface-muted: rgba(255, 255, 255, 0.34);
+  --hint-card-inner: rgba(255, 255, 255, 0.42);
+  --hint-me-avatar-bg: radial-gradient(circle at 50% 34%, rgba(100, 156, 158, 0.24), rgba(255, 252, 246, 0.88) 58%, rgba(224, 244, 240, 0.76));
+  --hint-me-avatar-shadow: 0 14px 32px rgba(75, 56, 85, 0.14), inset 0 1px 0 rgba(255,255,255,0.72);
+  --hint-me-plus-surface: linear-gradient(150deg, rgba(255, 248, 232, 0.88) 0%, rgba(245, 237, 247, 0.78) 48%, rgba(224, 244, 240, 0.78) 100%);
+  --hint-me-plus-border: rgba(174, 124, 54, 0.24);
+  --hint-me-plus-shadow: 0 22px 60px rgba(75, 56, 85, 0.14), inset 0 1px 0 rgba(255,255,255,0.72);
+  --hint-me-plus-check-bg: rgba(196,169,98,0.18);
+  --hint-me-archive-surface: linear-gradient(120deg, rgba(255, 252, 246, 0.88), rgba(232, 244, 241, 0.8) 58%, rgba(247, 237, 246, 0.82));
+  --hint-me-archive-shadow: 0 18px 48px rgba(75, 56, 85, 0.13), inset 0 1px 0 rgba(255,255,255,0.72);
+  --hint-me-archive-stars: radial-gradient(circle at 88% 18%, rgba(196,169,98,0.16), transparent 45%), radial-gradient(1px 1px at 20% 60%, rgba(174,124,54,0.34), transparent), radial-gradient(1px 1px at 64% 30%, rgba(42,150,154,0.28), transparent), radial-gradient(1px 1px at 40% 80%, rgba(174,124,54,0.26), transparent);
+  --hint-hero-surface: linear-gradient(150deg, rgba(255, 252, 246, 0.82), rgba(243, 232, 245, 0.74) 46%, rgba(224, 244, 240, 0.74));
+  --hint-input-bg: rgba(255, 255, 255, 0.48);
+  --hint-chat-input-veil: linear-gradient(to top, rgba(250,245,235,0.84), rgba(250,245,235,0));
+  --hint-chat-input-bg: rgba(255, 252, 246, 0.58);
+  --hint-chat-input-border: rgba(54, 42, 61, 0.16);
+  --hint-chat-input-border-focus: rgba(174, 124, 54, 0.32);
+  --hint-chat-input-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 12px 26px rgba(75,56,85,0.12);
+  --hint-chat-input-shadow-focus: inset 0 1px 0 rgba(255,255,255,0.88), 0 14px 34px rgba(75,56,85,0.16), 0 0 28px rgba(206,169,89,0.14);
+  --hint-chat-placeholder: rgba(76, 68, 88, 0.48);
+  --hint-stat-bg: rgba(255, 255, 255, 0.42);
+  --hint-deck-card-bg: linear-gradient(160deg, rgba(38, 31, 50, 0.98), rgba(17, 19, 31, 0.98) 60%, rgba(25, 41, 45, 0.98));
+  --hint-deck-label: #f9f6f0;
+  --hint-nav-bg: rgba(255, 251, 244, 0.78);
+  --hint-nav-shadow: 0 18px 44px rgba(70, 49, 88, 0.18), inset 0 1px 0 rgba(255,255,255,0.82);
+  --hint-elevated-shadow: 0 24px 70px rgba(75, 56, 85, 0.18), inset 0 1px 0 rgba(255,255,255,0.72);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground transition-colors duration-1000;
+  }
+}
+
+.hint-ritual-input::placeholder {
+  color: var(--hint-ritual-placeholder, var(--hint-faint));
+  opacity: 1;
+}
+
+.hint-chat-input::placeholder {
+  color: var(--hint-chat-placeholder, var(--hint-faint));
+  opacity: 1;
+}
+
+.glow-subtle {
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.05);
+}
+
+.dark .glow-subtle {
+  box-shadow: 0 0 40px rgba(200, 200, 255, 0.03);
+}
+
+/* 3D card utilities (not in Tailwind by default) */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+  transition: transform 1.5s ease-in-out;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* ─── Mood slider (custom range input) ──────────────────────── */
+.mood-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 99px;
+  background: linear-gradient(
+    to right,
+    rgba(150, 152, 160, 0.45) 0%,
+    rgba(206, 178, 110, 0.9) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+.mood-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(253, 251, 247, 0.16);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(206, 178, 110, 0.9);
+  box-shadow: 0 0 14px rgba(206, 178, 110, 0.55), 0 2px 6px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.mood-slider::-webkit-slider-thumb:active {
+  transform: scale(1.12);
+}
+.mood-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(253, 251, 247, 0.16);
+  border: 1px solid rgba(206, 178, 110, 0.9);
+  box-shadow: 0 0 14px rgba(206, 178, 110, 0.55), 0 2px 6px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+/* ─── Tarot flip (dedicated — does not touch immersive room) ─── */
+.tarot-flip {
+  perspective: 1000px;
+}
+.tarot-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tarot-flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+.tarot-flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.tarot-flip-back {
+  transform: rotateY(180deg);
+}
+
+/* ─── Ritual strikethrough ──────────────────────────────────── */
+.ritual-text {
+  position: relative;
+  display: inline-block;
+}
+.ritual-text::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 52%;
+  height: 1px;
+  width: 0%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: width 0.5s ease-out;
+}
+.ritual-text.done::after {
+  width: 100%;
+}
