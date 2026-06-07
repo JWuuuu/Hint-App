@@ -62,8 +62,18 @@ export interface EmotionalWeather {
 export interface DailyPull {
   cardId: string;
   cardName: string;
-  /** One-line emotional read for the card, tailored to "tonight". */
+  /** One upright card from the full 78-card tarot deck. */
   whisper: string;
+  arcana?: "major" | "minor";
+  suit?: "wands" | "cups" | "swords" | "pentacles";
+  orientation?: "upright";
+  keyword?: string;
+  do?: string;
+  avoid?: string;
+  love?: string;
+  work?: string;
+  self?: string;
+  themeNote?: string;
 }
 
 export type DailyScoreKey =

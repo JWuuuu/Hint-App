@@ -27,6 +27,7 @@ import { FeedCards } from "./FeedCards";
 import { CardSigil } from "../../hold/components/CardSigil";
 import { useLanguage } from "../../../lib/i18n";
 import { saveLocalDailyReading } from "../../readings/localDailyReadings";
+import { useProfile } from "../../../lib/useProfile";
 import type { DailyReport, DailyScore } from "../types/home.types";
 
 type PortalCardData = {
@@ -107,6 +108,274 @@ function ScoreSummaryGrid({ scores }: { scores: DailyScore[] }) {
   );
 }
 
+function CompactSignalPanel({
+  overallScore,
+  scores,
+  revealed,
+  withTopMargin = true,
+  birthPersonalized = false,
+}: {
+  overallScore: number;
+  scores: DailyScore[];
+  revealed: boolean;
+  withTopMargin?: boolean;
+  birthPersonalized?: boolean;
+}) {
+  const { t } = useLanguage();
+
+  return (
+    <motion.div
+      id="signals"
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.35 }}
+      transition={{ duration: 0.55, ease: "easeOut" }}
+      className={[
+        "relative scroll-mt-28 overflow-hidden rounded-[18px] border p-2.5 text-left lg:scroll-mt-28 lg:rounded-[20px] lg:p-4",
+        withTopMargin ? "mt-5" : "",
+      ].join(" ")}
+      style={{
+        background:
+          "linear-gradient(145deg, color-mix(in srgb, var(--hint-surface) 88%, transparent), color-mix(in srgb, var(--hint-input-bg) 82%, transparent))",
+        borderColor: "color-mix(in srgb, var(--hint-border-strong) 82%, transparent)",
+        boxShadow: "0 18px 44px rgba(31,25,34,0.12), inset 0 1px 0 rgba(255,255,255,0.18)",
+      }}
+    >
+      <motion.span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 w-24 -skew-x-12"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent)",
+        }}
+        animate={{ x: ["-40%", "520%"], opacity: [0, 0.75, 0] }}
+        transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 lg:mb-3 lg:gap-3">
+        <div>
+          <p
+            className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em] lg:text-[11px] lg:tracking-[0.2em]"
+            style={{ color: ACCENT.gold }}
+          >
+            Today's signals
+          </p>
+          {!revealed && (
+            <p className="mt-1 font-sans text-[11px] leading-snug lg:text-[12px]" style={{ color: "var(--hint-muted)" }}>
+              Draw first. Scores are calculated from the card you reveal.
+            </p>
+          )}
+        </div>
+        <motion.div
+          aria-hidden
+          className="grid size-7 place-items-center rounded-full border lg:size-9"
+          style={{
+            color: ACCENT.gold,
+            borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 34%, var(--hint-border))",
+            background: "color-mix(in srgb, var(--hint-surface-soft) 78%, transparent)",
+          }}
+          animate={{ rotate: [0, 8, -8, 0], scale: [1, 1.06, 1] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Sparkles className="size-3.5 lg:size-[17px]" />
+        </motion.div>
+      </div>
+
+      <div className="grid gap-2">
+        {!revealed ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.48, ease: "easeOut" }}
+            className="relative min-h-[126px] overflow-hidden rounded-[14px] border px-3 py-3 lg:min-h-[174px] lg:rounded-[16px] lg:px-4 lg:py-4"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 10%, rgba(122,226,214,0.18), transparent 58%), linear-gradient(145deg, color-mix(in srgb, var(--hint-surface) 90%, transparent), color-mix(in srgb, var(--hint-input-bg) 78%, transparent))",
+              borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 38%, var(--hint-border))",
+              boxShadow: "0 16px 34px rgba(31,25,34,0.14), inset 0 1px 0 rgba(255,255,255,0.18)",
+            }}
+          >
+            <motion.span
+              aria-hidden
+              className="absolute left-3 top-3 grid size-9 place-items-center rounded-full border lg:left-5 lg:top-5 lg:size-11"
+              style={{
+                color: ACCENT.gold,
+                borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 34%, var(--hint-border))",
+                background: "color-mix(in srgb, var(--hint-surface-soft) 78%, transparent)",
+              }}
+              animate={{ scale: [1, 1.08, 1], opacity: [0.72, 1, 0.72] }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Sparkles className="size-4 lg:size-[18px]" />
+            </motion.span>
+            <div className="relative ml-12 lg:ml-16">
+              <p className="font-serif text-[21px] leading-tight lg:text-[26px]" style={{ color: "var(--hint-text)" }}>
+                Score hidden
+              </p>
+              <p className="mt-1.5 max-w-sm font-sans text-[11px] leading-snug lg:mt-2 lg:text-[13px] lg:leading-relaxed" style={{ color: "var(--hint-muted)" }}>
+                Turn the daily card first. Hint will score love, money, work, focus, and people from that card.
+              </p>
+            </div>
+            <div className="relative mt-3 grid grid-cols-3 gap-1.5 lg:mt-5 lg:gap-2">
+              {["Card", "Score", "Ba Zi"].map((step, index) => (
+                <div
+                  key={step}
+                  className="rounded-[10px] border px-2 py-1.5 lg:rounded-[12px] lg:px-3 lg:py-2"
+                  style={{
+                    background: "color-mix(in srgb, var(--hint-input-bg) 76%, transparent)",
+                    borderColor: "var(--hint-border)",
+                    color: index === 0 ? "var(--hint-text)" : "var(--hint-muted)",
+                  }}
+                >
+                  <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.12em] lg:text-[10px] lg:tracking-[0.14em]">
+                    {index + 1}
+                  </p>
+                  <p className="mt-0.5 truncate font-sans text-[10.5px] font-semibold lg:mt-1 lg:text-[12px]">{step}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        ) : (
+          <div className="grid gap-2 lg:flex lg:items-stretch">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true, amount: 0.45 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="relative flex min-h-[48px] items-center gap-2 overflow-hidden rounded-[12px] border px-2.5 py-1.5 lg:min-h-[68px] lg:w-[128px] lg:shrink-0 lg:gap-2.5 lg:rounded-[14px] lg:px-3 lg:py-2"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 20%, rgba(122,226,214,0.20), transparent 58%), linear-gradient(145deg, color-mix(in srgb, var(--hint-surface) 90%, transparent), color-mix(in srgb, var(--hint-input-bg) 78%, transparent))",
+                borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 48%, var(--hint-border))",
+                boxShadow: "0 16px 34px rgba(31,25,34,0.16), inset 0 1px 0 rgba(255,255,255,0.24)",
+              }}
+            >
+              <motion.span
+                aria-hidden
+                className="absolute inset-3 rounded-full"
+                style={{
+                  background: "radial-gradient(circle, rgba(239,162,96,0.28), transparent 62%)",
+                }}
+                animate={{ scale: [0.84, 1.16, 0.84], opacity: [0.55, 0.95, 0.55] }}
+                transition={{ duration: 3.1, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <div className="relative">
+                <motion.p
+                  className="font-serif text-[28px] leading-none tabular-nums lg:text-[36px]"
+                  style={{ color: "var(--hint-score-ink)", textShadow: "var(--hint-score-shadow)" }}
+                  initial={{ opacity: 0, y: 8 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.45 }}
+                  transition={{ delay: 0.12, duration: 0.48, ease: "easeOut" }}
+                >
+                  {overallScore}
+                </motion.p>
+              </div>
+              <div className="relative min-w-0 flex-1">
+                <p className="truncate font-sans text-[8px] font-semibold uppercase tracking-[0.12em] lg:text-[9px] lg:tracking-[0.14em]" style={{ color: ACCENT.gold }}>
+                  Overall
+                </p>
+                <p className="mt-0.5 font-sans text-[9px] leading-none lg:text-[10px]" style={{ color: "var(--hint-muted)" }}>
+                  {t("daily.score")}
+                </p>
+                <div
+                  className="mt-1.5 h-1 overflow-hidden rounded-full lg:mt-2 lg:h-1.5"
+                  style={{ background: "color-mix(in srgb, var(--hint-border) 62%, transparent)" }}
+                >
+                  <motion.div
+                    className="relative h-full overflow-hidden rounded-full"
+                    style={{
+                      background: "linear-gradient(90deg, var(--hint-score-ink), color-mix(in srgb, var(--hint-gold, #cba866) 74%, transparent))",
+                    }}
+                    initial={{ width: 0 }}
+                    whileInView={{ width: `${overallScore}%` }}
+                    viewport={{ once: true, amount: 0.45 }}
+                    transition={{ delay: 0.1, duration: 0.72, ease: "easeOut" }}
+                  >
+                    <motion.span
+                      aria-hidden
+                      className="absolute inset-y-0 right-0 w-10 rounded-full"
+                      style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.76))" }}
+                      animate={{ opacity: [0.2, 0.95, 0.2] }}
+                      transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+
+            <div className="grid grid-cols-2 gap-1.5 lg:flex lg:min-w-0 lg:flex-1 lg:gap-2">
+              {scores.map((score, index) => (
+                <motion.div
+                  key={score.key}
+                  initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true, amount: 0.45 }}
+                  transition={{ delay: index * 0.07, duration: 0.42, ease: "easeOut" }}
+                  className="relative min-h-[44px] overflow-hidden rounded-[10px] border px-2 py-1.5 lg:min-h-[68px] lg:min-w-0 lg:flex-1 lg:rounded-[12px] lg:px-2.5 lg:py-2"
+                  style={{
+                    background: "color-mix(in srgb, var(--hint-input-bg) 82%, transparent)",
+                    borderColor: "color-mix(in srgb, var(--hint-border-strong) 72%, transparent)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
+                  }}
+                >
+                  <div className="relative">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-sans text-[10px] font-semibold leading-none lg:truncate lg:text-[12px]" style={{ color: "var(--hint-text)" }}>
+                        {score.label}
+                      </p>
+                      <p className="font-serif text-[18px] leading-none tabular-nums lg:text-[23px]" style={{ color: score.tone }}>
+                        {score.score}
+                      </p>
+                    </div>
+                    <div
+                      className="relative mt-1.5 h-1 overflow-hidden rounded-full lg:mt-2 lg:h-1.5"
+                      style={{ background: "color-mix(in srgb, var(--hint-border) 62%, transparent)" }}
+                    >
+                      <motion.div
+                        className="relative h-full overflow-hidden rounded-full"
+                        style={{
+                          background: `linear-gradient(90deg, ${score.tone}, color-mix(in srgb, ${score.tone} 28%, transparent))`,
+                        }}
+                        initial={{ width: 0 }}
+                        whileInView={{ width: `${score.score}%` }}
+                        viewport={{ once: true, amount: 0.45 }}
+                        transition={{ delay: 0.12 + index * 0.07, duration: 0.72, ease: "easeOut" }}
+                      >
+                        <motion.span
+                          aria-hidden
+                          className="absolute inset-y-0 right-0 w-10 rounded-full"
+                          style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.74))" }}
+                          animate={{ opacity: [0.18, 0.9, 0.18] }}
+                          transition={{ duration: 1.7 + index * 0.12, repeat: Infinity, ease: "easeInOut" }}
+                        />
+                      </motion.div>
+                    </div>
+                    <p className="mt-1 hidden truncate font-sans text-[10.5px] 2xl:block" style={{ color: "var(--hint-muted)" }}>
+                      {scoreInsight(score)}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      {revealed && !birthPersonalized && (
+        <Link
+          href="/me"
+          className="relative mt-3 inline-flex w-full items-center justify-center rounded-full border px-4 py-2.5 font-sans text-[12px] font-semibold"
+          style={{
+            color: "var(--hint-text)",
+            background: "color-mix(in srgb, var(--hint-surface-soft) 88%, transparent)",
+            borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 34%, var(--hint-border))",
+          }}
+        >
+          Add date of birth for a sharper Ba Zi score
+        </Link>
+      )}
+    </motion.div>
+  );
+}
+
 function OverallScoreBadge({
   score,
   label,
@@ -173,9 +442,9 @@ function ThemeAwareDailyCard({
 }) {
   return (
     <div
-      className="tarot-flip mx-auto aspect-[46/71] w-[220px] max-w-full sm:w-[260px]"
+      className="tarot-flip mx-auto aspect-[46/71] w-[132px] max-w-full sm:w-[158px] lg:w-[176px]"
       style={{
-        filter: "drop-shadow(0 34px 42px rgba(31, 25, 34, 0.22))",
+        filter: "drop-shadow(0 18px 28px rgba(31, 25, 34, 0.18))",
       }}
     >
       <motion.div
@@ -234,7 +503,7 @@ function ThemeAwareDailyCard({
             className="absolute inset-[10px] rounded-[14px] border"
             style={{ borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 34%, transparent)" }}
           />
-          <CardSigil cardId={report.card.cardId} />
+          {revealed ? <CardSigil cardId={report.card.cardId} /> : null}
         </div>
       </motion.div>
     </div>
@@ -243,36 +512,31 @@ function ThemeAwareDailyCard({
 
 function DailyHintSection({
   report,
-  todayCompleted,
+  revealed,
   onReveal,
+  birthPersonalized,
 }: {
   report: DailyReport;
-  todayCompleted: boolean;
+  revealed: boolean;
   onReveal: () => void;
+  birthPersonalized: boolean;
 }) {
-  const [revealed, setRevealed] = useState(todayCompleted);
-  const keywords = [report.scores[0]?.label, report.scores[2]?.label, "Clarity"].filter(Boolean);
-
-  useEffect(() => {
-    setRevealed(todayCompleted);
-  }, [report.date, todayCompleted]);
+  const keywords = [
+    report.card.orientation === "upright" ? "Upright" : null,
+    report.card.arcana === "major" ? "Bigger message" : report.card.arcana === "minor" ? "Daily guidance" : null,
+    report.card.keyword,
+  ].filter((keyword): keyword is string => Boolean(keyword));
 
   function revealDailyCard() {
-    if (!revealed) {
-      setRevealed(true);
-    }
-    if (!todayCompleted) {
-      onReveal();
-    }
+    if (!revealed) onReveal();
   }
 
   return (
-    <motion.section
-      id="your-card"
+    <motion.div
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.16, duration: 0.76, ease: "easeOut" }}
-      className="relative scroll-mt-28 overflow-hidden rounded-[28px] border px-5 py-8 sm:px-10 sm:py-12 lg:px-14"
+      className="relative overflow-hidden rounded-[18px] border px-3 py-3.5 lg:rounded-[28px] lg:px-10 lg:py-8"
       style={{
         background:
           "linear-gradient(105deg, color-mix(in srgb, var(--hint-surface) 86%, transparent), color-mix(in srgb, var(--hint-input-bg) 78%, transparent))",
@@ -289,72 +553,66 @@ function DailyHintSection({
         }}
       />
 
-      <div className="relative grid items-center gap-8 lg:grid-cols-[0.78fr_1fr]">
-        <button
-          type="button"
-          onClick={revealDailyCard}
-          className="group rounded-[22px] outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--hint-aqua)_80%,white)]"
-          aria-label={revealed ? `Daily card: ${report.card.cardName}` : "Reveal daily card"}
-        >
-          <ThemeAwareDailyCard report={report} revealed={revealed} />
-        </button>
-
-        <div className="min-w-0 text-center lg:text-left">
-          <p className="font-sans text-[12px] font-semibold uppercase tracking-[0.34em]" style={{ color: "var(--hint-faint)" }}>
-            The ritual · one card a day
-          </p>
-
-          {!revealed ? (
-            <motion.div
-              key="daily-unrevealed"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, ease: "easeOut" }}
+      {revealed ? (
+        <div className="relative grid gap-4 sm:grid-cols-[170px_minmax(0,1fr)] sm:items-start lg:grid-cols-[190px_minmax(0,1fr)]">
+          <div className="order-2 min-w-0 text-center sm:order-1">
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.28em]" style={{ color: "var(--hint-faint)" }}>
+              Daily card
+            </p>
+            <button
+              type="button"
+              onClick={revealDailyCard}
+              className="group mt-3 rounded-[18px] outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--hint-aqua)_80%,white)]"
+              aria-label={`Daily card: ${report.card.cardName}`}
             >
-              <p className="mt-4 max-w-xl font-serif text-[25px] italic leading-snug sm:text-[31px]" style={{ color: "var(--hint-muted)" }}>
-                A single card is waiting for you. Take a breath, then turn it over.
-              </p>
-              <button
-                type="button"
-                onClick={revealDailyCard}
-                className="mt-5 inline-flex items-center gap-3 rounded-full px-1 font-sans text-[13px] font-semibold uppercase tracking-[0.26em] transition hover:translate-x-1"
-                style={{ color: "var(--hint-faint)" }}
-              >
-                <span className="size-2.5 rounded-full" style={{ background: ACCENT.gold, boxShadow: "0 0 18px rgba(228,198,138,0.34)" }} />
-                Tap the card to draw
-              </button>
-            </motion.div>
-          ) : (
+              <ThemeAwareDailyCard report={report} revealed={revealed} />
+            </button>
+          </div>
+          <div className="order-1 min-w-0 sm:order-2">
+            <CompactSignalPanel
+              overallScore={report.overallScore}
+              scores={report.scores}
+              revealed={revealed}
+              withTopMargin={false}
+              birthPersonalized={birthPersonalized}
+            />
             <motion.div
-              key="daily-revealed"
+              key="daily-revealed-details"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.18, duration: 0.66, ease: "easeOut" }}
+              className="mt-2 rounded-[14px] border p-3 sm:flex sm:items-center sm:justify-between sm:gap-3 lg:mt-3 lg:rounded-[16px] lg:p-4 lg:gap-5"
+              style={{
+                background: "color-mix(in srgb, var(--hint-input-bg) 82%, transparent)",
+                borderColor: "color-mix(in srgb, var(--hint-border-strong) 72%, transparent)",
+              }}
             >
-              <h2 className="mt-4 font-serif text-[48px] leading-none sm:text-[70px]" style={{ color: "var(--hint-text)", textShadow: "var(--hint-ritual-halo-soft)" }}>
-                {report.card.cardName}
-              </h2>
-              <p className="mt-5 max-w-2xl font-serif text-[24px] italic leading-relaxed sm:text-[31px]" style={{ color: "var(--hint-ritual-body)" }}>
-                "{report.card.whisper}"
-              </p>
-              <div className="mt-7 flex flex-wrap justify-center gap-2 lg:justify-start">
-                {keywords.map((keyword) => (
-                  <span
-                    key={keyword}
-                    className="rounded-full border px-4 py-2 font-sans text-[13px] font-medium"
-                style={{
-                  borderColor: "var(--hint-border-strong)",
-                  background: "color-mix(in srgb, var(--hint-surface) 82%, transparent)",
-                  color: "var(--hint-ritual-body)",
-                }}
-                  >
-                    {keyword}
-                  </span>
-                ))}
+              <div className="min-w-0">
+                <h2 className="font-serif text-[24px] leading-none lg:text-[34px]" style={{ color: "var(--hint-text)", textShadow: "var(--hint-ritual-halo-soft)" }}>
+                  {report.card.cardName}
+                </h2>
+                <div className="mt-2 flex flex-wrap gap-1.5 lg:mt-3 lg:gap-2">
+                  {keywords.map((keyword) => (
+                    <span
+                      key={keyword}
+                      className="rounded-full border px-2.5 py-1 font-sans text-[10.5px] font-medium lg:px-3 lg:py-1.5 lg:text-[12px]"
+                      style={{
+                        borderColor: "var(--hint-border-strong)",
+                        background: "color-mix(in srgb, var(--hint-surface) 82%, transparent)",
+                        color: "var(--hint-ritual-body)",
+                      }}
+                    >
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-2 line-clamp-2 max-w-2xl font-serif text-[13px] italic leading-snug lg:mt-3 lg:line-clamp-none lg:text-[15px] lg:leading-relaxed" style={{ color: "var(--hint-ritual-body)" }}>
+                  "{report.card.whisper}"
+                </p>
               </div>
               <Link
                 href="/daily-pull"
-                className="mt-8 inline-flex h-12 items-center justify-center gap-3 rounded-full px-6 font-sans text-[14px] font-semibold"
+                className="mt-3 inline-flex h-9 w-full shrink-0 items-center justify-center gap-2.5 rounded-full px-4 font-sans text-[12px] font-semibold sm:mt-0 sm:w-auto lg:h-10 lg:gap-3 lg:px-5 lg:text-[13px]"
                 style={{
                   color: "#231d2a",
                   background: "linear-gradient(135deg, rgba(228,164,82,1), rgba(242,148,111,0.98))",
@@ -365,10 +623,58 @@ function DailyHintSection({
                 <ArrowRight size={16} />
               </Link>
             </motion.div>
-          )}
+          </div>
         </div>
-      </div>
-    </motion.section>
+      ) : (
+        <div className="relative grid gap-3 lg:grid-cols-[250px_minmax(0,1fr)] lg:items-start lg:gap-5">
+          <div className="order-2 min-w-0 text-center lg:order-1">
+            <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.18em] lg:text-[11px] lg:tracking-[0.28em]" style={{ color: "var(--hint-faint)" }}>
+              Daily card
+            </p>
+            <button
+              type="button"
+              onClick={revealDailyCard}
+              className="group mt-3 rounded-[18px] outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--hint-aqua)_80%,white)]"
+              aria-label="Reveal daily card"
+            >
+              <ThemeAwareDailyCard report={report} revealed={revealed} />
+            </button>
+            <motion.div
+              key="daily-unrevealed"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, ease: "easeOut" }}
+            >
+              <p className="mx-auto mt-3 max-w-[15rem] font-serif text-[15px] italic leading-snug lg:mt-4 lg:text-[20px]" style={{ color: "var(--hint-muted)" }}>
+                A single card is waiting for you. Take a breath, then turn it over.
+              </p>
+              <button
+                type="button"
+                onClick={revealDailyCard}
+                className="mt-3 inline-flex h-10 w-full max-w-[18rem] items-center justify-center gap-2.5 rounded-full border px-4 font-sans text-[10.5px] font-semibold uppercase tracking-[0.14em] transition hover:translate-y-[-1px] lg:mt-4 lg:h-12 lg:w-auto lg:max-w-none lg:text-[12px] lg:tracking-[0.26em]"
+                style={{
+                  color: "var(--hint-text)",
+                  borderColor: "var(--hint-border-strong)",
+                  background: "color-mix(in srgb, var(--hint-surface) 78%, transparent)",
+                }}
+              >
+                <span className="size-2.5 rounded-full" style={{ background: ACCENT.gold, boxShadow: "0 0 18px rgba(228,198,138,0.34)" }} />
+                Tap the card to draw
+              </button>
+            </motion.div>
+          </div>
+          <div className="order-1 min-w-0 lg:order-2">
+            <CompactSignalPanel
+              overallScore={report.overallScore}
+              scores={report.scores}
+              revealed={revealed}
+              withTopMargin={false}
+              birthPersonalized={birthPersonalized}
+            />
+          </div>
+        </div>
+      )}
+    </motion.div>
   );
 }
 
@@ -389,7 +695,7 @@ function RitualStreakPanel({ ritual }: { ritual: RitualProgressSnapshot }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.35 }}
       transition={{ duration: 0.72, ease: "easeOut" }}
-      className="relative scroll-mt-28 overflow-hidden rounded-[28px] border px-5 py-8 sm:px-10 sm:py-10"
+      className="relative scroll-mt-28 overflow-hidden rounded-[22px] border px-4 py-5 sm:rounded-[28px] sm:px-7 sm:py-7 lg:px-8"
       style={{
         background:
           "linear-gradient(115deg, color-mix(in srgb, var(--hint-surface) 86%, transparent), color-mix(in srgb, var(--hint-input-bg) 70%, transparent))",
@@ -397,12 +703,12 @@ function RitualStreakPanel({ ritual }: { ritual: RitualProgressSnapshot }) {
         boxShadow: "var(--hint-elevated-shadow)",
       }}
     >
-      <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h2 className="font-serif text-[42px] leading-none sm:text-[56px]" style={{ color: "var(--hint-text)" }}>
+      <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
+          <h2 className="font-serif text-[32px] leading-none sm:text-[44px]" style={{ color: "var(--hint-text)" }}>
             Your ritual
           </h2>
-          <p className="font-serif text-[18px] italic sm:text-[22px]" style={{ color: "var(--hint-muted)" }}>
+          <p className="font-serif text-[15px] italic sm:text-[18px]" style={{ color: "var(--hint-muted)" }}>
             a streak you keep gently, not anxiously
           </p>
         </div>
@@ -415,11 +721,11 @@ function RitualStreakPanel({ ritual }: { ritual: RitualProgressSnapshot }) {
         </Link>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[1.15fr_0.9fr] lg:items-center">
+      <div className="grid gap-5 lg:grid-cols-[1.12fr_0.88fr] lg:items-center">
         <div>
-          <div className="mb-8 flex items-center gap-5">
+          <div className="mb-5 flex items-center gap-4">
             <motion.p
-              className="font-serif text-[74px] leading-none"
+              className="font-serif text-[54px] leading-none sm:text-[64px]"
               style={{ color: "#eaa15f" }}
               initial={{ scale: 0.9, opacity: 0 }}
               whileInView={{ scale: 1, opacity: 1 }}
@@ -432,7 +738,7 @@ function RitualStreakPanel({ ritual }: { ritual: RitualProgressSnapshot }) {
               <p className="font-serif text-[23px] leading-tight" style={{ color: "var(--hint-text)" }}>
                 day streak
               </p>
-              <p className="font-sans text-[16px]" style={{ color: "var(--hint-muted)" }}>
+              <p className="font-sans text-[13px] sm:text-[14px]" style={{ color: "var(--hint-muted)" }}>
                 {ritualStatus}
               </p>
             </div>
@@ -444,7 +750,7 @@ function RitualStreakPanel({ ritual }: { ritual: RitualProgressSnapshot }) {
               return (
                 <div key={day.date} className="text-center">
                   <motion.div
-                    className="mx-auto grid size-11 place-items-center rounded-full"
+                    className="mx-auto grid size-8 place-items-center rounded-full sm:size-10"
                     style={{
                       background: done
                         ? "linear-gradient(135deg, #e2a245, #f09974)"
@@ -468,7 +774,7 @@ function RitualStreakPanel({ ritual }: { ritual: RitualProgressSnapshot }) {
                   >
                     {done ? <Check size={16} /> : <Sparkles size={16} />}
                   </motion.div>
-                  <p className="mt-3 font-sans text-[12px] font-semibold" style={{ color: "var(--hint-muted)" }}>
+                  <p className="mt-2 font-sans text-[10px] font-semibold sm:text-[11px]" style={{ color: "var(--hint-muted)" }}>
                     {day.label}
                   </p>
                 </div>
@@ -476,12 +782,12 @@ function RitualStreakPanel({ ritual }: { ritual: RitualProgressSnapshot }) {
             })}
           </div>
 
-          <div className="mt-8">
+          <div className="mt-5">
             <div className="mb-3 flex items-center justify-between gap-4">
-              <p className="font-sans text-[15px]" style={{ color: "var(--hint-text)" }}>
+              <p className="font-sans text-[13px] sm:text-[14px]" style={{ color: "var(--hint-text)" }}>
                 {rewardText}
               </p>
-              <p className="font-sans text-[14px]" style={{ color: "var(--hint-faint)" }}>
+              <p className="font-sans text-[13px]" style={{ color: "var(--hint-faint)" }}>
                 {progress}%
               </p>
             </div>
@@ -498,13 +804,13 @@ function RitualStreakPanel({ ritual }: { ritual: RitualProgressSnapshot }) {
           </div>
         </div>
 
-        <div className="grid gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <RewardStat icon={Star} value={`${ritual.auraStars}`} label="Aura stars" />
             <RewardStat icon={Gift} value={`${ritual.readingCredits}`} label="Reading credits" />
           </div>
           <div
-            className="flex flex-col gap-4 rounded-[22px] border p-5 sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-3 rounded-[18px] border p-4 sm:flex-row sm:items-center sm:justify-between"
             style={{
               background: "var(--hint-me-plus-surface)",
               borderColor: "var(--hint-me-plus-border)",
@@ -512,21 +818,21 @@ function RitualStreakPanel({ ritual }: { ritual: RitualProgressSnapshot }) {
             }}
           >
             <div className="flex items-center gap-4">
-              <div className="grid size-14 place-items-center rounded-[16px] border" style={{ borderColor: "var(--hint-border)", color: ACCENT.gold }}>
+              <div className="grid size-11 place-items-center rounded-[14px] border" style={{ borderColor: "var(--hint-border)", color: ACCENT.gold }}>
                 <Sparkles size={20} />
               </div>
               <div>
-                <p className="font-serif text-[25px]" style={{ color: "var(--hint-text)" }}>
+                <p className="font-serif text-[22px]" style={{ color: "var(--hint-text)" }}>
                   Hint Plus
                 </p>
-                <p className="max-w-sm font-sans text-[14px] leading-relaxed" style={{ color: "var(--hint-muted)" }}>
+                <p className="max-w-sm font-sans text-[12px] leading-relaxed sm:text-[13px]" style={{ color: "var(--hint-muted)" }}>
                   Deeper readings, mood history, and the full daily report.
                 </p>
               </div>
             </div>
             <Link
               href="/me"
-              className="inline-flex h-12 shrink-0 items-center justify-center rounded-full px-6 font-sans text-[14px] font-semibold"
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-full px-5 font-sans text-[13px] font-semibold"
               style={{ color: "#fffaf2", background: "#292331" }}
             >
               Try free
@@ -549,20 +855,20 @@ function RewardStat({
 }) {
   return (
     <div
-      className="flex items-center gap-4 rounded-[18px] border p-5"
+      className="flex items-center gap-3 rounded-[16px] border p-3.5"
       style={{
         background: "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)",
         borderColor: "var(--hint-border)",
       }}
     >
-      <div className="grid size-12 place-items-center rounded-[14px]" style={{ background: "rgba(228, 198, 138, 0.16)", color: ACCENT.gold }}>
-        <Icon size={18} />
+      <div className="grid size-10 place-items-center rounded-[12px]" style={{ background: "rgba(228, 198, 138, 0.16)", color: ACCENT.gold }}>
+        <Icon size={16} />
       </div>
       <div>
-        <p className="font-serif text-[30px] leading-none" style={{ color: "var(--hint-text)" }}>
+        <p className="font-serif text-[24px] leading-none" style={{ color: "var(--hint-text)" }}>
           {value}
         </p>
-        <p className="font-sans text-[14px]" style={{ color: "var(--hint-muted)" }}>
+        <p className="font-sans text-[12px]" style={{ color: "var(--hint-muted)" }}>
           {label}
         </p>
       </div>
@@ -886,19 +1192,39 @@ function SectionHeader({
 
 export function HomeDashboard() {
   const { language, t } = useLanguage();
+  const { profile } = useProfile();
   const [ritual, setRitual] = useState(() => getRitualProgress());
+  const [dailyCardRevealed, setDailyCardRevealed] = useState(false);
   const report = useMemo(
-    () => getDailyReport({ anonId: getAnonId(), language }),
-    [language],
+    () =>
+      getDailyReport({
+        anonId: getAnonId(),
+        language,
+        birthDetails: profile
+          ? {
+              birthDate: profile.birthDate,
+              birthTime: profile.birthTime,
+              birthPlace: profile.birthPlace,
+            }
+          : undefined,
+      }),
+    [language, profile?.birthDate, profile?.birthTime, profile?.birthPlace],
   );
+
+  useEffect(() => {
+    setDailyCardRevealed(false);
+  }, [report.date]);
 
   useEffect(() => {
     return subscribeToRitualProgress(() => setRitual(getRitualProgress()));
   }, []);
 
-  function completeDailyRitual() {
-    saveLocalDailyReading(report.card);
-    setRitual(recordRitualCompletion(report.date));
+  function revealDailyCard() {
+    setDailyCardRevealed(true);
+    if (!ritual.todayCompleted) {
+      saveLocalDailyReading(report.card);
+      setRitual(recordRitualCompletion(report.date));
+    }
   }
 
   const startCards = [
@@ -929,43 +1255,39 @@ export function HomeDashboard() {
   ];
   return (
     <div className="h-full w-full overflow-y-auto overscroll-none pb-16">
-      <div className="mx-auto w-full max-w-lg px-4 pt-28 sm:max-w-3xl sm:px-6 md:pt-28 lg:max-w-6xl">
+      <div className={`mx-auto w-full max-w-lg px-3 sm:max-w-3xl sm:px-6 lg:max-w-6xl lg:pt-28 ${dailyCardRevealed ? "pt-20" : "pt-24"}`}>
         <motion.section
           id="today"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.75, ease: "easeOut" }}
-          className="relative mb-8 scroll-mt-28 overflow-visible pt-3"
+          className={`relative scroll-mt-24 overflow-visible pt-2 lg:mb-8 lg:scroll-mt-28 lg:pt-3 ${dailyCardRevealed ? "mb-3" : "mb-5"}`}
         >
-          <div className="py-5 lg:py-8">
+          <div className={`${dailyCardRevealed ? "py-2" : "py-3"} lg:py-8`}>
             <div className="relative z-10">
-              <p className="font-sans text-[11px] font-medium uppercase tracking-[0.12em]" style={{ color: ACCENT.gold }}>
+              <p className="font-sans text-[10px] font-medium uppercase tracking-[0.12em] lg:text-[11px]" style={{ color: ACCENT.gold }}>
                 {t("home.eyebrow")}
               </p>
               <h1
-                className="mt-4 max-w-4xl font-serif text-[42px] leading-[0.95] sm:text-[58px] lg:text-[72px]"
+                className={`mt-2 max-w-4xl font-serif leading-[0.98] lg:mt-4 lg:text-[72px] ${dailyCardRevealed ? "text-[24px]" : "text-[32px]"}`}
                 style={{ color: "var(--hint-text)", textShadow: "0 0 32px rgba(228,198,138,0.12)" }}
               >
                 {t("home.title")}
               </h1>
-              <p className="mt-4 max-w-2xl font-sans text-[14px] leading-relaxed sm:text-[16px]" style={{ color: "var(--hint-muted)" }}>
+              <p className={`max-w-2xl font-sans leading-relaxed lg:mt-4 lg:text-[16px] ${dailyCardRevealed ? "mt-2 line-clamp-1 text-[11px]" : "mt-3 text-[12px]"}`} style={{ color: "var(--hint-muted)" }}>
                 {t("home.subtitle")}
               </p>
             </div>
           </div>
         </motion.section>
 
-        <div className="mb-10">
+        <section id="your-card" className="mb-7 scroll-mt-28 lg:mb-10">
           <DailyHintSection
             report={report}
-            todayCompleted={ritual.todayCompleted}
-            onReveal={completeDailyRitual}
+            revealed={dailyCardRevealed}
+            onReveal={revealDailyCard}
+            birthPersonalized={Boolean(profile?.birthDate)}
           />
-        </div>
-
-        <section id="signals" className="mb-10 scroll-mt-28">
-          <SectionHeader title="Today's signals" />
-          <ScoreSummaryGrid scores={report.scores} />
         </section>
 
         <div className="mb-10">
@@ -987,7 +1309,7 @@ export function HomeDashboard() {
 
         <section className="mb-10">
           <SectionHeader title={t("home.notes")} />
-          <FeedCards />
+          <FeedCards dailyCardRevealed={dailyCardRevealed} />
         </section>
       </div>
     </div>

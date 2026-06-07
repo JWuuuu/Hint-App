@@ -14,10 +14,10 @@ import { useLanguage } from "../../lib/i18n";
 export function AppScreen({ children }: { children: ReactNode }) {
   return (
     <div
-      className="h-full w-full overflow-y-auto overscroll-none flex flex-col items-center pb-44 md:pb-20"
+      className="h-full w-full overflow-y-auto overscroll-none flex flex-col items-center pb-16"
       style={{ background: "transparent" }}
     >
-      <div className="w-full max-w-lg md:max-w-3xl lg:max-w-5xl px-4 sm:px-6 pt-6 md:pt-28">
+      <div className="w-full max-w-lg md:max-w-3xl lg:max-w-5xl px-4 pt-24 sm:px-6 md:pt-28">
         {children}
       </div>
     </div>

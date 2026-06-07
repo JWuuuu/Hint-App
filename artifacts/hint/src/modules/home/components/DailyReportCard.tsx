@@ -21,6 +21,7 @@ import { getDailyReport } from "../data/dailyReport";
 import { localizeDailyPull } from "../data/dailyPulls";
 import type { DailyPull, DailyScore, DailyScoreKey } from "../types/home.types";
 import { useLanguage } from "../../../lib/i18n";
+import { useProfile } from "../../../lib/useProfile";
 
 const SCORE_ICONS: Record<DailyScoreKey, typeof Heart> = {
   love: Heart,
@@ -82,7 +83,7 @@ function MiniDailyCard({ card }: { card: DailyPull }) {
   return (
     <Link href="/daily-pull" className="group block">
       <div
-        className="relative grid grid-cols-[72px_1fr_auto] items-center gap-4 rounded-[12px] border p-3"
+        className="relative grid grid-cols-[74px_1fr] items-center gap-3 rounded-[12px] border p-3 sm:grid-cols-[72px_1fr_auto] sm:gap-4"
         style={{
           background: "var(--hint-input-bg)",
           borderColor: "var(--hint-border)",
@@ -101,26 +102,101 @@ function MiniDailyCard({ card }: { card: DailyPull }) {
         </div>
         <div className="min-w-0">
           <p
-            className="font-sans text-[10px] uppercase tracking-[0.24em]"
+            className="font-sans text-[9px] uppercase tracking-[0.22em] sm:text-[10px] sm:tracking-[0.24em]"
             style={{ color: ACCENT.gold }}
           >
             {t("daily.card")}
           </p>
-          <h3 className="mt-1 font-serif text-[21px] leading-tight" style={{ color: "var(--hint-text)" }}>
+          <h3 className="mt-1 font-serif text-[20px] leading-tight sm:text-[21px]" style={{ color: "var(--hint-text)" }}>
             {card.cardName}
           </h3>
-          <p className="mt-2 line-clamp-2 font-sans text-[12px] leading-relaxed" style={{ color: "var(--hint-muted)" }}>
+          <p className="mt-1 line-clamp-2 font-sans text-[11px] leading-snug sm:mt-2 sm:text-[12px] sm:leading-relaxed" style={{ color: "var(--hint-muted)" }}>
             {card.whisper}
           </p>
         </div>
         <ArrowRight
           size={18}
           strokeWidth={1.8}
-          className="transition-transform group-hover:translate-x-0.5"
+          className="hidden transition-transform group-hover:translate-x-0.5 sm:block"
           style={{ color: "var(--hint-faint)" }}
         />
       </div>
     </Link>
+  );
+}
+
+function CardGuidanceItem({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string;
+}) {
+  if (!value) return null;
+
+  return (
+    <div
+      className="rounded-[12px] border p-3"
+      style={{
+        background: "var(--hint-card-inner)",
+        borderColor: "var(--hint-border)",
+      }}
+    >
+      <p
+        className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em]"
+        style={{ color: ACCENT.gold }}
+      >
+        {label}
+      </p>
+      <p
+        className="mt-2 font-sans text-[11.5px] leading-snug sm:text-[12.5px] sm:leading-relaxed"
+        style={{ color: "var(--hint-muted)" }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function CardGuidanceGrid({ card }: { card: DailyPull }) {
+  const badges = [
+    card.orientation === "upright" ? "Upright" : null,
+    card.arcana === "major" ? "Bigger message" : card.arcana === "minor" ? "Daily guidance" : null,
+    card.keyword,
+  ].filter((badge): badge is string => Boolean(badge));
+
+  return (
+    <div
+      className="mt-4 rounded-[14px] border p-3 sm:p-4"
+      style={{
+        background: "var(--hint-input-bg)",
+        borderColor: "var(--hint-border)",
+      }}
+    >
+      <div className="mb-4 flex flex-wrap gap-2">
+        {badges.map((badge) => (
+          <span
+            key={badge}
+            className="rounded-full border px-3 py-1.5 font-sans text-[11px] font-medium"
+            style={{
+              borderColor: "var(--hint-border)",
+              background: "var(--hint-surface-soft)",
+              color: "var(--hint-text)",
+            }}
+          >
+            {badge}
+          </span>
+        ))}
+      </div>
+      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+        <CardGuidanceItem label="Do" value={card.do} />
+        <CardGuidanceItem label="Avoid" value={card.avoid} />
+        <CardGuidanceItem label="Love" value={card.love} />
+        <CardGuidanceItem label="Work / study" value={card.work} />
+        <CardGuidanceItem label="Self" value={card.self} />
+        <CardGuidanceItem label="Why it matters" value={card.themeNote} />
+      </div>
+    </div>
   );
 }
 
@@ -130,7 +206,22 @@ export function DailyReportCard({
   cardOverride,
 }: DailyReportCardProps) {
   const { language, t } = useLanguage();
-  const report = useMemo(() => getDailyReport({ anonId: getAnonId(), language }), [language]);
+  const { profile } = useProfile();
+  const report = useMemo(
+    () =>
+      getDailyReport({
+        anonId: getAnonId(),
+        language,
+        birthDetails: profile
+          ? {
+              birthDate: profile.birthDate,
+              birthTime: profile.birthTime,
+              birthPlace: profile.birthPlace,
+            }
+          : undefined,
+      }),
+    [language, profile?.birthDate, profile?.birthTime, profile?.birthPlace],
+  );
   const card = cardOverride ? localizeDailyPull(cardOverride, language) : report.card;
   const [checked, setChecked] = useState<boolean[]>(() =>
     report.tasks.map(() => false),
@@ -156,22 +247,26 @@ export function DailyReportCard({
             "radial-gradient(360px 260px at 18% 8%, rgba(100,156,158,0.18), transparent 70%), radial-gradient(300px 260px at 90% 16%, rgba(196,169,98,0.16), transparent 72%)",
         }}
       />
-      <div className="relative p-5 sm:p-6">
-        <header className="mb-5 flex items-start justify-between gap-4">
+      <div className="relative p-4 sm:p-5 lg:p-6">
+        <div className="mb-4 lg:hidden">
+          <MiniDailyCard card={card} />
+        </div>
+
+        <header className="mb-4 flex items-start justify-between gap-4 lg:mb-5">
           <div>
             <p
-              className="font-serif text-[11px] uppercase tracking-[0.34em]"
+              className="font-serif text-[9px] uppercase tracking-[0.22em] lg:text-[11px] lg:tracking-[0.34em]"
               style={{ color: ACCENT.aqua }}
             >
               {t("daily.eyebrow")}
             </p>
-            <h2 className="mt-2 font-serif text-[30px] leading-none sm:text-[38px]" style={{ color: "var(--hint-text)" }}>
+            <h2 className="mt-1 max-w-[13ch] font-serif text-[20px] leading-tight sm:max-w-[24ch] sm:text-[24px] lg:mt-2 lg:max-w-none lg:text-[38px] lg:leading-none" style={{ color: "var(--hint-text)" }}>
               {report.title}
             </h2>
           </div>
           <Link
             href="/daily-pull"
-            className="hidden h-9 shrink-0 items-center gap-1 rounded-full border px-3 font-sans text-[10px] uppercase tracking-[0.16em] sm:inline-flex"
+            className="hidden h-9 shrink-0 items-center gap-1 rounded-full border px-3 font-sans text-[10px] uppercase tracking-[0.16em] lg:inline-flex"
             style={{
               color: "var(--hint-muted)",
               background: "var(--hint-surface-soft)",
@@ -183,11 +278,11 @@ export function DailyReportCard({
           </Link>
         </header>
 
-        <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+        <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr] lg:gap-5">
           <div className="min-w-0">
-            <div className="mb-6 flex items-end gap-2 sm:mb-7">
+            <div className="mb-3 flex items-end gap-2 lg:mb-7">
               <span
-                className="font-serif text-[74px] leading-[0.9] tabular-nums sm:text-[88px]"
+                className="font-serif text-[52px] leading-[0.9] tabular-nums sm:text-[60px] lg:text-[88px]"
                 style={{
                   color: "var(--hint-score-ink)",
                   textShadow: "var(--hint-score-shadow)",
@@ -195,14 +290,14 @@ export function DailyReportCard({
               >
                 {report.overallScore}
               </span>
-              <span className="pb-3 font-serif text-[22px]" style={{ color: "var(--hint-score-ink)" }}>
+              <span className="pb-2 font-serif text-[16px] lg:pb-3 lg:text-[22px]" style={{ color: "var(--hint-score-ink)" }}>
                 {t("daily.score")}
               </span>
             </div>
-            <p className="font-sans text-[14px] leading-relaxed" style={{ color: "var(--hint-muted)" }}>
+            <p className="line-clamp-2 font-sans text-[12px] leading-snug lg:line-clamp-none lg:text-[14px] lg:leading-relaxed" style={{ color: "var(--hint-muted)" }}>
               {report.summary}
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-3 hidden grid-cols-2 gap-3 lg:grid">
               <div>
                 <p className="font-sans text-[10px] uppercase tracking-[0.2em]" style={{ color: "var(--hint-faint)" }}>
                   {t("daily.suggest")}
@@ -222,18 +317,20 @@ export function DailyReportCard({
             </div>
           </div>
 
-          <div className="grid gap-3">
+          <div className="grid gap-2 lg:gap-3">
             {report.scores.map((score) => (
               <ScoreBar key={score.key} score={score} />
             ))}
           </div>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-5 hidden lg:block">
           <MiniDailyCard card={card} />
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {detailed && <CardGuidanceGrid card={card} />}
+
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {report.lucky.map((item) => {
             const Icon = LUCKY_ICONS[item.key];
             return (

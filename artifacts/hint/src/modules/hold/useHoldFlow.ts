@@ -9,9 +9,11 @@ import type {
 } from "./chat/types";
 import { readingToActive } from "./chat/types";
 import { useLanguage } from "../../lib/i18n";
+import { saveLocalQuestionHistory } from "../readings/localQuestionHistory";
 
 export type HoldStep =
   | "setup"
+  | "ritual"
   | "territories"
   | "acknowledgment"
   | "hold"
@@ -456,6 +458,13 @@ export function useHoldFlow() {
         emotionalContext,
         spreadType: normalized.spreadType,
         onSuccess: (reading) => {
+          saveLocalQuestionHistory({
+            question,
+            focus: normalized.focus.label,
+            spreadType: normalized.spreadType,
+            readingId: reading.id,
+            createdAt: reading.createdAt,
+          });
           // First reading in a brand new session
           setSession({
             sessionId: newSessionId(),
@@ -478,7 +487,7 @@ export function useHoldFlow() {
   const startRoom = useCallback((next: TarotRoomSetup) => {
     setRoomSetup(next);
     setErrorMessage(null);
-    setStep("territories");
+    setStep("ritual");
   }, []);
 
   /** Pull a fresh set of cards for the same territory. Keeps chat history. */

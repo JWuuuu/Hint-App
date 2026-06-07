@@ -1,9 +1,7 @@
 /**
- * Server-side daily-pull deck — the 22 Major Arcana paired with a single
- * emotional "whisper" for tonight. The daily pull is drawn from here once per
- * user per day and then persisted, so revisiting the same day is stable.
- * The id format matches the canonical tarot deck so the client renders the
- * right sigil.
+ * Server-side daily-pull deck. MVP rules match the client fallback:
+ * full 78-card tarot deck, upright-only, one card persisted per user per day.
+ * The persisted shape stays small so existing history rows remain compatible.
  */
 
 export interface DailyPullCard {
@@ -12,7 +10,7 @@ export interface DailyPullCard {
   whisper: string;
 }
 
-export const dailyPullDeck: DailyPullCard[] = [
+const majorArcanaDeck: DailyPullCard[] = [
   { id: "0-fool", name: "The Fool", whisper: "Tonight, something in you is at an edge. Don't talk yourself out of it yet." },
   { id: "1-magician", name: "The Magician", whisper: "You already have more in your hands than you've admitted." },
   { id: "2-high-priestess", name: "The High Priestess", whisper: "Stop asking. You already know what tonight is asking of you." },
@@ -35,6 +33,63 @@ export const dailyPullDeck: DailyPullCard[] = [
   { id: "19-sun", name: "The Sun", whisper: "A small clean thing today. Don't make it more complicated than it is." },
   { id: "20-judgement", name: "Judgement", whisper: "Something is calling you back to yourself. Listen before you answer." },
   { id: "21-world", name: "The World", whisper: "A chapter has quietly finished. Mark it before you move on." },
+];
+
+const SUITS = [
+  {
+    id: "wands",
+    label: "Wands",
+    domain: "energy, creativity, and action",
+    hint: "Let your energy move, but give it a clean direction.",
+  },
+  {
+    id: "cups",
+    label: "Cups",
+    domain: "feelings, relationships, and intuition",
+    hint: "Let the emotional truth be simple before you explain it.",
+  },
+  {
+    id: "swords",
+    label: "Swords",
+    domain: "thoughts, words, and decisions",
+    hint: "A cleaner thought can cut through the noise today.",
+  },
+  {
+    id: "pentacles",
+    label: "Pentacles",
+    domain: "body, work, money, and routines",
+    hint: "Today gets easier when you make it practical.",
+  },
+] as const;
+
+const RANKS = [
+  ["ace", "Ace", "A fresh opening is small, but it is real."],
+  ["two", "Two", "Two paths are asking you to choose with care."],
+  ["three", "Three", "Something grows better when it is shared."],
+  ["four", "Four", "A steadier base matters more than a bigger move."],
+  ["five", "Five", "The tension is useful if you do not make it your identity."],
+  ["six", "Six", "Help, memory, or kindness can move the day forward."],
+  ["seven", "Seven", "Pause and choose your strategy instead of reacting."],
+  ["eight", "Eight", "Repetition is shaping the result more than one big gesture."],
+  ["nine", "Nine", "You are closer than it feels, but pacing still matters."],
+  ["ten", "Ten", "A cycle is full; now simplify what you carry next."],
+  ["page", "Page", "Beginner energy can bring the message you need."],
+  ["knight", "Knight", "Movement helps, but direction matters."],
+  ["queen", "Queen", "Your power is steadier when it is cared for."],
+  ["king", "King", "Today asks for calm command, not control."],
+] as const;
+
+const minorArcanaDeck: DailyPullCard[] = SUITS.flatMap((suit) =>
+  RANKS.map(([rankId, rankLabel, rankHint]) => ({
+    id: `${rankId}-${suit.id}`,
+    name: `${rankLabel} of ${suit.label}`,
+    whisper: `${rankHint} In ${suit.domain}, ${suit.hint.charAt(0).toLowerCase()}${suit.hint.slice(1)}`,
+  })),
+);
+
+export const dailyPullDeck: DailyPullCard[] = [
+  ...majorArcanaDeck,
+  ...minorArcanaDeck,
 ];
 
 export function drawDailyPull(): DailyPullCard {

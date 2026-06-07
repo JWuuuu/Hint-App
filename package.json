@@ -1,6 +1,7 @@
 {
   "name": "hint-workspace",
   "version": "0.0.0",
+  "packageManager": "pnpm@10.25.0",
   "license": "MIT",
   "scripts": {
     "build": "pnpm run typecheck && pnpm -r --if-present run build",

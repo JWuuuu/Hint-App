@@ -49,16 +49,18 @@ export function DailyPullView() {
 
   return (
     <AppScreen>
-      <ScreenHeader
-        eyebrow={t("dailyPull.eyebrow")}
-        title={t("dailyPull.title")}
-        subtitle={t("dailyPull.subtitle")}
-        sigil={DailyPullSigil}
-      />
+      <div className="hidden lg:block">
+        <ScreenHeader
+          eyebrow={t("dailyPull.eyebrow")}
+          title={t("dailyPull.title")}
+          subtitle={t("dailyPull.subtitle")}
+          sigil={DailyPullSigil}
+        />
+      </div>
 
       <DailyReportCard
         detailed
-        className="mb-6"
+        className="mb-5 lg:mb-6"
         cardOverride={
           pull
             ? {

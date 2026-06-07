@@ -64,6 +64,11 @@ const STEP_ORDER: IntakePanel[] = ["context", "question", "spread"];
 const QUICK_SPREAD_IDS: readonly SpreadType[] = ["single", "three", "relationship"];
 const MAX_VISIBLE_LONG_POSITION_CHIPS = 4;
 
+interface SpreadRecommendation {
+  spreadType: SpreadType;
+  reasonKey: string;
+}
+
 const GUIDED_SPREAD_CHOICE_COPY = [
   {
     id: "quick",
@@ -294,6 +299,131 @@ function translatedList(value: string): string[] {
     .filter(Boolean);
 }
 
+function normalizeForRecommendation(value: string): string {
+  return value.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ");
+}
+
+function includesAny(value: string, terms: readonly string[]): boolean {
+  return terms.some((term) => value.includes(term));
+}
+
+function recommendSpreadType({
+  context,
+  focus,
+  question,
+}: {
+  context: string;
+  focus: Territory;
+  question: string;
+}): SpreadRecommendation {
+  const text = normalizeForRecommendation(`${focus.id} ${context} ${question}`);
+
+  if (
+    includesAny(text, [
+      "ex",
+      "break up",
+      "breakup",
+      "broke up",
+      "broken",
+      "come back",
+      "reconcile",
+      "reconciliation",
+      "again",
+      "复合",
+      "前任",
+    ])
+  ) {
+    return { spreadType: "reconciliation", reasonKey: "tarot.spreadRecommendation.reason.reconciliation" };
+  }
+
+  if (
+    includesAny(text, [
+      "future lover",
+      "future love",
+      "new love",
+      "new person",
+      "meet someone",
+      "coming in",
+      "when will i find",
+      "桃花",
+      "未来",
+    ])
+  ) {
+    return { spreadType: "futureLover", reasonKey: "tarot.spreadRecommendation.reason.futureLover" };
+  }
+
+  if (
+    includesAny(text, [
+      "crush",
+      "attraction",
+      "attracted",
+      "dating",
+      "flirt",
+      "text me",
+      "message me",
+      "interested",
+      "暧昧",
+      "吸引",
+    ])
+  ) {
+    return { spreadType: "peachBlossom", reasonKey: "tarot.spreadRecommendation.reason.peachBlossom" };
+  }
+
+  if (
+    includesAny(text, [
+      "feel",
+      "feeling",
+      "feelings",
+      "think of me",
+      "true heart",
+      "honest",
+      "inside",
+      "really",
+      "真心",
+      "感觉",
+      "想法",
+    ])
+  ) {
+    return { spreadType: "trueHeart", reasonKey: "tarot.spreadRecommendation.reason.trueHeart" };
+  }
+
+  if (
+    includesAny(text, [
+      "complicated",
+      "pattern",
+      "cycle",
+      "why",
+      "obstacle",
+      "blocked",
+      "mixed signal",
+      "confusing",
+      "复杂",
+      "模式",
+      "阻碍",
+    ])
+  ) {
+    return { spreadType: "xRelationship", reasonKey: "tarot.spreadRecommendation.reason.xRelationship" };
+  }
+
+  if (focus.id === "someone" || includesAny(text, ["relationship", "connection", "between us", "we", "them", "him", "her", "关系"])) {
+    return { spreadType: "relationship", reasonKey: "tarot.spreadRecommendation.reason.relationship" };
+  }
+
+  if (focus.id === "avoiding" || includesAny(text, ["decision", "choose", "choice", "should i", "next step", "what now", "决定", "选择"])) {
+    return { spreadType: "three", reasonKey: "tarot.spreadRecommendation.reason.three" };
+  }
+
+  if (includesAny(text, ["quick", "today", "daily", "one thing", "right now", "现在", "今天"])) {
+    return { spreadType: "single", reasonKey: "tarot.spreadRecommendation.reason.single" };
+  }
+
+  if (question.trim().length > 120 || context.trim().length > 220) {
+    return { spreadType: "three", reasonKey: "tarot.spreadRecommendation.reason.three" };
+  }
+
+  return { spreadType: focus.spreadType, reasonKey: `tarot.spreadRecommendation.reason.${focus.spreadType}` };
+}
+
 function translateSpreadChoice(choice: SpreadChoice, t: (key: string) => string): SpreadChoice {
   const positionLabels = translatedList(t(`tarot.spread.${choice.id}.positionLabels`));
 
@@ -305,6 +435,37 @@ function translateSpreadChoice(choice: SpreadChoice, t: (key: string) => string)
     bestFor: t(`tarot.spread.${choice.id}.bestFor`),
     positionLabels: positionLabels.length ? positionLabels : choice.positionLabels,
   };
+}
+
+function positionGuideText(label: string): string {
+  const normalized = label.toLowerCase();
+
+  if (/(past|root|cause|break|appears|arrival)/.test(normalized)) {
+    return "where the story begins or what shaped this question";
+  }
+  if (/(present|now|trunk|outer|image|signal)/.test(normalized)) {
+    return "what is visible in the current moment";
+  }
+  if (/(next|future|direction|trend|result)/.test(normalized)) {
+    return "where the energy may move next";
+  }
+  if (/(you|your)/.test(normalized)) {
+    return "your side, role, or inner position";
+  }
+  if (/(them|their|feeling|pull)/.test(normalized)) {
+    return "the other side, signal, or emotional pull";
+  }
+  if (/(between|connection)/.test(normalized)) {
+    return "the shared thread between both sides";
+  }
+  if (/(block|barrier|obstacle|challenge)/.test(normalized)) {
+    return "what creates friction or asks for care";
+  }
+  if (/(help|positive|gain|crown|fruit|advice|approach|action)/.test(normalized)) {
+    return "what can support the next honest move";
+  }
+
+  return "the specific job this card has inside the spread";
 }
 
 function VoiceButton({
@@ -387,6 +548,14 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
       })),
     [t]
   );
+  const recommendedSpread = useMemo(
+    () => recommendSpreadType({ context, focus, question }),
+    [context, focus, question]
+  );
+  const recommendedSpreadChoice = useMemo(
+    () => localizedSpreads.find((choice) => choice.id === recommendedSpread.spreadType) ?? localizedSpreads[0]!,
+    [localizedSpreads, recommendedSpread.spreadType]
+  );
   const selectedSpread = useMemo(
     () => localizedSpreads.find((choice) => choice.id === spreadType) ?? localizedSpreads[0]!,
     [localizedSpreads, spreadType]
@@ -417,10 +586,18 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
     setShowAllPositions(false);
   }, [spreadType]);
 
+  useEffect(() => {
+    if (spreadTouched) return;
+    setSpreadType(recommendedSpread.spreadType);
+    if (!QUICK_SPREAD_IDS.includes(recommendedSpread.spreadType)) {
+      setShowAdvancedSpreads(true);
+    }
+  }, [recommendedSpread.spreadType, spreadTouched]);
+
   const updateFocus = (next: Territory) => {
     setFocus(next);
     if (!questionTouched) setQuestion(t(`territory.${next.id}.seed`));
-    if (!spreadTouched && !roomSetup) setSpreadType(next.spreadType);
+    if (!spreadTouched) setSpreadType(next.spreadType);
   };
 
   const addSpeech = (field: DictationField, spoken: string) => {
@@ -710,9 +887,58 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                 >
                   <div className="space-y-2.5">
                     <FieldLabel>{t("tarot.intake.style")}</FieldLabel>
+                    <div
+                      className="rounded-[8px] border p-3"
+                      style={{
+                        borderColor: "rgba(228,198,138,0.28)",
+                        background:
+                          "linear-gradient(135deg, rgba(228,198,138,0.12), rgba(64,224,208,0.07))",
+                        boxShadow: "0 0 22px rgba(228,198,138,0.08)",
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p
+                            className="font-sans text-[9px] font-semibold uppercase tracking-[0.22em]"
+                            style={{ color: GOLD.ink }}
+                          >
+                            {t("tarot.spreadRecommendation.eyebrow")}
+                          </p>
+                          <p className="mt-1 font-sans text-[14px] font-semibold leading-tight" style={{ color: IVORY.strong }}>
+                            {t("tarot.spreadRecommendation.title")} {recommendedSpreadChoice.label}
+                          </p>
+                        </div>
+                        <Sparkles className="shrink-0" size={15} style={{ color: GOLD.ink }} />
+                      </div>
+                      <p className="mt-2 font-sans text-[11px] leading-relaxed" style={{ color: IVORY.dim }}>
+                        {t(recommendedSpread.reasonKey)}
+                      </p>
+                      {spreadType !== recommendedSpread.spreadType && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSpreadTouched(false);
+                            setSpreadType(recommendedSpread.spreadType);
+                            setShowAllPositions(false);
+                            if (!QUICK_SPREAD_IDS.includes(recommendedSpread.spreadType)) {
+                              setShowAdvancedSpreads(true);
+                            }
+                          }}
+                          className="mt-2 rounded-full border px-3 py-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.14em] transition-opacity hover:opacity-80"
+                          style={{
+                            color: IVORY.primary,
+                            borderColor: "rgba(228,198,138,0.28)",
+                            background: "rgba(228,198,138,0.08)",
+                          }}
+                        >
+                          {t("tarot.spreadRecommendation.use")}
+                        </button>
+                      )}
+                    </div>
                     <div className="grid gap-1.5 sm:grid-cols-2">
                       {guidedReadingChoices.map((choice) => {
                         const selected = spreadType === choice.spreadType;
+                        const recommended = recommendedSpread.spreadType === choice.spreadType;
                         return (
                           <button
                             type="button"
@@ -742,6 +968,17 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                                 </p>
                                 <p className="mt-1 flex flex-wrap items-center gap-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: GOLD.ink }}>
                                   <span>{choice.cardCount}</span>
+                                  {recommended && (
+                                    <span
+                                      className="rounded-full border px-1.5 py-0.5"
+                                      style={{
+                                        color: IVORY.primary,
+                                        borderColor: "rgba(228,198,138,0.28)",
+                                      }}
+                                    >
+                                      {t("tarot.spreadRecommendation.badge")}
+                                    </span>
+                                  )}
                                   {choice.badge && (
                                     <span
                                       className="rounded-full border px-1.5 py-0.5"
@@ -804,6 +1041,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                         <div className="grid gap-1.5 sm:grid-cols-2">
                           {specializedSpreads.map((choice) => {
                             const selected = spreadType === choice.id;
+                            const recommended = recommendedSpread.spreadType === choice.id;
                             return (
                               <button
                                 type="button"
@@ -828,7 +1066,20 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                                   >
                                     {choice.label}
                                   </p>
-                                  {selected && <Check size={13} style={{ color: GOLD.ink }} />}
+                                  <span className="flex shrink-0 items-center gap-1">
+                                    {recommended && (
+                                      <span
+                                        className="rounded-full border px-1.5 py-0.5 font-sans text-[8px] font-semibold uppercase tracking-[0.1em]"
+                                        style={{
+                                          color: IVORY.primary,
+                                          borderColor: "rgba(228,198,138,0.26)",
+                                        }}
+                                      >
+                                        {t("tarot.spreadRecommendation.badge")}
+                                      </span>
+                                    )}
+                                    {selected && <Check size={13} style={{ color: GOLD.ink }} />}
+                                  </span>
                                 </div>
                                 <p className="mt-0.5 font-sans text-[9.5px] font-semibold uppercase tracking-[0.12em]" style={{ color: GOLD.ink }}>
                                   {choice.cardCount} {choice.cardCount === 1 ? t("tarot.spreadChooser.card") : t("tarot.spreadChooser.cards")}
@@ -930,6 +1181,33 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                         </span>{" "}
                         {selectedSpread.positions}
                       </p>
+
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: GOLD.ink }}>
+                          {t("tarot.spreadExplanation.positionGuide")}
+                        </p>
+                        <div className="grid gap-1.5">
+                          {visiblePositionLabels.map((label, index) => (
+                            <div
+                              key={`${selectedSpread.id}-guide-${index}-${label}`}
+                              className="grid grid-cols-[1.75rem_1fr] gap-2 rounded-[8px] border px-2 py-1.5"
+                              style={{
+                                borderColor: "rgba(228,198,138,0.14)",
+                                background: "rgba(255,255,255,0.025)",
+                              }}
+                            >
+                              <span className="font-sans text-[10px] font-semibold" style={{ color: GOLD.ink }}>
+                                {index + 1}
+                              </span>
+                              <span className="font-sans text-[10.5px] leading-snug" style={{ color: IVORY.dim }}>
+                                <span style={{ color: IVORY.body }}>{label}</span>
+                                {" - "}
+                                {positionGuideText(label)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
                     <div

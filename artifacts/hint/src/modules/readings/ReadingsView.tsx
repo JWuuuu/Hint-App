@@ -11,6 +11,12 @@ import {
   listLocalDailyReadings,
   subscribeToLocalDailyReadings,
 } from "./localDailyReadings";
+import {
+  listLocalQuestionHistory,
+  subscribeToLocalQuestionHistory,
+  type QuestionHistoryItem,
+} from "./localQuestionHistory";
+import type { SpreadType } from "../hold/chat/types";
 
 /**
  * ReadingsView — the room's memory. A real archive of every tarot reading the
@@ -127,6 +133,68 @@ function ReadingCard({
   );
 }
 
+const SPREAD_LABELS: Record<SpreadType, string> = {
+  single: "One card",
+  three: "Three cards",
+  relationship: "Connection",
+  futureLover: "Future Lover",
+  peachBlossom: "Peach Blossom",
+  reconciliation: "Reconciliation",
+  trueHeart: "True Heart",
+  loveTree: "Love Tree",
+  xRelationship: "X Relationship",
+};
+
+function QuestionCard({
+  item,
+  todayLabel,
+}: {
+  item: QuestionHistoryItem;
+  todayLabel: string;
+}) {
+  return (
+    <div
+      className="rounded-[8px] px-4 py-4"
+      style={{ background: GLASS.panel, border: `1px solid ${GLASS.border}` }}
+    >
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <span
+          className="font-serif text-[10px] uppercase tracking-[0.22em]"
+          style={{ color: GLASS.faint }}
+        >
+          {fmt(item.createdAt, todayLabel)}
+        </span>
+        <span
+          className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-semibold uppercase tracking-[0.12em]"
+          style={{
+            color: ACCENT.gold,
+            borderColor: "rgba(206,178,110,0.26)",
+            background: "rgba(206,178,110,0.09)",
+          }}
+        >
+          {SPREAD_LABELS[item.spreadType] ?? item.spreadType}
+        </span>
+      </div>
+      <p className="font-serif text-[17px] leading-snug" style={{ color: GLASS.text }}>
+        {item.question}
+      </p>
+      <p className="mt-2 font-sans text-[12px] leading-relaxed" style={{ color: GLASS.faint }}>
+        {item.focus}
+      </p>
+      <Link
+        href="/tarot"
+        className="mt-4 inline-flex h-9 items-center justify-center rounded-[8px] px-3 font-sans text-[12px] font-semibold"
+        style={{
+          color: "#08070B",
+          background: "rgba(243,212,144,0.9)",
+        }}
+      >
+        Ask again
+      </Link>
+    </div>
+  );
+}
+
 function EmptyPanel({ children }: { children: string }) {
   return (
     <div
@@ -146,8 +214,12 @@ export function ReadingsView() {
   const { language, t } = useLanguage();
   const anonId = getAnonId();
   const { data, isLoading } = useListReadings({ anonId });
+  const [activeTab, setActiveTab] = useState<"readings" | "questions">("readings");
   const [localReadings, setLocalReadings] = useState<ReadingSummary[]>(() =>
     listLocalDailyReadings(anonId),
+  );
+  const [questionHistory, setQuestionHistory] = useState<QuestionHistoryItem[]>(() =>
+    listLocalQuestionHistory(anonId),
   );
   const readings = useMemo(() => {
     const apiReadings = (data ?? []) as ReadingSummary[];
@@ -177,6 +249,12 @@ export function ReadingsView() {
     });
   }, [anonId]);
 
+  useEffect(() => {
+    return subscribeToLocalQuestionHistory(() => {
+      setQuestionHistory(listLocalQuestionHistory(anonId));
+    });
+  }, [anonId]);
+
   return (
     <AppScreen>
       <ScreenHeader
@@ -199,10 +277,46 @@ export function ReadingsView() {
         </Link>
       </div>
 
+      <div
+        className="mb-7 grid grid-cols-2 rounded-[14px] border p-1"
+        style={{
+          background: "rgba(255,255,255,0.045)",
+          borderColor: GLASS.border,
+        }}
+      >
+        <TabButton active={activeTab === "readings"} onClick={() => setActiveTab("readings")}>
+          {t("readings.tab.readings")}
+        </TabButton>
+        <TabButton active={activeTab === "questions"} onClick={() => setActiveTab("questions")}>
+          {t("readings.tab.questions")}
+        </TabButton>
+      </div>
+
       {isLoading ? (
         <p className="font-serif italic text-[13px] py-8 text-center" style={{ color: GLASS.muted }}>
           {t("readings.loading")}
         </p>
+      ) : activeTab === "questions" ? (
+        <section className="mb-10">
+          <SectionLabel>{t("readings.questions")}</SectionLabel>
+          {questionHistory.length === 0 ? (
+            <EmptyPanel>{t("readings.questionsEmpty")}</EmptyPanel>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {questionHistory.map((item, i) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: Math.min(i, 6) * 0.05 }}
+                >
+                  <QuestionCard item={item} todayLabel={t("readings.today")} />
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </section>
       ) : readings.length === 0 ? (
         <section className="mb-10">
           <SectionLabel>{t("readings.section")}</SectionLabel>
@@ -295,5 +409,30 @@ export function ReadingsView() {
         </>
       )}
     </AppScreen>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="h-11 rounded-[10px] px-3 font-sans text-[13px] font-semibold transition"
+      style={{
+        color: active ? GLASS.text : GLASS.muted,
+        background: active ? "rgba(206,178,110,0.13)" : "transparent",
+        boxShadow: active ? "inset 0 0 0 1px rgba(206,178,110,0.18)" : "none",
+      }}
+    >
+      {children}
+    </button>
   );
 }

@@ -1,22 +1,6 @@
-export type CardOrientation = "upright" | "reversed";
+import type { RitualCard, RitualDeckCard } from "../types/ritual.types";
 
-export type RitualCard = {
-  visualId: string;
-  cardId: string;
-  name: string;
-  orientation: CardOrientation;
-  x: number;
-  y: number;
-  rotate: number;
-  zIndex: number;
-  selected: boolean;
-};
-
-export type RitualDeckCard = {
-  cardId: string;
-  name: string;
-  keywords: string[];
-};
+export type { CardOrientation, RitualCard, RitualDeckCard } from "../types/ritual.types";
 
 const MAJOR_ARCANA_DATA: Array<[string, string, string[]]> = [
   ["0-fool", "The Fool", ["beginning", "risk", "trust"]],
@@ -89,6 +73,31 @@ function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min);
 }
 
+function randomTablePoint() {
+  const clusters = [
+    { x: 50, y: 52, weight: 0.42, spreadX: 24, spreadY: 17 },
+    { x: 42, y: 49, weight: 0.2, spreadX: 18, spreadY: 12 },
+    { x: 58, y: 55, weight: 0.2, spreadX: 18, spreadY: 12 },
+    { x: 51, y: 43, weight: 0.18, spreadX: 20, spreadY: 11 },
+  ];
+  const roll = Math.random();
+  let cursor = 0;
+  const cluster = clusters.find((item) => {
+    cursor += item.weight;
+    return roll <= cursor;
+  }) ?? clusters[0]!;
+  const angle = Math.random() * Math.PI * 2;
+  const radius = Math.pow(Math.random(), 0.72);
+  return {
+    x: cluster.x + Math.cos(angle) * radius * randomBetween(4, cluster.spreadX),
+    y: cluster.y + Math.sin(angle) * radius * randomBetween(3, cluster.spreadY),
+  };
+}
+
+function getWashLayer(index: number): RitualCard["washLayer"] {
+  return index % 2 === 0 ? "base" : "top";
+}
+
 function shuffle<T>(items: readonly T[]): T[] {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -99,28 +108,58 @@ function shuffle<T>(items: readonly T[]): T[] {
 }
 
 export function scatterDeck(deck: readonly RitualCard[]): RitualCard[] {
-  return deck.map((card, index) => ({
-    ...card,
-    x: randomBetween(12, 88),
-    y: randomBetween(16, 82),
-    rotate: randomBetween(-34, 34),
-    zIndex: index,
-    selected: false,
-  }));
+  return deck.map((card, index) => {
+    const rotation = randomBetween(-34, 34);
+    const point = randomTablePoint();
+    const washLayer = card.washLayer ?? getWashLayer(index);
+    return {
+      ...card,
+      x: point.x,
+      y: point.y,
+      homeX: point.x,
+      homeY: point.y,
+      washLayer,
+      rotate: rotation,
+      rotation,
+      zIndex: washLayer === "base" ? index : 120 + index,
+      selected: false,
+      revealed: false,
+      velocityX: 0,
+      velocityY: 0,
+      velocityRotate: 0,
+      lift: 0,
+      gatherDelay: 0,
+    };
+  });
 }
 
 export function createHiddenDeck(): RitualCard[] {
-  return shuffle(RITUAL_TAROT_DECK).map((card, index) => ({
-    visualId: `visual-${index}-${Math.random().toString(36).slice(2, 9)}`,
-    cardId: card.cardId,
-    name: card.name,
-    orientation: Math.random() > 0.22 ? "upright" : "reversed",
-    x: randomBetween(12, 88),
-    y: randomBetween(16, 82),
-    rotate: randomBetween(-34, 34),
-    zIndex: index,
-    selected: false,
-  }));
+  return shuffle(RITUAL_TAROT_DECK).map((card, index) => {
+    const rotation = randomBetween(-34, 34);
+    const point = randomTablePoint();
+    const washLayer = getWashLayer(index);
+    return {
+      visualId: `visual-${index}-${Math.random().toString(36).slice(2, 9)}`,
+      cardId: card.cardId,
+      name: card.name,
+      orientation: Math.random() > 0.22 ? "upright" : "reversed",
+      x: point.x,
+      y: point.y,
+      homeX: point.x,
+      homeY: point.y,
+      washLayer,
+      rotate: rotation,
+      rotation,
+      zIndex: washLayer === "base" ? index : 120 + index,
+      selected: false,
+      revealed: false,
+      velocityX: 0,
+      velocityY: 0,
+      velocityRotate: 0,
+      lift: 0,
+      gatherDelay: 0,
+    };
+  });
 }
 
 export function getCardKeywords(cardId: string): string[] {

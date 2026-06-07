@@ -75,7 +75,7 @@ function Sub({ children }: { children: ReactNode }) {
   );
 }
 
-export function FeedCards() {
+export function FeedCards({ dailyCardRevealed }: { dailyCardRevealed: boolean }) {
   const { language, t } = useLanguage();
   const copy = getFeedCopy(language);
   const pull = getDailyPull(new Date(), language);
@@ -83,13 +83,22 @@ export function FeedCards() {
   return (
     <div className="flex flex-col">
       {/* Tonight's Pull — live, opens the tarot room */}
-      <FeedCardBase href="/tarot" index={0}>
+      <FeedCardBase href={dailyCardRevealed ? "/daily-pull" : "#your-card"} index={0}>
         <div className="flex justify-between items-start mb-3">
           <Eyebrow label={t("feed.tonightPull")} color={ACCENT.gold} />
           <Cta label={t("feed.turn")} color={ACCENT.aqua} />
         </div>
-        <Title>{pull.cardName}</Title>
-        <Sub>{pull.whisper}</Sub>
+        {dailyCardRevealed ? (
+          <>
+            <Title>{pull.cardName}</Title>
+            <Sub>{pull.whisper}</Sub>
+          </>
+        ) : (
+          <>
+            <Title>{t("home.card.daily.title")}</Title>
+            <Sub>{t("home.card.daily.body")}</Sub>
+          </>
+        )}
       </FeedCardBase>
 
       {/* Relationship Energy */}

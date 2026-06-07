@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
+import { Home } from "lucide-react";
 import { Link } from "wouter";
 import { useHoldFlow } from "./useHoldFlow";
 import type { HoldStep } from "./useHoldFlow";
@@ -7,6 +8,7 @@ import { RoomSetup } from "./components/RoomSetup";
 import { StepTerritories } from "./components/StepTerritories";
 import { TarotRitual } from "./components/TarotRitual";
 import { TarotChatRoom } from "./chat/components/TarotChatRoom";
+import { TarotRitualChamber } from "../tarot/components/TarotRitualChamber";
 import { IVORY, TEXT_HALO } from "./atmosphere";
 import { useLanguage } from "../../lib/i18n";
 import { trackEvent } from "../../lib/analytics";
@@ -159,6 +161,14 @@ export function HoldExperience() {
             <RoomSetup onStart={startRoom} />
           </Breath>
         );
+      case "ritual":
+        return (
+          <TarotRitualChamber
+            key={stepKey("ritual")}
+            setup={roomSetup}
+            onComplete={() => advance("territories")}
+          />
+        );
       case "territories":
         return (
           <Breath key={stepKey("territories")} duration={2}>
@@ -218,17 +228,17 @@ export function HoldExperience() {
 
   return (
     <div className="absolute inset-0">
-      {/* Persistent "Home" exit, only on the entry steps where it makes sense.
+      {/* Persistent home exit, only on the entry steps where it makes sense.
           Once the user is in a reading, the existing "End" affordance in the
           chat room handles the way out. */}
       {(flow.step === "setup" ||
         flow.step === "territories") && (
         <Link
           href="/"
-          className="absolute top-5 left-5 z-30 inline-flex min-h-11 items-center font-serif text-[11px] uppercase tracking-[0.32em] transition-opacity duration-700 hover:opacity-80 select-none"
-          style={{ color: IVORY.mute }}
+          aria-label={t("tarot.homeLink")}
+          className="absolute left-5 top-5 z-30 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#8f8170]/35 bg-white/42 text-[#4a4450] shadow-[0_10px_24px_rgba(58,48,38,0.12)] transition duration-300 hover:border-[#c79d51]/55 hover:bg-white/62 hover:text-[#27232d] active:scale-95 select-none"
         >
-          ← {t("tarot.homeLink")}
+          <Home size={17} strokeWidth={1.8} aria-hidden="true" />
         </Link>
       )}
 

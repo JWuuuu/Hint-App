@@ -94,6 +94,21 @@ export function ProfileCard({
           </button>
         </div>
 
+        {!profile?.birthDate && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="mt-5 inline-flex w-full items-center justify-center rounded-[10px] border px-4 py-3 font-sans text-[12px] font-semibold"
+            style={{
+              background: "rgba(196,169,98,0.12)",
+              borderColor: "rgba(196,169,98,0.32)",
+              color: ACCENT.gold,
+            }}
+          >
+            Add birth details for a sharper Ba Zi score
+          </button>
+        )}
+
         <div
           className="flex items-stretch mt-5 pt-5"
           style={{ borderTop: `1px solid ${GLASS.border}` }}

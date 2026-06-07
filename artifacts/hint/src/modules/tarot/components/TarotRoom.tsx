@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
+import { SPREAD_CHOICES } from "../../hold/useHoldFlow";
 import type { CutPile, CutPileId } from "../logic/cutDeck";
 import { cutDeck, stackPiles } from "../logic/cutDeck";
 import type { RitualCard } from "../logic/createHiddenDeck";
@@ -175,6 +176,7 @@ export function TarotRoom() {
           finalDeckOrder={finalDeckOrder}
           selectedCards={selectedCards}
           maxCards={MAX_SELECTED_CARDS}
+          spread={SPREAD_CHOICES.find((spread) => spread.id === "three") ?? SPREAD_CHOICES[0]!}
           onSelect={selectFromRibbon}
         />
       )}

@@ -1,9 +1,8 @@
 /**
- * Deterministic-by-date "Tonight's Pull" — a single major arcana card
- * with a one-line emotional whisper tailored to "tonight, with you."
- *
- * The card is chosen from the 22 majors by day-of-year. The id format
- * matches the server deck so CardSigil renders the right emblem.
+ * Deterministic-by-date Daily Card. MVP rules:
+ * - full 78-card tarot deck
+ * - upright only
+ * - one stable card per local calendar day
  */
 
 import type { HintLanguage } from "../../../lib/i18n";
@@ -14,6 +13,28 @@ interface MajorEntry {
   name: string;
   whisper: string;
 }
+
+type DailyDeckEntry = MajorEntry &
+  Required<
+    Pick<
+      DailyPull,
+      | "arcana"
+      | "orientation"
+      | "keyword"
+      | "do"
+      | "avoid"
+      | "love"
+      | "work"
+      | "self"
+      | "themeNote"
+    >
+  > &
+  Pick<DailyPull, "suit">;
+
+type MajorDetail = Omit<
+  DailyDeckEntry,
+  "id" | "name" | "whisper" | "arcana" | "orientation" | "suit"
+>;
 
 const MAJORS: MajorEntry[] = [
   { id: "0-fool",          name: "The Fool",          whisper: "Tonight, something in you is at an edge. Don't talk yourself out of it yet." },
@@ -39,6 +60,207 @@ const MAJORS: MajorEntry[] = [
   { id: "20-judgement",    name: "Judgement",         whisper: "Something is calling you back to yourself. Listen before you answer." },
   { id: "21-world",        name: "The World",         whisper: "A chapter has quietly finished. Mark it before you move on." },
 ];
+
+const MAJOR_DETAILS: Record<string, MajorDetail> = {
+  "0-fool": {
+    keyword: "Beginning · trust · lightness",
+    do: "Take one low-risk first step.",
+    avoid: "Demanding a perfect plan before you begin.",
+    love: "Stay open without rushing the label.",
+    work: "Test the idea in a small, visible way.",
+    self: "Let curiosity lead before fear edits it.",
+    themeNote: "Major Arcana: today's card carries a bigger message, but it still lands through one simple choice.",
+  },
+  "1-magician": {
+    keyword: "Will · skill · focus",
+    do: "Use what is already in your hands.",
+    avoid: "Waiting for someone else to validate your ability.",
+    love: "Say the thing clearly instead of hinting around it.",
+    work: "Turn scattered tools into one finished action.",
+    self: "Notice where you are more capable than you admit.",
+    themeNote: "Major Arcana: today has a bigger message about agency and intention.",
+  },
+  "2-high-priestess": {
+    keyword: "Intuition · silence · inner knowing",
+    do: "Give yourself a quiet pause before answering.",
+    avoid: "Overexplaining a feeling that is still forming.",
+    love: "Listen for what is not being said.",
+    work: "Read the room before moving the plan.",
+    self: "Trust the signal your body keeps repeating.",
+    themeNote: "Major Arcana: today's bigger message is subtle, private, and worth protecting.",
+  },
+  "3-empress": {
+    keyword: "Growth · care · abundance",
+    do: "Feed the thing you want to grow.",
+    avoid: "Calling something failed because it is slow.",
+    love: "Lead with warmth, not performance.",
+    work: "Make the workspace easier to return to.",
+    self: "Choose one comfort that actually restores you.",
+    themeNote: "Major Arcana: today asks you to take growth seriously without forcing it.",
+  },
+  "4-emperor": {
+    keyword: "Structure · boundaries · order",
+    do: "Set one clear rule for your day.",
+    avoid: "Borrowing pressure from someone else's timeline.",
+    love: "Name the boundary kindly and directly.",
+    work: "Make the next step concrete and scheduled.",
+    self: "Stability can be caring, not cold.",
+    themeNote: "Major Arcana: today's bigger message is about building a frame that supports you.",
+  },
+  "5-hierophant": {
+    keyword: "Guidance · tradition · belief",
+    do: "Question one rule before you follow it.",
+    avoid: "Confusing old approval with current truth.",
+    love: "Notice which expectations belong to you.",
+    work: "Ask for guidance, then adapt it to reality.",
+    self: "Keep the wisdom; release the automatic obedience.",
+    themeNote: "Major Arcana: today may highlight a pattern, belief, or teacher.",
+  },
+  "6-lovers": {
+    keyword: "Choice · alignment · bond",
+    do: "Choose the option you can stand behind.",
+    avoid: "Trying to keep every door open out of fear.",
+    love: "Let alignment matter more than intensity.",
+    work: "Pick the priority that matches the bigger goal.",
+    self: "Check whether your choice respects your values.",
+    themeNote: "Major Arcana: today's bigger message is about alignment, not just attraction.",
+  },
+  "7-chariot": {
+    keyword: "Direction · drive · control",
+    do: "Move one thing forward with intention.",
+    avoid: "Letting friction decide the whole day.",
+    love: "Keep the conversation pointed toward repair.",
+    work: "Choose the route and commit to the first mile.",
+    self: "Your energy needs direction, not more pressure.",
+    themeNote: "Major Arcana: today asks you to steer instead of drift.",
+  },
+  "8-strength": {
+    keyword: "Courage · patience · heart",
+    do: "Use gentleness where you usually use force.",
+    avoid: "Mistaking harshness for discipline.",
+    love: "Soften the tone without hiding the truth.",
+    work: "Handle the difficult task in smaller breaths.",
+    self: "Be patient with the part of you that is tired.",
+    themeNote: "Major Arcana: today's bigger message is quiet strength, not domination.",
+  },
+  "9-hermit": {
+    keyword: "Solitude · truth · reflection",
+    do: "Make space to hear your own answer.",
+    avoid: "Filling silence just because it feels awkward.",
+    love: "Take space without disappearing.",
+    work: "Protect one block for deep focus.",
+    self: "Let quiet become information.",
+    themeNote: "Major Arcana: today carries a bigger message through privacy and reflection.",
+  },
+  "10-wheel": {
+    keyword: "Cycle · timing · change",
+    do: "Notice what is turning before you push.",
+    avoid: "Treating a mood shift like a final verdict.",
+    love: "Let the dynamic breathe before naming it forever.",
+    work: "Adapt to the timing instead of fighting it.",
+    self: "Change is information, not proof you failed.",
+    themeNote: "Major Arcana: today's bigger message is about timing and cycles.",
+  },
+  "11-justice": {
+    keyword: "Truth · balance · accountability",
+    do: "Make the fair choice, even if it is small.",
+    avoid: "Skipping the honest part to keep things easy.",
+    love: "Speak plainly and listen just as plainly.",
+    work: "Check the details before you decide.",
+    self: "Accountability can feel clean, not punishing.",
+    themeNote: "Major Arcana: today may bring a bigger message about truth and consequences.",
+  },
+  "12-hanged-man": {
+    keyword: "Pause · perspective · surrender",
+    do: "Try one different angle before acting.",
+    avoid: "Forcing movement just to escape discomfort.",
+    love: "Let a pause reveal what the push cannot.",
+    work: "Reframe the blocker instead of attacking it.",
+    self: "Stillness can be active when it changes your view.",
+    themeNote: "Major Arcana: today's bigger message may arrive through waiting.",
+  },
+  "13-death": {
+    keyword: "Ending · release · change",
+    do: "Close one thing honestly.",
+    avoid: "Dragging out what has already ended.",
+    love: "Release the version of the story that no longer fits.",
+    work: "Retire an approach that is costing too much.",
+    self: "Let an old self-image fall away gently.",
+    themeNote: "Major Arcana: today has a bigger message about release and renewal.",
+  },
+  "14-temperance": {
+    keyword: "Balance · healing · patience",
+    do: "Blend two needs instead of choosing an extreme.",
+    avoid: "Overcorrecting because you feel behind.",
+    love: "Choose moderation over a dramatic test.",
+    work: "Pace the task so it can actually finish.",
+    self: "Healing may look like steadiness today.",
+    themeNote: "Major Arcana: today's bigger message is balance that lasts.",
+  },
+  "15-devil": {
+    keyword: "Pattern · attachment · honesty",
+    do: "Name the habit without shaming yourself.",
+    avoid: "Calling a loop your personality.",
+    love: "Watch the pull between desire and control.",
+    work: "Set a limit around the distraction.",
+    self: "Awareness is the first way out.",
+    themeNote: "Major Arcana: today may show a bigger pattern so you can loosen it.",
+  },
+  "16-tower": {
+    keyword: "Truth · disruption · clearing",
+    do: "Let the unstable part tell you what it needs.",
+    avoid: "Trying to save a structure that keeps cracking.",
+    love: "Be honest about what no longer feels safe or true.",
+    work: "Fix the root issue, not only the visible mess.",
+    self: "A clear break can create room to rebuild.",
+    themeNote: "Major Arcana: today's bigger message may feel sudden, but it clears space.",
+  },
+  "17-star": {
+    keyword: "Hope · renewal · inspiration",
+    do: "Let one hopeful action be enough.",
+    avoid: "Rejecting comfort because it feels too small.",
+    love: "Reach for the softer, more generous read.",
+    work: "Begin again with a cleaner expectation.",
+    self: "Trust the process before it proves itself.",
+    themeNote: "Major Arcana: today carries a bigger message of renewal and faith.",
+  },
+  "18-moon": {
+    keyword: "Uncertainty · dream · intuition",
+    do: "Move slowly where the facts are unclear.",
+    avoid: "Turning anxiety into a prediction.",
+    love: "Ask for clarity without accusing.",
+    work: "Separate what you know from what you fear.",
+    self: "Let feelings be signals, not verdicts.",
+    themeNote: "Major Arcana: today's bigger message is about navigating uncertainty.",
+  },
+  "19-sun": {
+    keyword: "Clarity · warmth · joy",
+    do: "Choose the simple bright thing.",
+    avoid: "Complicating what is already clear.",
+    love: "Let appreciation be obvious.",
+    work: "Put the easy win where everyone can see it.",
+    self: "Receive the good without shrinking it.",
+    themeNote: "Major Arcana: today brings a bigger message through clarity and warmth.",
+  },
+  "20-judgement": {
+    keyword: "Calling · awakening · review",
+    do: "Answer the part of you asking for change.",
+    avoid: "Ignoring the pattern because it is familiar.",
+    love: "Let a real conversation replace the old script.",
+    work: "Review what the last cycle taught you.",
+    self: "You are allowed to outgrow a role.",
+    themeNote: "Major Arcana: today's bigger message may feel like a wake-up call.",
+  },
+  "21-world": {
+    keyword: "Completion · integration · arrival",
+    do: "Mark what is finished before moving on.",
+    avoid: "Rushing past the meaning of a completed chapter.",
+    love: "Acknowledge how far the bond has come.",
+    work: "Close the loop cleanly.",
+    self: "Let yourself feel complete for a moment.",
+    themeNote: "Major Arcana: today carries a bigger message about completion and wholeness.",
+  },
+};
 
 const MAJORS_ZH: MajorEntry[] = [
   { id: "0-fool", name: "愚者", whisper: "今晚，你心里有一部分站在边缘。先不要急着说服自己退回去。" },
@@ -140,13 +362,303 @@ const MAJORS_KO: MajorEntry[] = [
   { id: "21-world", name: "세계", whisper: "한 장이 조용히 끝났습니다. 앞으로 가기 전에 표시를 남기세요." },
 ];
 
-const DECKS: Record<HintLanguage, MajorEntry[]> = {
+const LOCALIZED_MAJOR_DECKS: Record<HintLanguage, MajorEntry[]> = {
   en: MAJORS,
   zh: MAJORS_ZH,
   es: MAJORS_ES,
   ja: MAJORS_JA,
   ko: MAJORS_KO,
 };
+
+const DAILY_MAJOR_ARCANA: DailyDeckEntry[] = MAJORS.map((major) => ({
+  ...major,
+  arcana: "major",
+  orientation: "upright",
+  ...MAJOR_DETAILS[major.id],
+}));
+
+const SUITS = ["wands", "cups", "swords", "pentacles"] as const;
+const RANKS = [
+  "ace",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "page",
+  "knight",
+  "queen",
+  "king",
+] as const;
+
+type MinorSuit = (typeof SUITS)[number];
+type MinorRank = (typeof RANKS)[number];
+
+const SUIT_DETAILS: Record<
+  MinorSuit,
+  {
+    label: string;
+    domain: string;
+    keyword: string;
+    whisper: string;
+    do: string;
+    avoid: string;
+    love: string;
+    work: string;
+    self: string;
+  }
+> = {
+  wands: {
+    label: "Wands",
+    domain: "energy, creativity, and action",
+    keyword: "Spark",
+    whisper: "Let your energy move, but give it a clean direction.",
+    do: "Act on the idea while it still has heat.",
+    avoid: "Burning energy on drama or proving yourself.",
+    love: "Bring warmth and honesty instead of pressure.",
+    work: "Move one creative or high-energy task forward.",
+    self: "Notice what makes you feel awake.",
+  },
+  cups: {
+    label: "Cups",
+    domain: "feelings, relationships, and intuition",
+    keyword: "Feeling",
+    whisper: "Let the emotional truth be simple before you explain it.",
+    do: "Check in with your heart before reacting.",
+    avoid: "Letting a mood become the whole story.",
+    love: "Choose tenderness and honest listening.",
+    work: "Consider the human tone behind the task.",
+    self: "Give your feelings somewhere calm to land.",
+  },
+  swords: {
+    label: "Swords",
+    domain: "thoughts, words, and decisions",
+    keyword: "Clarity",
+    whisper: "A cleaner thought can cut through the noise today.",
+    do: "Say the true thing in the simplest way.",
+    avoid: "Overthinking until every option feels sharp.",
+    love: "Use clear words without turning them into weapons.",
+    work: "Make the decision or define the next question.",
+    self: "Separate facts from fear.",
+  },
+  pentacles: {
+    label: "Pentacles",
+    domain: "body, work, money, and routines",
+    keyword: "Ground",
+    whisper: "Today gets easier when you make it practical.",
+    do: "Take care of one real-world detail.",
+    avoid: "Ignoring your body or the basic numbers.",
+    love: "Show care through something reliable.",
+    work: "Make progress visible and measurable.",
+    self: "Return to food, rest, money, space, or schedule.",
+  },
+};
+
+const RANK_DETAILS: Record<
+  MinorRank,
+  {
+    label: string;
+    keyword: string;
+    whisper: string;
+    do: string;
+    avoid: string;
+    love: string;
+    work: string;
+    self: string;
+  }
+> = {
+  ace: {
+    label: "Ace",
+    keyword: "New seed",
+    whisper: "A fresh opening is small, but it is real.",
+    do: "Start with one clean beginning.",
+    avoid: "Waiting until the beginning feels guaranteed.",
+    love: "Open the door without forcing the room.",
+    work: "Capture the idea and make the first move.",
+    self: "Let newness feel possible.",
+  },
+  two: {
+    label: "Two",
+    keyword: "Choice",
+    whisper: "Two paths are asking you to choose with care.",
+    do: "Compare options honestly.",
+    avoid: "Stalling because both paths have a cost.",
+    love: "Look for mutual balance.",
+    work: "Pick the next priority instead of splitting attention.",
+    self: "Ask what your nervous system can actually hold.",
+  },
+  three: {
+    label: "Three",
+    keyword: "Collaboration",
+    whisper: "Something grows better when it is shared.",
+    do: "Let support or feedback in.",
+    avoid: "Trying to prove you can do everything alone.",
+    love: "Make room for shared effort.",
+    work: "Build with people, notes, or a clearer plan.",
+    self: "Notice where connection helps you expand.",
+  },
+  four: {
+    label: "Four",
+    keyword: "Stability",
+    whisper: "A steadier base matters more than a bigger move.",
+    do: "Create one stable container.",
+    avoid: "Confusing stillness with failure.",
+    love: "Protect the calm part of the connection.",
+    work: "Set the structure before adding more.",
+    self: "Let rest count as part of the work.",
+  },
+  five: {
+    label: "Five",
+    keyword: "Friction",
+    whisper: "The tension is useful if you do not make it your identity.",
+    do: "Address the small conflict directly.",
+    avoid: "Escalating because discomfort feels urgent.",
+    love: "Repair the tone before debating the facts.",
+    work: "Name the blocker and reduce its size.",
+    self: "You can be uncomfortable and still be steady.",
+  },
+  six: {
+    label: "Six",
+    keyword: "Support",
+    whisper: "Help, memory, or kindness can move the day forward.",
+    do: "Accept support or offer it cleanly.",
+    avoid: "Keeping score when generosity is enough.",
+    love: "Return to simple care.",
+    work: "Use what has worked before.",
+    self: "Let ease be allowed.",
+  },
+  seven: {
+    label: "Seven",
+    keyword: "Assessment",
+    whisper: "Pause and choose your strategy instead of reacting.",
+    do: "Review the situation before adding effort.",
+    avoid: "Treating delay as proof nothing is happening.",
+    love: "Notice the pattern before choosing your response.",
+    work: "Decide what deserves more investment.",
+    self: "Trust slow evaluation.",
+  },
+  eight: {
+    label: "Eight",
+    keyword: "Practice",
+    whisper: "Repetition is shaping the result more than one big gesture.",
+    do: "Practice the next useful step.",
+    avoid: "Changing the plan every time it feels boring.",
+    love: "Show up consistently.",
+    work: "Do the focused reps.",
+    self: "Let progress be built, not discovered.",
+  },
+  nine: {
+    label: "Nine",
+    keyword: "Resilience",
+    whisper: "You are closer than it feels, but pacing still matters.",
+    do: "Protect your energy while staying present.",
+    avoid: "Preparing for every possible problem.",
+    love: "Keep the boundary that keeps you kind.",
+    work: "Finish carefully without draining yourself.",
+    self: "Honor what you have already carried.",
+  },
+  ten: {
+    label: "Ten",
+    keyword: "Completion",
+    whisper: "A cycle is full; now simplify what you carry next.",
+    do: "Close the loop or lighten the load.",
+    avoid: "Adding more because you are used to carrying more.",
+    love: "Let the relationship evolve past the old pattern.",
+    work: "Finish, archive, delegate, or release.",
+    self: "You do not have to carry the entire pile.",
+  },
+  page: {
+    label: "Page",
+    keyword: "Curiosity",
+    whisper: "Beginner energy can bring the message you need.",
+    do: "Ask, learn, or try the small experiment.",
+    avoid: "Pretending you already know everything.",
+    love: "Be curious about the other person's world.",
+    work: "Turn uncertainty into a question.",
+    self: "Let yourself be a student today.",
+  },
+  knight: {
+    label: "Knight",
+    keyword: "Momentum",
+    whisper: "Movement helps, but direction matters.",
+    do: "Move with purpose.",
+    avoid: "Charging ahead just to avoid waiting.",
+    love: "Bring energy without rushing the bond.",
+    work: "Advance the plan with a clear next move.",
+    self: "Notice where urgency is useful and where it is noise.",
+  },
+  queen: {
+    label: "Queen",
+    keyword: "Maturity",
+    whisper: "Your power is steadier when it is cared for.",
+    do: "Lead from grounded self-respect.",
+    avoid: "Overgiving until you disappear.",
+    love: "Offer care without abandoning yourself.",
+    work: "Set the tone calmly.",
+    self: "Protect the part of you that nurtures everything else.",
+  },
+  king: {
+    label: "King",
+    keyword: "Leadership",
+    whisper: "Today asks for calm command, not control.",
+    do: "Make the responsible choice.",
+    avoid: "Using certainty to shut down nuance.",
+    love: "Be steady enough to be honest.",
+    work: "Own the decision and the structure around it.",
+    self: "Let maturity be quiet and useful.",
+  },
+};
+
+const DAILY_MINOR_ARCANA: DailyDeckEntry[] = SUITS.flatMap((suit) =>
+  RANKS.map((rank) => {
+    const suitDetail = SUIT_DETAILS[suit];
+    const rankDetail = RANK_DETAILS[rank];
+    return {
+      id: `${rank}-${suit}`,
+      name: `${rankDetail.label} of ${suitDetail.label}`,
+      arcana: "minor",
+      suit,
+      orientation: "upright",
+      keyword: `${rankDetail.keyword} · ${suitDetail.keyword}`,
+      whisper: `${rankDetail.whisper} In ${suitDetail.domain}, ${suitDetail.whisper.charAt(0).toLowerCase()}${suitDetail.whisper.slice(1)}`,
+      do: `${rankDetail.do} ${suitDetail.do}`,
+      avoid: `${rankDetail.avoid} ${suitDetail.avoid}`,
+      love: `${rankDetail.love} ${suitDetail.love}`,
+      work: `${rankDetail.work} ${suitDetail.work}`,
+      self: `${rankDetail.self} ${suitDetail.self}`,
+      themeNote: `Minor Arcana: this is a daily-life card, so read it as practical guidance for ${suitDetail.domain}.`,
+    };
+  }),
+);
+
+export const DAILY_TAROT_DECK: DailyDeckEntry[] = [
+  ...DAILY_MAJOR_ARCANA,
+  ...DAILY_MINOR_ARCANA,
+];
+
+const DAILY_TAROT_BY_ID = new Map(DAILY_TAROT_DECK.map((card) => [card.id, card]));
+
+function toDailyPull(entry: DailyDeckEntry): DailyPull {
+  return {
+    cardId: entry.id,
+    cardName: entry.name,
+    whisper: entry.whisper,
+    arcana: entry.arcana,
+    suit: entry.suit,
+    orientation: "upright",
+    keyword: entry.keyword,
+    do: entry.do,
+    avoid: entry.avoid,
+    love: entry.love,
+    work: entry.work,
+    self: entry.self,
+    themeNote: entry.themeNote,
+  };
+}
 
 /** Stable integer seed from the user's *local* calendar day. */
 function localDaySeed(date: Date): number {
@@ -159,19 +671,21 @@ function localDaySeed(date: Date): number {
 
 /** Deterministic daily pull. Same *local* calendar date = same card all day. */
 export function getDailyPull(now: Date = new Date(), language: HintLanguage = "en"): DailyPull {
-  const deck = DECKS[language];
-  const idx = localDaySeed(now) % deck.length;
-  const m = deck[idx]!;
-  return {
-    cardId: m.id,
-    cardName: m.name,
-    whisper: m.whisper,
-  };
+  const idx = localDaySeed(now) % DAILY_TAROT_DECK.length;
+  return localizeDailyPull(toDailyPull(DAILY_TAROT_DECK[idx]!), language);
 }
 
 export function localizeDailyPull(pull: DailyPull, language: HintLanguage): DailyPull {
-  const translated = DECKS[language].find((entry) => entry.id === pull.cardId);
+  const canonical = DAILY_TAROT_BY_ID.get(pull.cardId);
+  const merged = canonical ? { ...toDailyPull(canonical), ...pull } : pull;
+  const translated = LOCALIZED_MAJOR_DECKS[language].find((entry) => entry.id === pull.cardId);
+
   return translated
-    ? { cardId: translated.id, cardName: translated.name, whisper: translated.whisper }
-    : pull;
+    ? {
+        ...merged,
+        cardId: translated.id,
+        cardName: translated.name,
+        whisper: translated.whisper,
+      }
+    : merged;
 }

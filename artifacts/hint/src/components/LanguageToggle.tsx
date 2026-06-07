@@ -40,7 +40,7 @@ export function LanguageToggle({ className = "", menuPlacement = "top" }: Props)
   };
 
   return (
-    <div ref={rootRef} className={`pointer-events-auto relative inline-flex ${className}`}>
+    <div ref={rootRef} className={`pointer-events-auto relative ${className || "inline-flex"}`}>
       <button
         type="button"
         aria-label={t("language.switchAria")}

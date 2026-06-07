@@ -1,6 +1,7 @@
 import { getLocalDateString } from "../../../lib/identity";
 import type {
   DailyLuckyItem,
+  DailyPull,
   DailyReport,
   DailyScore,
   DailyScoreKey,
@@ -23,6 +24,61 @@ const SCORE_LABELS: Record<HintLanguage, Record<DailyScoreKey, string>> = {
   es: { love: "Amor", resources: "Dinero", work: "Trabajo", focus: "Enfoque", connection: "Vínculos" },
   ja: { love: "恋愛", resources: "お金", work: "仕事", focus: "集中", connection: "人間関係" },
   ko: { love: "사랑", resources: "재정", work: "일", focus: "집중", connection: "관계" },
+};
+
+type BirthDetails = {
+  birthDate?: string | null;
+  birthTime?: string | null;
+  birthPlace?: string | null;
+};
+
+const SUIT_SCORE_BIAS: Record<NonNullable<DailyPull["suit"]>, Partial<Record<DailyScoreKey, number>>> = {
+  wands: { work: 8, focus: 6, connection: 3, love: 1, resources: -1 },
+  cups: { love: 8, connection: 7, focus: 1, work: -1, resources: 0 },
+  swords: { focus: 8, work: 4, connection: 2, resources: 1, love: -2 },
+  pentacles: { resources: 8, work: 6, focus: 4, love: 1, connection: -1 },
+};
+
+const MAJOR_SCORE_BIAS: Record<string, Partial<Record<DailyScoreKey, number>>> = {
+  "0-fool": { focus: 4, connection: 3, resources: -2 },
+  "1-magician": { work: 7, focus: 6, resources: 2 },
+  "2-high-priestess": { focus: 7, love: 3, connection: 2 },
+  "3-empress": { love: 6, resources: 5, connection: 3 },
+  "4-emperor": { work: 6, resources: 5, focus: 3 },
+  "5-hierophant": { connection: 5, focus: 3, work: 2 },
+  "6-lovers": { love: 8, connection: 5, focus: 1 },
+  "7-chariot": { work: 7, focus: 6, love: -1 },
+  "8-strength": { focus: 5, love: 4, work: 2 },
+  "9-hermit": { focus: 7, connection: -2, resources: 2 },
+  "10-wheel": { connection: 4, resources: 3, work: 2 },
+  "11-justice": { focus: 6, resources: 3, love: -1 },
+  "12-hanged-man": { focus: 5, work: -2, connection: 2 },
+  "13-death": { work: 4, focus: 4, love: -2 },
+  "14-temperance": { love: 4, focus: 4, resources: 3 },
+  "15-devil": { resources: 3, love: -3, focus: -2 },
+  "16-tower": { work: -3, love: -2, focus: 4 },
+  "17-star": { love: 5, connection: 5, focus: 3 },
+  "18-moon": { focus: 4, love: 2, work: -2 },
+  "19-sun": { love: 6, connection: 5, work: 3 },
+  "20-judgement": { work: 5, focus: 5, connection: 2 },
+  "21-world": { work: 5, resources: 4, connection: 4 },
+};
+
+const RANK_SCORE_BIAS: Record<string, Partial<Record<DailyScoreKey, number>>> = {
+  ace: { focus: 4, work: 3 },
+  two: { love: 3, connection: 3 },
+  three: { connection: 4, work: 2 },
+  four: { resources: 3, focus: 2 },
+  five: { focus: -2, connection: -1 },
+  six: { connection: 3, love: 2 },
+  seven: { focus: 4, resources: 1 },
+  eight: { work: 4, focus: 3 },
+  nine: { focus: 3, resources: 2 },
+  ten: { work: 2, focus: -1 },
+  page: { focus: 3, connection: 2 },
+  knight: { work: 4, focus: 2 },
+  queen: { love: 3, connection: 3 },
+  king: { work: 4, resources: 3 },
 };
 
 const TITLES = [
@@ -375,9 +431,47 @@ function hash(input: string): number {
   return value >>> 0;
 }
 
-function scoreFor(seed: number, key: DailyScoreKey, offset: number): number {
-  const noise = hash(`${seed}:${key}:${offset}`) % 37;
-  return 61 + noise;
+function clampScore(score: number): number {
+  return Math.max(42, Math.min(96, Math.round(score)));
+}
+
+function cardRank(cardId: string): string {
+  return cardId.split("-")[0] ?? "";
+}
+
+function cardBiasFor(card: DailyPull, key: DailyScoreKey): number {
+  const suitBias = card.suit ? SUIT_SCORE_BIAS[card.suit][key] ?? 0 : 0;
+  const majorBias = card.arcana === "major" ? MAJOR_SCORE_BIAS[card.cardId]?.[key] ?? 0 : 0;
+  const rankBias = card.arcana === "minor" ? RANK_SCORE_BIAS[cardRank(card.cardId)]?.[key] ?? 0 : 0;
+  const cardTexture = (hash(`${card.cardId}:${key}`) % 7) - 3;
+  return suitBias + majorBias + rankBias + cardTexture;
+}
+
+function birthBiasFor(birthDetails: BirthDetails | undefined, key: DailyScoreKey): number {
+  if (!birthDetails?.birthDate) return 0;
+
+  const birthSeed = hash(
+    [
+      birthDetails.birthDate,
+      birthDetails.birthTime ?? "unknown-time",
+      birthDetails.birthPlace ?? "unknown-place",
+      key,
+    ].join(":"),
+  );
+  const hasFullerBirthData = Boolean(birthDetails.birthTime || birthDetails.birthPlace);
+  const range = hasFullerBirthData ? 11 : 7;
+  return (birthSeed % range) - Math.floor(range / 2);
+}
+
+function scoreFor(
+  seed: number,
+  key: DailyScoreKey,
+  offset: number,
+  card: DailyPull,
+  birthDetails?: BirthDetails,
+): number {
+  const dailyNoise = hash(`${seed}:${key}:${offset}`) % 25;
+  return clampScore(58 + dailyNoise + cardBiasFor(card, key) + birthBiasFor(birthDetails, key));
 }
 
 function pick<T>(items: readonly T[], seed: number, offset: number): T {
@@ -388,10 +482,12 @@ export function getDailyReport({
   anonId = "guest",
   date = new Date(),
   language = "en",
+  birthDetails,
 }: {
   anonId?: string;
   date?: Date;
   language?: HintLanguage;
+  birthDetails?: BirthDetails;
 } = {}): DailyReport {
   const dateString = getLocalDateString(date);
   const seed = hash(`${anonId}:${dateString}`);
@@ -402,7 +498,7 @@ export function getDailyReport({
   const scores = SCORE_BASE.map(({ offset, ...score }) => ({
     ...score,
     label: SCORE_LABELS[language][score.key],
-    score: scoreFor(seed, score.key, offset),
+    score: scoreFor(seed, score.key, offset, card, birthDetails),
   }));
 
   const overallScore = Math.round(

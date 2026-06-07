@@ -55,6 +55,17 @@ const inputStyle = {
   color: GLASS.text,
 } as const;
 
+function formatBirthDateInput(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+}
+
+function isCompleteBirthDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 export function ProfileForm({
   initial,
   submitLabel,
@@ -64,12 +75,12 @@ export function ProfileForm({
 }: Props) {
   const { t } = useLanguage();
   const [name, setName] = useState(initial?.name ?? "");
-  const [birthDate, setBirthDate] = useState(initial?.birthDate ?? "");
+  const [birthDate, setBirthDate] = useState(formatBirthDateInput(initial?.birthDate ?? ""));
   const [birthTime, setBirthTime] = useState(initial?.birthTime ?? "");
   const [birthPlace, setBirthPlace] = useState(initial?.birthPlace ?? "");
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = name.trim().length > 0 && birthDate.trim().length > 0;
+  const canSubmit = name.trim().length > 0 && isCompleteBirthDate(birthDate);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,11 +89,13 @@ export function ProfileForm({
       return;
     }
     setError(null);
-    void onSubmit({
+    void Promise.resolve(onSubmit({
       name: name.trim(),
       birthDate,
       birthTime: birthTime.trim() || undefined,
       birthPlace: birthPlace.trim() || undefined,
+    })).catch(() => {
+      setError("Could not save your birth details. Please try again.");
     });
   }
 
@@ -103,9 +116,15 @@ export function ProfileForm({
 
       <Field label={t("profile.birthLabel")}>
         <input
-          type="date"
+          type="text"
           value={birthDate}
-          onChange={(e) => setBirthDate(e.target.value)}
+          onChange={(e) => setBirthDate(formatBirthDateInput(e.target.value))}
+          onInput={(e) => setBirthDate(formatBirthDateInput(e.currentTarget.value))}
+          placeholder="YYYY-MM-DD"
+          autoComplete="bday"
+          inputMode="numeric"
+          maxLength={10}
+          pattern="\d{4}-\d{2}-\d{2}"
           className={inputClass}
           style={inputStyle}
           data-testid="input-birthdate"
