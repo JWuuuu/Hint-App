@@ -13,7 +13,9 @@ node_modules
 
 # local secrets
 .env
+.env.local
 .env.*
+.env.*.local
 !.env.example
 env
 

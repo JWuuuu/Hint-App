@@ -11,12 +11,14 @@ import {
   ShieldAlert,
   LifeBuoy,
   Mail,
+  UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Link } from "wouter";
 import { ACCENT, GLASS } from "../../hold/atmosphere";
 import { SectionLabel, GlassPanel } from "../../../components/app/AppChrome";
 import { LanguageToggle } from "../../../components/LanguageToggle";
+import { CONTACT_EMAIL } from "../../../components/LegalNotice";
 import { useLanguage } from "../../../lib/i18n";
 import { apiUrl } from "../../../lib/api";
 import { getAnonId } from "../../../lib/identity";
@@ -77,6 +79,12 @@ export function SettingsList() {
       onClick: () => setAppearanceOpen((open) => !open),
     },
     {
+      icon: UserRound,
+      label: "Log in / Sign up",
+      detail: "Verify email or phone, or connect a social login.",
+      href: "/login",
+    },
+    {
       icon: Sparkles,
       label: "Tarot room",
       detail: "Change your saved deck, room mood, and background.",
@@ -91,7 +99,7 @@ export function SettingsList() {
       href: "/disclaimer",
     },
     { icon: LifeBuoy, label: t("me.support"), detail: t("me.supportDetail"), href: "/contact" },
-    { icon: Mail, label: t("me.contact"), detail: t("me.contactDetail"), href: "/contact" },
+    { icon: Mail, label: t("me.contact"), detail: CONTACT_EMAIL, href: "/contact" },
     {
       icon: Trash2,
       label: t("me.clearHistory"),
@@ -99,7 +107,7 @@ export function SettingsList() {
       danger: true,
       onClick: () => void clearHistory(t("me.clearConfirm")),
     },
-    { icon: Info, label: t("me.about"), detail: t("me.aboutDetail"), comingSoon: true },
+    { icon: Info, label: t("me.about"), detail: t("me.aboutDetail"), href: "/about" },
   ];
 
   return (
@@ -154,7 +162,7 @@ export function SettingsList() {
                 <PreferenceSwitch
                   icon={Volume2}
                   label={t("me.sound")}
-                  description="Store sound and browser haptics preference for supported devices."
+                  description="Controls browser vibration/haptics where the device supports it."
                   checked={preferences.soundAndHaptics}
                   onChange={(checked) => setPreference("soundAndHaptics", checked)}
                 />

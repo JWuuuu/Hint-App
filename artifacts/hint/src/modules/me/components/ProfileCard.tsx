@@ -105,7 +105,7 @@ export function ProfileCard({
               color: ACCENT.gold,
             }}
           >
-            Add birth details for a sharper Ba Zi score
+            Add birth details once for sharper daily and astrology signals
           </button>
         )}
 

@@ -1,4 +1,5 @@
 import { getAnonId } from "../../lib/identity";
+import type { TarotCardArtId } from "../tarot/logic/cardImageMap";
 
 const STORAGE_KEY = "hint_local_tarot_readings_v1";
 const UPDATED_EVENT = "hint:local-tarot-readings-updated";
@@ -21,6 +22,7 @@ export type LocalTarotReading = {
   question?: string;
   story?: string;
   focusLabel?: string;
+  cardArtId?: TarotCardArtId;
   shortAnswer: string;
   questionMeaning: string;
   cardMeanings: string[];
@@ -67,6 +69,7 @@ export function saveLocalTarotReading(
     question: input.question,
     story: input.story,
     focusLabel: input.focusLabel,
+    cardArtId: input.cardArtId,
     shortAnswer: input.shortAnswer,
     questionMeaning: input.questionMeaning,
     cardMeanings: input.cardMeanings,

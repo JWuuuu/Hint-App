@@ -4,9 +4,11 @@ import { SendHorizontal } from "lucide-react";
 import { useSendTarotChatMessage, type TarotCardDraw } from "@workspace/api-client-react";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { getCardKeywords, type RitualCard } from "../logic/createHiddenDeck";
+import type { TarotCardArtId } from "../logic/cardImageMap";
 import type { TarotCardBackStyle } from "./TarotCardVisual";
 import { TarotCardVisual } from "./TarotCardVisual";
 import { saveLocalTarotReading } from "../../readings/localTarotReadings";
+import { saveLocalQuestionHistory } from "../../readings/localQuestionHistory";
 import { recordRitualCompletion } from "../../home/data/localRitualProgress";
 
 type LocalChatMessage = {
@@ -19,9 +21,11 @@ type TarotHintReadingChatProps = {
   selectedCards: RitualCard[];
   spread: SpreadChoice;
   backStyle?: TarotCardBackStyle;
+  cardArtId?: TarotCardArtId;
   question?: string;
   story?: string;
   focusLabel?: string;
+  archiveOnOpen?: boolean;
 };
 
 const FOLLOW_UPS = [
@@ -301,9 +305,11 @@ export function TarotHintReadingChat({
   selectedCards,
   spread,
   backStyle = "nocturne",
+  cardArtId = "original",
   question,
   story,
   focusLabel,
+  archiveOnOpen = true,
 }: TarotHintReadingChatProps) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
@@ -330,16 +336,18 @@ export function TarotHintReadingChat({
   }, [selectedCards]);
 
   useEffect(() => {
+    if (!archiveOnOpen) return;
     if (selectedCards.length === 0) return;
     const saveKey = selectedCards.map((card) => card.visualId).join("|");
     if (savedReadingKeyRef.current === saveKey) return;
     savedReadingKeyRef.current = saveKey;
-    saveLocalTarotReading({
+    const savedReading = saveLocalTarotReading({
       spreadType: spread.id,
       spreadLabel: spread.label,
       question,
       story,
       focusLabel,
+      cardArtId,
       shortAnswer,
       questionMeaning,
       cardMeanings,
@@ -351,6 +359,15 @@ export function TarotHintReadingChat({
         keywords: getReadableCardMeaning(card).keywords,
       })),
     });
+    if (question?.trim()) {
+      saveLocalQuestionHistory({
+        question,
+        focus: focusLabel?.trim() || spread.label,
+        spreadType: spread.id,
+        readingId: savedReading.id,
+        createdAt: savedReading.createdAt,
+      });
+    }
     recordRitualCompletion();
     // Save once when the reading page opens for this selected card set.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -461,6 +478,7 @@ export function TarotHintReadingChat({
                       faceDown={false}
                       revealed
                       backStyle={backStyle}
+                      cardArtId={cardArtId}
                       positionLabel={`Hint ${index + 1}`}
                       ariaLabel={`Hint ${index + 1}, ${card.name}, ${card.orientation}`}
                       showFrontCaption={false}

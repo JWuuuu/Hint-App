@@ -1,0 +1,240 @@
+import { useEffect, useState } from "react";
+import { getGeoDetails, getTimezoneDetails, type AstroGeoPlace } from "../../lib/astro/astroClient";
+import { useLanguage } from "../../lib/i18n";
+import type { BirthProfile } from "../../types/astrology";
+
+type BirthProfileDraft = {
+  name: string;
+  birthDate: string;
+  birthTime: string;
+  birthPlace: string;
+  latitude: string;
+  longitude: string;
+  timezone: string;
+  timezoneOffset: string;
+};
+
+function draftFrom(profile?: BirthProfile | null): BirthProfileDraft {
+  return {
+    name: profile?.name ?? "",
+    birthDate: profile?.birthDate ?? "",
+    birthTime: profile?.birthTime ?? "",
+    birthPlace: profile?.birthPlace ?? "",
+    latitude: profile?.latitude !== undefined ? String(profile.latitude) : "",
+    longitude: profile?.longitude !== undefined ? String(profile.longitude) : "",
+    timezone: profile?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timezoneOffset: profile?.timezoneOffset !== undefined ? String(profile.timezoneOffset) : "",
+  };
+}
+
+const ASTRO_TEXT = "var(--astro-text)";
+const ASTRO_MUTED = "var(--astro-muted)";
+const ASTRO_GOLD_BRIGHT = "var(--astro-gold-bright)";
+const ASTRO_GOLD = "var(--astro-gold)";
+const ASTRO_BORDER = "var(--astro-border)";
+const ASTRO_SURFACE = "var(--astro-surface)";
+const ASTRO_INNER = "var(--astro-inner)";
+const ASTRO_INPUT = "var(--astro-input)";
+const ASTRO_BUTTON = "var(--astro-button)";
+const ASTRO_BUTTON_TEXT = "var(--astro-button-text)";
+
+const SAMPLE_PLACES: Array<{ label: string; draft: BirthProfileDraft }> = [
+  {
+    label: "Phoenix sample",
+    draft: {
+      name: "Phoenix Sample",
+      birthDate: "1992-04-12",
+      birthTime: "09:30",
+      birthPlace: "Phoenix, AZ",
+      latitude: "33.4484",
+      longitude: "-112.0740",
+      timezone: "America/Phoenix",
+      timezoneOffset: "-7",
+    },
+  },
+  {
+    label: "Los Angeles sample",
+    draft: {
+      name: "Los Angeles Sample",
+      birthDate: "1990-07-22",
+      birthTime: "18:20",
+      birthPlace: "Los Angeles, CA",
+      latitude: "34.0522",
+      longitude: "-118.2437",
+      timezone: "America/Los_Angeles",
+      timezoneOffset: "-8",
+    },
+  },
+  {
+    label: "Taipei sample",
+    draft: {
+      name: "Taipei Sample",
+      birthDate: "1995-11-05",
+      birthTime: "07:45",
+      birthPlace: "Taipei, Taiwan",
+      latitude: "25.0330",
+      longitude: "121.5654",
+      timezone: "Asia/Taipei",
+      timezoneOffset: "8",
+    },
+  },
+];
+
+export function BirthProfileForm({
+  profile,
+  title = "Add birth profile",
+  submitLabel = "Save birth profile",
+  onSubmit,
+}: {
+  profile?: BirthProfile | null;
+  title?: string;
+  submitLabel?: string;
+  onSubmit: (profile: BirthProfileDraft) => void;
+}) {
+  const { t } = useLanguage();
+  const [draft, setDraft] = useState<BirthProfileDraft>(() => draftFrom(profile));
+  const [placeResults, setPlaceResults] = useState<AstroGeoPlace[]>([]);
+  const [placeLoading, setPlaceLoading] = useState(false);
+  const [placeMode, setPlaceMode] = useState<"live" | "fallback" | null>(null);
+  const [placeError, setPlaceError] = useState("");
+  const complete = draft.name.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(draft.birthDate) && draft.birthPlace.trim().length > 0;
+
+  useEffect(() => {
+    setDraft(draftFrom(profile));
+  }, [profile?.birthDate, profile?.birthPlace, profile?.birthTime, profile?.latitude, profile?.longitude, profile?.name, profile?.timezone, profile?.timezoneOffset]);
+
+  function update<Key extends keyof BirthProfileDraft>(key: Key, value: BirthProfileDraft[Key]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  async function searchPlace() {
+    const query = draft.birthPlace.trim();
+    if (!query) return;
+    setPlaceLoading(true);
+    setPlaceError("");
+    try {
+      const response = await getGeoDetails(query, 6);
+      setPlaceResults(response.results);
+      setPlaceMode(response.mode);
+      if (!response.results.length) setPlaceError(t("birthProfile.placeNotFound"));
+    } catch {
+      setPlaceError(t("birthProfile.placeUnavailable"));
+      setPlaceResults([]);
+      setPlaceMode(null);
+    } finally {
+      setPlaceLoading(false);
+    }
+  }
+
+  async function selectPlace(place: AstroGeoPlace) {
+    const label = place.label ?? [place.name, place.region, place.country].filter(Boolean).join(", ");
+    setDraft((current) => ({
+      ...current,
+      birthPlace: label || place.name,
+      latitude: String(place.latitude),
+      longitude: String(place.longitude),
+      timezone: place.timezoneId ?? place.timezone ?? current.timezone,
+      timezoneOffset: typeof place.timezoneOffset === "number" ? String(place.timezoneOffset) : current.timezoneOffset,
+    }));
+    try {
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(draft.birthDate) ? draft.birthDate : new Date().toISOString().slice(0, 10);
+      const timezone = await getTimezoneDetails(place.latitude, place.longitude, date);
+      setDraft((current) => ({
+        ...current,
+        timezone: timezone.timezoneId ?? place.timezoneId ?? place.timezone ?? current.timezone,
+        timezoneOffset: typeof timezone.timezoneOffset === "number" ? String(timezone.timezoneOffset) : current.timezoneOffset,
+      }));
+    } catch {
+      // Coordinates are still useful when timezone fallback is unavailable.
+    }
+  }
+
+  return (
+    <form
+      className="rounded-[8px] border p-5 shadow-[var(--astro-shadow)]"
+      style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!complete) return;
+        onSubmit(draft);
+      }}
+    >
+      <p className="mb-2 text-[11px] font-black uppercase tracking-[0.18em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{t("birthProfile.editor")}</p>
+      <h2 className="font-serif text-[30px] leading-tight" style={{ color: ASTRO_TEXT }}>
+        {title}
+      </h2>
+      <p className="mt-2 text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>
+        {t("birthProfile.localSave")}
+      </p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <input aria-label={t("birthProfile.name")} className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder={t("birthProfile.name")} />
+        <input aria-label={t("birthProfile.birthDate")} className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.birthDate} onChange={(event) => update("birthDate", event.target.value)} placeholder={t("birthProfile.birthDate")} inputMode="numeric" />
+        <input
+          aria-label={t("birthProfile.birthTime")}
+          className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none"
+          style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}
+          value={draft.birthTime}
+          onChange={(event) => update("birthTime", event.target.value)}
+          placeholder={t("birthProfile.birthTimeOptional")}
+          type="time"
+        />
+        <div className="sm:col-span-2">
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <input aria-label={t("birthProfile.birthPlace")} className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.birthPlace} onChange={(event) => update("birthPlace", event.target.value)} placeholder={t("birthProfile.birthPlace")} />
+            <button type="button" onClick={searchPlace} disabled={placeLoading || !draft.birthPlace.trim()} className="h-12 rounded-[8px] border px-4 text-[13px] font-black transition-[opacity] disabled:opacity-50" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}>
+              {placeLoading ? t("birthProfile.searching") : t("birthProfile.findPlace")}
+            </button>
+          </div>
+          {placeMode ? <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: ASTRO_MUTED }}>{placeMode === "live" ? t("birthProfile.liveMatch") : t("birthProfile.fallbackMatch")}</p> : null}
+          {placeError ? <p className="mt-2 text-[12px] font-semibold" style={{ color: ASTRO_GOLD }}>{placeError}</p> : null}
+          {placeResults.length ? (
+            <div className="mt-3 grid gap-2">
+              {placeResults.map((place) => {
+                const label = place.label ?? [place.name, place.region, place.country].filter(Boolean).join(", ");
+                return (
+                  <button key={`${place.name}-${place.latitude}-${place.longitude}`} type="button" onClick={() => void selectPlace(place)} className="rounded-[8px] border px-3 py-2 text-left transition-[transform,opacity] duration-200 hover:-translate-y-0.5" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}>
+                    <span className="block text-[13px] font-black">{label || place.name}</span>
+                    <span className="mt-1 block text-[11px] font-semibold" style={{ color: ASTRO_MUTED }}>{place.latitude.toFixed(4)}, {place.longitude.toFixed(4)}{place.timezone ? ` · ${place.timezone}` : ""}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {SAMPLE_PLACES.map((sample) => (
+          <button
+            key={sample.label}
+            type="button"
+            className="rounded-[8px] border px-3 py-2 text-[12px] font-black"
+            style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}
+            onClick={() => setDraft((current) => ({ ...current, ...sample.draft }))}
+          >
+            {sample.label}
+          </button>
+        ))}
+      </div>
+      <details className="mt-4 rounded-[8px] border p-4" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
+        <summary className="cursor-pointer text-[12px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{t("birthProfile.advancedLocation")}</summary>
+        <p className="mt-2 text-[12px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>
+          {t("birthProfile.advancedHelp")}
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <input className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.latitude} onChange={(event) => update("latitude", event.target.value)} placeholder={t("birthProfile.latitude")} inputMode="decimal" />
+          <input className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.longitude} onChange={(event) => update("longitude", event.target.value)} placeholder={t("birthProfile.longitude")} inputMode="decimal" />
+          <input className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.timezone} onChange={(event) => update("timezone", event.target.value)} placeholder={t("birthProfile.timezone")} />
+          <input className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.timezoneOffset} onChange={(event) => update("timezoneOffset", event.target.value)} placeholder={t("birthProfile.timezoneOffset")} inputMode="decimal" />
+        </div>
+      </details>
+      <button
+        type="submit"
+        disabled={!complete}
+        className="mt-5 h-12 w-full rounded-[8px] text-[14px] font-black shadow-[var(--astro-button-shadow)] transition-[transform,opacity] duration-200 hover:-translate-y-0.5 disabled:opacity-45"
+        style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}
+      >
+        {submitLabel}
+      </button>
+    </form>
+  );
+}

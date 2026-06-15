@@ -1,4 +1,13 @@
-const CARD_IMAGE_BASE_PATH = "/brand/tarot/cards";
+export type TarotCardArtId = "original" | "hint-classic";
+
+const CARD_IMAGE_BASE_PATHS: Record<TarotCardArtId, string> = {
+  original: "/brand/tarot/cards",
+  "hint-classic": "/brand/tarot/decks/hint-classic/cards",
+};
+
+export function isTarotCardArtId(value: unknown): value is TarotCardArtId {
+  return value === "original" || value === "hint-classic";
+}
 
 const MAJOR_CARD_IMAGES: Record<string, string> = {
   "0-fool": "00-TheFool.jpg",
@@ -49,18 +58,18 @@ const MINOR_SUIT_PREFIXES: Record<string, string> = {
   wands: "Wands",
 };
 
-function withBasePath(fileName: string) {
-  return `${CARD_IMAGE_BASE_PATH}/${fileName}`;
+function withBasePath(fileName: string, cardArtId: TarotCardArtId) {
+  return `${CARD_IMAGE_BASE_PATHS[cardArtId]}/${fileName}`;
 }
 
-export function getTarotCardImage(cardId: string): string | null {
+export function getTarotCardImage(cardId: string, cardArtId: TarotCardArtId = "original"): string | null {
   const majorImage = MAJOR_CARD_IMAGES[cardId];
-  if (majorImage) return withBasePath(majorImage);
+  if (majorImage) return withBasePath(majorImage, cardArtId);
 
   const [rank, suit] = cardId.split("-");
   const rankNumber = rank ? MINOR_RANK_NUMBERS[rank] : undefined;
   const suitPrefix = suit ? MINOR_SUIT_PREFIXES[suit] : undefined;
 
   if (!rankNumber || !suitPrefix) return null;
-  return withBasePath(`${suitPrefix}${rankNumber}.jpg`);
+  return withBasePath(`${suitPrefix}${rankNumber}.jpg`, cardArtId);
 }

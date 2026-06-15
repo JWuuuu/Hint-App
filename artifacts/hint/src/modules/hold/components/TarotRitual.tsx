@@ -6,6 +6,7 @@ import type { TarotRoomSetup } from "../useHoldFlow";
 import { IVORY, GOLD, TEXT_HALO } from "../atmosphere";
 import { CardSigil } from "./CardSigil";
 import { useLanguage } from "../../../lib/i18n";
+import { getHintPreferences } from "../../../lib/preferences";
 
 /**
  * TarotRitual — a tactile, deliberate card ceremony that replaces the
@@ -63,6 +64,7 @@ function pileIndices(p: 0 | 1 | 2): number[] {
 }
 
 function haptic(pattern: number | number[]) {
+  if (!getHintPreferences().soundAndHaptics) return;
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
     navigator.vibrate(pattern);
   }

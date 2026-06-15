@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import type { RitualCard } from "../logic/createHiddenDeck";
+import type { TarotCardArtId } from "../logic/cardImageMap";
 import { TarotCardVisual } from "./TarotCardVisual";
 import type { TarotCardBackStyle } from "./TarotCardVisual";
 
@@ -8,6 +9,7 @@ type ReadingRevealProps = {
   selectedCards: RitualCard[];
   revealedIds: readonly string[];
   backStyle?: TarotCardBackStyle;
+  cardArtId?: TarotCardArtId;
   autoReveal?: boolean;
   onContinue?: () => void;
   onReveal: (visualId: string) => void;
@@ -34,6 +36,7 @@ export function ReadingReveal({
   selectedCards,
   revealedIds,
   backStyle = "nocturne",
+  cardArtId = "original",
   autoReveal = false,
   onContinue,
   onReveal,
@@ -67,11 +70,11 @@ export function ReadingReveal({
   }, [autoReveal, onReveal, revealedIds, selectedCards]);
 
   return (
-    <section className="relative h-full w-full overflow-y-auto overflow-x-hidden px-4 py-8 text-center">
+    <section className="relative h-full w-full overflow-y-auto overflow-x-hidden px-4 py-10 text-center sm:py-12">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(226,190,116,0.17),transparent_28%),radial-gradient(circle_at_50%_72%,rgba(8,19,34,0.74),transparent_34%),linear-gradient(180deg,#050816,#010207)]" />
       <div className="pointer-events-none absolute inset-x-0 top-[22%] mx-auto h-[55%] max-w-5xl rounded-full bg-[#e4c174]/[0.045] blur-3xl" />
 
-      <div className="relative z-10 mx-auto mb-8 max-w-3xl">
+      <div className="relative z-30 mx-auto mb-10 max-w-3xl sm:mb-12">
         <p className="font-serif text-[34px] leading-tight text-[#f7ead0] sm:text-5xl">{title}</p>
         <p className="mt-3 font-sans text-sm text-[#d8c7a6]/78 sm:text-[15px]">{subtitle}</p>
       </div>
@@ -85,7 +88,7 @@ export function ReadingReveal({
             <motion.div
               key={card.visualId}
               layoutId={`spread-card-${card.visualId}`}
-              initial={{ opacity: 0, y: 34, scale: 0.92 }}
+              initial={{ opacity: 0, y: 18, scale: 0.94 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: index * 0.08, type: "spring", stiffness: 165, damping: 23 }}
               className={`relative flex flex-col items-center gap-4 ${canReveal ? "cursor-pointer" : ""}`}
@@ -110,6 +113,7 @@ export function ReadingReveal({
                   revealed={revealed}
                   active={!revealed}
                   backStyle={backStyle}
+                  cardArtId={cardArtId}
                   positionLabel={label}
                   ariaLabel={revealed ? undefined : `${label}, face-down`}
                   showFrontCaption={false}

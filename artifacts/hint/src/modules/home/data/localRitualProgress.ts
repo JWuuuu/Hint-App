@@ -3,11 +3,13 @@ import { getAnonId, getLocalDateString } from "../../../lib/identity";
 const STORAGE_KEY = "hint_local_ritual_progress_v1";
 const UPDATED_EVENT = "hint:local-ritual-progress-updated";
 const RITUAL_CYCLE_DAYS = 7;
-const AURA_STARS_PER_RITUAL = 4;
+const CREDITS_PER_WEEK = 10;
+const DAYS_PER_STAR = 30;
 
 type StoredRitualProgress = {
   anonId: string;
   completedDates: string[];
+  taskCompletions?: Record<string, number[]>;
   updatedAt: string;
 };
 
@@ -20,9 +22,10 @@ export type RitualWeekDay = {
 
 export type RitualProgressSnapshot = {
   completedDates: string[];
+  todayTaskCompletions: number[];
   currentStreak: number;
   longestStreak: number;
-  auraStars: number;
+  starLevel: number;
   readingCredits: number;
   todayCompleted: boolean;
   daysUntilCredit: number;
@@ -120,10 +123,11 @@ function toSnapshot(stored: StoredRitualProgress, today = getLocalDateString()):
 
   return {
     completedDates,
+    todayTaskCompletions: Array.from(new Set(stored.taskCompletions?.[today] ?? [])).filter((index) => index >= 0 && index < 3),
     currentStreak,
     longestStreak: longestStreakFor(completedDates),
-    auraStars: completedDates.length * AURA_STARS_PER_RITUAL,
-    readingCredits: Math.floor(completedDates.length / RITUAL_CYCLE_DAYS),
+    starLevel: Math.floor(currentStreak / DAYS_PER_STAR),
+    readingCredits: Math.floor(completedDates.length / RITUAL_CYCLE_DAYS) * CREDITS_PER_WEEK,
     todayCompleted: completedSet.has(today),
     daysUntilCredit,
     progressPercent:
@@ -138,6 +142,7 @@ function emptyProgress(anonId = getAnonId()): StoredRitualProgress {
   return {
     anonId,
     completedDates: [],
+    taskCompletions: {},
     updatedAt: new Date().toISOString(),
   };
 }
@@ -154,6 +159,42 @@ export function recordRitualCompletion(date = getLocalDateString(), anonId = get
   const next: StoredRitualProgress = {
     ...existing,
     completedDates,
+    updatedAt: new Date().toISOString(),
+  };
+
+  writeAll([next, ...all.filter((item) => item.anonId !== anonId)]);
+  return toSnapshot(next, date);
+}
+
+export function toggleRitualTask(index: number, date = getLocalDateString(), anonId = getAnonId()): RitualProgressSnapshot {
+  const all = readAll();
+  const existing = all.find((item) => item.anonId === anonId) ?? emptyProgress(anonId);
+  const taskCompletions = { ...(existing.taskCompletions ?? {}) };
+  const current = new Set(taskCompletions[date] ?? []);
+
+  if (current.has(index)) {
+    current.delete(index);
+  } else {
+    current.add(index);
+  }
+
+  const nextTasks = Array.from(current).filter((value) => value >= 0 && value < 3).sort();
+  if (nextTasks.length > 0) {
+    taskCompletions[date] = nextTasks;
+  } else {
+    delete taskCompletions[date];
+  }
+
+  const completedDates = normalizeDates(
+    nextTasks.length === 3
+      ? [...existing.completedDates, date]
+      : existing.completedDates.filter((completedDate) => completedDate !== date),
+  );
+
+  const next: StoredRitualProgress = {
+    ...existing,
+    completedDates,
+    taskCompletions,
     updatedAt: new Date().toISOString(),
   };
 

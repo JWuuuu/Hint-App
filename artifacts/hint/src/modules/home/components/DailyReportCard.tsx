@@ -1,47 +1,41 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import {
   ArrowRight,
-  Brain,
+  BookOpen,
   BriefcaseBusiness,
   Check,
-  Clock3,
   Coins,
-  Compass,
   Heart,
-  Palette,
   Sparkles,
   Users,
 } from "lucide-react";
 import { ACCENT } from "../../hold/atmosphere";
 import { CardSigil } from "../../hold/components/CardSigil";
-import { getAnonId } from "../../../lib/identity";
+import { getAnonId, getLocalDateString } from "../../../lib/identity";
 import { getDailyReport } from "../data/dailyReport";
 import { localizeDailyPull } from "../data/dailyPulls";
+import { getRitualProgress } from "../data/localRitualProgress";
 import type { DailyPull, DailyScore, DailyScoreKey } from "../types/home.types";
 import { useLanguage } from "../../../lib/i18n";
 import { useProfile } from "../../../lib/useProfile";
+import { readBirthProfile } from "../../../lib/astro/userBirthProfile";
+import { LuckyIllustration } from "./LuckyIllustration";
 
 const SCORE_ICONS: Record<DailyScoreKey, typeof Heart> = {
   love: Heart,
-  resources: Coins,
-  work: BriefcaseBusiness,
-  focus: Brain,
-  connection: Users,
+  wealth: Coins,
+  career: BriefcaseBusiness,
+  study: BookOpen,
+  people: Users,
 };
-
-const LUCKY_ICONS = {
-  color: Palette,
-  hour: Clock3,
-  direction: Compass,
-  number: Sparkles,
-} as const;
 
 interface DailyReportCardProps {
   className?: string;
   detailed?: boolean;
   cardOverride?: DailyPull | null;
+  dateOverride?: Date;
 }
 
 function ScoreBar({ score }: { score: DailyScore }) {
@@ -204,28 +198,59 @@ export function DailyReportCard({
   className = "",
   detailed = false,
   cardOverride,
+  dateOverride,
 }: DailyReportCardProps) {
   const { language, t } = useLanguage();
   const { profile } = useProfile();
+  const [birthProfile, setBirthProfile] = useState(() => readBirthProfile());
+  const dateKey = dateOverride ? getLocalDateString(dateOverride) : undefined;
+  const activeBirthDetails = profile?.birthDate
+    ? {
+        name: profile.name,
+        birthDate: profile.birthDate,
+        birthTime: profile.birthTime,
+        birthPlace: profile.birthPlace,
+      }
+    : birthProfile
+      ? {
+          name: birthProfile.name,
+          birthDate: birthProfile.birthDate,
+          birthTime: birthProfile.birthTime,
+          birthPlace: birthProfile.birthPlace,
+        }
+      : null;
   const report = useMemo(
     () =>
       getDailyReport({
         anonId: getAnonId(),
+        date: dateOverride,
         language,
-        birthDetails: profile
-          ? {
-              birthDate: profile.birthDate,
-              birthTime: profile.birthTime,
-              birthPlace: profile.birthPlace,
-            }
-          : undefined,
+        birthDetails: activeBirthDetails ?? undefined,
+        ritualStreak: getRitualProgress().currentStreak,
       }),
-    [language, profile?.birthDate, profile?.birthTime, profile?.birthPlace],
+    [activeBirthDetails?.birthDate, activeBirthDetails?.birthPlace, activeBirthDetails?.birthTime, dateKey, language],
   );
   const card = cardOverride ? localizeDailyPull(cardOverride, language) : report.card;
+  const birthProfileLabel = activeBirthDetails?.birthDate
+    ? `${activeBirthDetails.name || "Birth"} sky profile`
+    : null;
   const [checked, setChecked] = useState<boolean[]>(() =>
     report.tasks.map(() => false),
   );
+
+  useEffect(() => {
+    const syncBirthProfile = () => setBirthProfile(readBirthProfile());
+    window.addEventListener("hint.birthProfile.updated", syncBirthProfile);
+    window.addEventListener("storage", syncBirthProfile);
+    return () => {
+      window.removeEventListener("hint.birthProfile.updated", syncBirthProfile);
+      window.removeEventListener("storage", syncBirthProfile);
+    };
+  }, []);
+
+  useEffect(() => {
+    setChecked(report.tasks.map(() => false));
+  }, [report.date, report.tasks]);
 
   return (
     <motion.section
@@ -260,6 +285,18 @@ export function DailyReportCard({
             >
               {t("daily.eyebrow")}
             </p>
+            {birthProfileLabel ? (
+              <span
+                className="mt-2 inline-flex rounded-full border px-2.5 py-1 font-sans text-[10px] font-black uppercase tracking-[0.12em]"
+                style={{
+                  color: "var(--hint-gold)",
+                  borderColor: "color-mix(in srgb, var(--hint-gold) 28%, var(--hint-border))",
+                  background: "color-mix(in srgb, var(--hint-gold) 9%, transparent)",
+                }}
+              >
+                {birthProfileLabel}
+              </span>
+            ) : null}
             <h2 className="mt-1 max-w-[13ch] font-serif text-[20px] leading-tight sm:max-w-[24ch] sm:text-[24px] lg:mt-2 lg:max-w-none lg:text-[38px] lg:leading-none" style={{ color: "var(--hint-text)" }}>
               {report.title}
             </h2>
@@ -330,31 +367,27 @@ export function DailyReportCard({
 
         {detailed && <CardGuidanceGrid card={card} />}
 
-        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {report.lucky.map((item) => {
-            const Icon = LUCKY_ICONS[item.key];
-            return (
-              <div
-                key={item.key}
-                className="rounded-[12px] border p-3"
-                style={{
-                  background: "var(--hint-card-inner)",
-                  borderColor: "var(--hint-border)",
-                }}
-              >
-                <Icon size={17} strokeWidth={1.8} style={{ color: ACCENT.gold }} />
-                <p className="mt-2 font-sans text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--hint-faint)" }}>
-                  {item.label}
-                </p>
-                <p className="mt-1 font-serif text-[17px] leading-none" style={{ color: "var(--hint-text)" }}>
-                  {item.value}
-                </p>
-                <p className="mt-2 font-sans text-[11px] leading-snug" style={{ color: "var(--hint-muted)" }}>
-                  {item.hint}
-                </p>
-              </div>
-            );
-          })}
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
+          {report.lucky.map((item) => (
+            <div
+              key={item.key}
+              className="min-h-[152px] rounded-[8px] px-3 py-4 text-center"
+              style={{
+                background: "var(--hint-lucky-tile-bg-strong)",
+              }}
+            >
+              <LuckyIllustration item={item} size={54} />
+              <p className="mt-3 font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--hint-faint)" }}>
+                {item.label}
+              </p>
+              <p className="mt-1 truncate font-serif text-[18px] leading-tight" style={{ color: "var(--hint-text)" }}>
+                {item.value}
+              </p>
+              <p className="mx-auto mt-2 max-w-[13rem] font-sans text-[11px] leading-snug" style={{ color: "var(--hint-muted)" }}>
+                {item.hint}
+              </p>
+            </div>
+          ))}
         </div>
 
         {detailed && (

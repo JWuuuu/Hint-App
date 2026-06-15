@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import type { RitualCard } from "../logic/createHiddenDeck";
+import type { TarotCardArtId } from "../logic/cardImageMap";
 import { HintTarotCardFront } from "./HintTarotCardFront";
 
 export type TarotCardBackStyle = "nocturne" | "ivory" | "rose";
@@ -13,6 +14,7 @@ type TarotCardVisualProps = {
   active?: boolean;
   selected?: boolean;
   backStyle?: TarotCardBackStyle;
+  cardArtId?: TarotCardArtId;
   positionLabel?: string;
   ariaLabel?: string;
   className?: string;
@@ -102,6 +104,7 @@ export function TarotCardVisual({
   active = false,
   selected = false,
   backStyle = "nocturne",
+  cardArtId = "original",
   positionLabel,
   ariaLabel,
   className = "",
@@ -151,6 +154,7 @@ export function TarotCardVisual({
               card={card}
               compact={compact}
               backStyle={backStyle}
+              cardArtId={cardArtId}
               positionLabel={positionLabel}
               showCaption={showFrontCaption}
             />

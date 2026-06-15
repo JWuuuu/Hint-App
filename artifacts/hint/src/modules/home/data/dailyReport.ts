@@ -1,84 +1,35 @@
 import { getLocalDateString } from "../../../lib/identity";
 import type {
   DailyLuckyItem,
-  DailyPull,
   DailyReport,
   DailyScore,
   DailyScoreKey,
   DailyTask,
 } from "../types/home.types";
-import { getDailyPull } from "./dailyPulls";
+import { getDailyPullById } from "./dailyPulls";
 import type { HintLanguage } from "../../../lib/i18n";
+import { selectSkyGuidedTarot } from "../../../lib/tarot/skyGuidedTarot";
 
 const SCORE_BASE: Array<Omit<DailyScore, "score" | "label"> & { offset: number }> = [
   { key: "love", tone: "#ef84bd", offset: 13 },
-  { key: "resources", tone: "#e6bd63", offset: 31 },
-  { key: "work", tone: "#90a8ef", offset: 47 },
-  { key: "focus", tone: "#60c8dc", offset: 59 },
-  { key: "connection", tone: "#bf7de8", offset: 71 },
+  { key: "wealth", tone: "#e6bd63", offset: 29 },
+  { key: "career", tone: "#90a8ef", offset: 43 },
+  { key: "study", tone: "#60c8dc", offset: 61 },
+  { key: "people", tone: "#bf7de8", offset: 79 },
 ];
 
 const SCORE_LABELS: Record<HintLanguage, Record<DailyScoreKey, string>> = {
-  en: { love: "Love", resources: "Money", work: "Work", focus: "Focus", connection: "People" },
-  zh: { love: "爱情", resources: "财富", work: "事业", focus: "专注", connection: "人际" },
-  es: { love: "Amor", resources: "Dinero", work: "Trabajo", focus: "Enfoque", connection: "Vínculos" },
-  ja: { love: "恋愛", resources: "お金", work: "仕事", focus: "集中", connection: "人間関係" },
-  ko: { love: "사랑", resources: "재정", work: "일", focus: "집중", connection: "관계" },
+  en: { love: "Love", wealth: "Wealth", career: "Career", study: "Study", people: "People" },
+  zh: { love: "爱情", wealth: "财富", career: "事业", study: "学习", people: "人际" },
+  es: { love: "Amor", wealth: "Dinero", career: "Carrera", study: "Estudio", people: "Vínculos" },
+  ja: { love: "恋愛", wealth: "金運", career: "仕事", study: "学び", people: "人間関係" },
+  ko: { love: "사랑", wealth: "재정", career: "커리어", study: "학습", people: "관계" },
 };
 
 type BirthDetails = {
   birthDate?: string | null;
   birthTime?: string | null;
   birthPlace?: string | null;
-};
-
-const SUIT_SCORE_BIAS: Record<NonNullable<DailyPull["suit"]>, Partial<Record<DailyScoreKey, number>>> = {
-  wands: { work: 8, focus: 6, connection: 3, love: 1, resources: -1 },
-  cups: { love: 8, connection: 7, focus: 1, work: -1, resources: 0 },
-  swords: { focus: 8, work: 4, connection: 2, resources: 1, love: -2 },
-  pentacles: { resources: 8, work: 6, focus: 4, love: 1, connection: -1 },
-};
-
-const MAJOR_SCORE_BIAS: Record<string, Partial<Record<DailyScoreKey, number>>> = {
-  "0-fool": { focus: 4, connection: 3, resources: -2 },
-  "1-magician": { work: 7, focus: 6, resources: 2 },
-  "2-high-priestess": { focus: 7, love: 3, connection: 2 },
-  "3-empress": { love: 6, resources: 5, connection: 3 },
-  "4-emperor": { work: 6, resources: 5, focus: 3 },
-  "5-hierophant": { connection: 5, focus: 3, work: 2 },
-  "6-lovers": { love: 8, connection: 5, focus: 1 },
-  "7-chariot": { work: 7, focus: 6, love: -1 },
-  "8-strength": { focus: 5, love: 4, work: 2 },
-  "9-hermit": { focus: 7, connection: -2, resources: 2 },
-  "10-wheel": { connection: 4, resources: 3, work: 2 },
-  "11-justice": { focus: 6, resources: 3, love: -1 },
-  "12-hanged-man": { focus: 5, work: -2, connection: 2 },
-  "13-death": { work: 4, focus: 4, love: -2 },
-  "14-temperance": { love: 4, focus: 4, resources: 3 },
-  "15-devil": { resources: 3, love: -3, focus: -2 },
-  "16-tower": { work: -3, love: -2, focus: 4 },
-  "17-star": { love: 5, connection: 5, focus: 3 },
-  "18-moon": { focus: 4, love: 2, work: -2 },
-  "19-sun": { love: 6, connection: 5, work: 3 },
-  "20-judgement": { work: 5, focus: 5, connection: 2 },
-  "21-world": { work: 5, resources: 4, connection: 4 },
-};
-
-const RANK_SCORE_BIAS: Record<string, Partial<Record<DailyScoreKey, number>>> = {
-  ace: { focus: 4, work: 3 },
-  two: { love: 3, connection: 3 },
-  three: { connection: 4, work: 2 },
-  four: { resources: 3, focus: 2 },
-  five: { focus: -2, connection: -1 },
-  six: { connection: 3, love: 2 },
-  seven: { focus: 4, resources: 1 },
-  eight: { work: 4, focus: 3 },
-  nine: { focus: 3, resources: 2 },
-  ten: { work: 2, focus: -1 },
-  page: { focus: 3, connection: 2 },
-  knight: { work: 4, focus: 2 },
-  queen: { love: 3, connection: 3 },
-  king: { work: 4, resources: 3 },
 };
 
 const TITLES = [
@@ -116,11 +67,36 @@ const AVOIDS = [
 type TextPair = readonly [string, string];
 
 const COLORS: readonly TextPair[] = [
-  ["Pearl blue", "Good for calm replies"],
-  ["Soft gold", "Good for confidence"],
-  ["Rose smoke", "Good for tenderness"],
-  ["Moss green", "Good for grounding"],
-  ["Moon white", "Good for clean starts"],
+  ["Sky Blue", "Good for calm replies"],
+  ["Sage Green", "Good for grounding"],
+  ["Lavender", "Good for soft focus"],
+  ["Sunset Pink", "Good for warmth"],
+  ["Ocean Blue", "Good for clear thinking"],
+  ["Cream White", "Good for clean starts"],
+  ["Mocha Brown", "Good for steady energy"],
+  ["Peach", "Good for warmth without pressure"],
+  ["Mint Green", "Good for a fresh reset"],
+  ["Lilac", "Good for dreamy focus"],
+  ["Coral", "Good for honest momentum"],
+  ["Butter Yellow", "Good for optimism"],
+  ["Rose Pink", "Good for tender confidence"],
+  ["Dusty Blue", "Good for gentle boundaries"],
+  ["Emerald Green", "Good for growth energy"],
+  ["Champagne", "Good for feeling polished"],
+  ["Soft Gray", "Good for keeping things simple"],
+  ["Ivory", "Good for quiet clarity"],
+  ["Terracotta", "Good for grounded warmth"],
+  ["Plum", "Good for deeper intuition"],
+  ["Aqua", "Good for light communication"],
+  ["Baby Blue", "Good for a softer start"],
+  ["Blush Pink", "Good for receiving care"],
+  ["Caramel", "Good for steady comfort"],
+  ["Olive Green", "Good for practical choices"],
+  ["Burgundy", "Good for self-possession"],
+  ["Midnight Blue", "Good for calm focus"],
+  ["Apricot", "Good for gentle courage"],
+  ["Mauve", "Good for reflective moods"],
+  ["Honey Beige", "Good for an easy rhythm"],
 ] as const;
 
 const HOURS: readonly TextPair[] = [
@@ -137,27 +113,237 @@ const DIRECTIONS: readonly TextPair[] = [
   ["West", "Close the loop"],
 ] as const;
 
+const JEWELRY: readonly TextPair[] = [
+  ["Gold Ring", "Good for quiet confidence"],
+  ["Silver Ring", "Good for clean boundaries"],
+  ["Pearl Earrings", "Softens how the day lands"],
+  ["Gold Necklace", "Good for warm visibility"],
+  ["Silver Necklace", "Keeps replies measured"],
+  ["Rose Quartz", "Good for a warmer tone"],
+  ["Moonstone", "Good for quiet intuition"],
+  ["Amethyst", "Good for intuitive focus"],
+  ["Pearl Bracelet", "Good for graceful pacing"],
+  ["Hoop Earrings", "Good for a bolder mood"],
+  ["Star Necklace", "Good for feeling seen"],
+  ["Heart Pendant", "Good for warmer words"],
+  ["Crystal Earrings", "Good for lightness"],
+  ["Sapphire Ring", "Good for clear decisions"],
+  ["Emerald Pendant", "Good for growth energy"],
+  ["Opal Ring", "Good for trusting nuance"],
+  ["Silver Bangle", "Good for steady intention"],
+  ["Charm Bracelet", "Good for tiny reminders"],
+  ["Butterfly Necklace", "Good for small transformations"],
+  ["Sun Pendant", "Good for bright confidence"],
+  ["Moon Pendant", "Helps name quiet feelings"],
+  ["Diamond Studs", "Good for polished clarity"],
+  ["Rose Gold Ring", "Good for soft confidence"],
+  ["Quartz Bracelet", "Good for an emotional reset"],
+  ["Zodiac Necklace", "Good for trusting your timing"],
+  ["Clover Charm", "Good for sweet timing"],
+  ["Shell Necklace", "Good for a softer pace"],
+  ["Birthstone Ring", "Good for personal luck"],
+  ["Gem Earrings", "Good for a little sparkle"],
+  ["Infinity Bracelet", "Good for staying connected"],
+] as const;
+
+const FOODS: readonly TextPair[] = [
+  ["Bubble Tea", "Good for a tiny mood lift"],
+  ["Avocado", "Good for steady energy"],
+  ["Strawberry", "Good for a sweet reset"],
+  ["Matcha", "Good for soft focus"],
+  ["Croissant", "Good for romanticizing the morning"],
+  ["Ramen", "Good for comfort and focus"],
+  ["Fried Rice", "Good for making use of what you have"],
+  ["Sushi", "Good for clean momentum"],
+  ["Yogurt", "Good for a gentle start"],
+  ["Chocolate", "Good for a small mood reset"],
+  ["Blueberries", "Good for a clear head"],
+  ["Salmon", "Good for grounded strength"],
+  ["Iced Coffee", "Good for getting moving"],
+  ["Macarons", "Good for a pretty pause"],
+  ["Donut", "Good for playfulness"],
+  ["Dumplings", "Good for feeling held"],
+  ["Mango", "Good for bright energy"],
+  ["Pancakes", "Good for a slow start"],
+  ["Tacos", "Good for spontaneous plans"],
+  ["Salad", "Good for a lighter rhythm"],
+  ["Ice Cream", "Good for a soft reward"],
+  ["Cheesecake", "Good for treating yourself gently"],
+  ["Acai Bowl", "Good for fresh energy"],
+  ["Apple", "Good for a crisp reset"],
+  ["Grapes", "Good for easy sweetness"],
+  ["Pasta", "Good for comfort without overthinking"],
+  ["Waffles", "Good for a cozy morning"],
+  ["Honey Toast", "Good for warmth"],
+] as const;
+
+const CARRY_ITEMS: readonly TextPair[] = [
+  ["AirPods Case", "Good for protecting your mood"],
+  ["Lip Balm", "Keep comfort close"],
+  ["Hair Ties", "Good for getting things handled"],
+  ["Phone", "Good for one honest message"],
+  ["Sunglasses", "Good for keeping your boundary"],
+  ["Water Bottle", "Good for steady energy"],
+  ["Perfume", "Good for resetting the room around you"],
+  ["Canvas Bag", "Good for carrying less chaos"],
+  ["Notebook", "Good for catching the thought"],
+  ["Keychain", "Good for one clean transition"],
+  ["Lipstick", "Good for a confidence cue"],
+  ["Hand Cream", "Good for small care"],
+  ["Ring", "Good for remembering your intention"],
+  ["Bracelet", "Good for staying anchored"],
+  ["Necklace", "Good for keeping intention close"],
+  ["Mirror", "Good for checking in with yourself"],
+  ["Charger", "Good for restoring energy"],
+  ["Wallet", "Good for practical luck"],
+  ["Scrunchie", "Good for an easy reset"],
+  ["Claw Clip", "Good for quick focus"],
+  ["Camera", "Good for noticing beauty"],
+  ["Earbuds Case", "Good for keeping calm nearby"],
+  ["Makeup Bag", "Good for feeling prepared"],
+  ["Crystal Charm", "Good for a tiny ritual"],
+  ["Coin Purse", "Good for mindful spending"],
+  ["Pen", "Good for naming the thought"],
+  ["Mini Plush", "Good for comfort"],
+  ["Travel Mug", "Good for carrying warmth"],
+  ["Glasses", "Good for seeing clearly"],
+  ["Headphones", "Good for protecting your focus"],
+] as const;
+
+const FLOWERS: readonly TextPair[] = [
+  ["Sunflower", "Good for visible confidence"],
+  ["Rose", "Good for softness with standards"],
+  ["Tulip", "Good for a fresh start"],
+  ["Daisy", "Good for lightness"],
+  ["Lavender", "Calm the overactive mind"],
+  ["Peony", "Receive softness without apologizing"],
+  ["Lily", "Good for clean emotional space"],
+  ["Cherry Blossom", "Good for a fleeting sweet moment"],
+  ["Hydrangea", "Good for gentle abundance"],
+  ["Orchid", "Good for elegant patience"],
+  ["Jasmine", "Good for a quiet glow"],
+  ["Camellia", "Good for steady affection"],
+  ["Iris", "Good for trusting your eye"],
+  ["Magnolia", "Good for grounded grace"],
+  ["Dandelion", "Good for a hopeful reset"],
+  ["Marigold", "Good for warm courage"],
+  ["Baby's Breath", "Good for light support"],
+  ["Gardenia", "Good for clear tenderness"],
+  ["Lotus", "Good for rising cleanly"],
+  ["Poppy Seed", "Good for creative boldness"],
+  ["Pink Camellia", "Good for modest confidence"],
+  ["Forget-Me-Not", "Good for meaningful contact"],
+  ["Hibiscus", "Good for expressive warmth"],
+  ["Ranunculus", "Good for layered feelings"],
+  ["Anemone", "Good for honest softness"],
+  ["Sweet Pea", "Good for tender beginnings"],
+  ["Cosmos", "Good for balanced beauty"],
+  ["Snapdragon", "Good for speaking clearly"],
+  ["Morning Glory", "Good for beginning again"],
+  ["Freesia", "Good for bright honesty"],
+] as const;
+
 const TASKS: DailyTask[] = [
-  {
-    text: "Name the real question before opening the Tarot Room.",
-    reason: "It keeps the reading from scattering.",
-  },
-  {
-    text: "Clear one small surface near you.",
-    reason: "The outside room changes the inside room.",
-  },
-  {
-    text: "Send the message only after rereading it once.",
-    reason: "Timing is part of the spell.",
-  },
-  {
-    text: "Write one sentence you do not need to send.",
-    reason: "Not every truth needs an audience.",
-  },
-  {
-    text: "Choose the plan that protects tomorrow morning.",
-    reason: "Future-you is part of today's reading.",
-  },
+  { text: "Drink a glass of water slowly.", reason: "Restore physical balance before you ask for more energy." },
+  { text: "Stretch your shoulders and neck for three minutes.", reason: "Release tension your mind may be carrying for your body." },
+  { text: "Take a short walk without checking your phone.", reason: "Let your attention land back in the present." },
+  { text: "Open a window and take five steady breaths.", reason: "Fresh air helps the day feel less stuck." },
+  { text: "Wash your face slowly.", reason: "A small reset can tell your nervous system the moment has changed." },
+  { text: "Eat one nourishing snack before more caffeine.", reason: "Steadier energy starts with something ordinary." },
+  { text: "Stand in sunlight for one minute.", reason: "Light can gently remind your body what time it is." },
+  { text: "Put both feet on the floor and unclench your jaw.", reason: "Tiny physical cues can soften mental pressure." },
+  { text: "Refill your water bottle.", reason: "Make care easier for the next version of you." },
+  { text: "Go to bed fifteen minutes earlier tonight.", reason: "Recovery is also a form of progress." },
+  { text: "Clear one small surface near you.", reason: "The outside room changes the inside room." },
+  { text: "Delete five screenshots you do not need.", reason: "A little digital space can quiet background noise." },
+  { text: "Make your bed or smooth your blanket.", reason: "One finished corner gives the day a cleaner edge." },
+  { text: "Put one item back where it belongs.", reason: "Order returns through small, repeatable choices." },
+  { text: "Wipe your desk or table for one minute.", reason: "A clearer surface helps your mind choose a next step." },
+  { text: "Prepare tomorrow's first item tonight.", reason: "Future-you deserves a softer start." },
+  { text: "Close three browser tabs.", reason: "Less visual noise makes focus feel more possible." },
+  { text: "Sort one tiny pile.", reason: "Momentum works better when the task is small enough to begin." },
+  { text: "Move one thing that keeps bothering you.", reason: "Your environment is allowed to support your mood." },
+  { text: "Set out something you want to wear tomorrow.", reason: "A little preparation can become self-trust." },
+  { text: "Send one thoughtful message.", reason: "Warm contact can steady the heart without becoming a big project." },
+  { text: "Thank someone who helped you recently.", reason: "Gratitude becomes stronger when it is specific." },
+  { text: "Ask one person how they are really doing.", reason: "Connection deepens when curiosity slows down." },
+  { text: "Reply to one message you have been avoiding.", reason: "A gentle response can release more weight than silence." },
+  { text: "Compliment someone sincerely.", reason: "Naming good things helps you notice more of them." },
+  { text: "Share a small happy memory with someone.", reason: "Lightness becomes easier when it is shared." },
+  { text: "Listen without planning your answer once today.", reason: "Understanding grows in the pause." },
+  { text: "Send a simple check-in to an old friend.", reason: "Reconnection does not need a perfect opening line." },
+  { text: "Encourage someone who is trying.", reason: "Support given outward often returns inward." },
+  { text: "Let one conversation end while it still feels kind.", reason: "Good boundaries protect good connection." },
+  { text: "Write down what you feel in one honest sentence.", reason: "Clarity starts when the feeling has a name." },
+  { text: "Write one sentence you do not need to send.", reason: "Not every truth needs an audience." },
+  { text: "Forgive yourself for one small mistake.", reason: "Self-kindness keeps growth from turning into punishment." },
+  { text: "Name one thing you can control today.", reason: "Agency returns when the circle gets smaller." },
+  { text: "Let go of one unrealistic expectation.", reason: "Pressure softens when the standard becomes human." },
+  { text: "Write a supportive note to yourself.", reason: "Your inner voice can learn to be safer." },
+  { text: "Accept one imperfect outcome without replaying it.", reason: "Flexibility protects your energy." },
+  { text: "Pause before responding to a message.", reason: "Timing is part of the spell." },
+  { text: "Write down one emotional trigger you noticed.", reason: "Awareness gives you a little more room next time." },
+  { text: "Give yourself permission to rest for ten minutes.", reason: "Rest is maintenance, not a failure to perform." },
+  { text: "Notice five things you can see.", reason: "Ground yourself in the room you are actually in." },
+  { text: "Take three slow breaths before your next task.", reason: "A calmer body makes a clearer choice." },
+  { text: "Enjoy one meal or drink without scrolling.", reason: "Pleasure gets louder when attention stays with it." },
+  { text: "Watch the sky for one minute.", reason: "Perspective is easier when your eyes look farther away." },
+  { text: "Sit in silence for two minutes.", reason: "Stillness lets your mind stop chasing every thread." },
+  { text: "Notice one beautiful detail around you.", reason: "Beauty can become an anchor when the day feels loud." },
+  { text: "Put your phone down for one full song.", reason: "Your attention deserves a clean pocket of time." },
+  { text: "Breathe out longer than you breathe in five times.", reason: "Long exhales tell your body it can stand down." },
+  { text: "Feel the temperature of your hands.", reason: "Simple sensation can interrupt spiraling thoughts." },
+  { text: "Look at something green for thirty seconds.", reason: "A tiny nature cue can soften your focus." },
+  { text: "Finish one small task before starting another.", reason: "Completion builds trust faster than intensity." },
+  { text: "Write tomorrow's top three tasks.", reason: "Clarity tonight makes tomorrow less crowded." },
+  { text: "Choose the plan that protects tomorrow morning.", reason: "Future-you is part of today's reading." },
+  { text: "Clean up five emails or notifications.", reason: "Small closures reduce mental tabs." },
+  { text: "Set one realistic goal for today.", reason: "A reachable target creates real momentum." },
+  { text: "Do the two-minute version of something you avoid.", reason: "Starting gently still counts as starting." },
+  { text: "Update one calendar item.", reason: "Structure can hold what memory should not carry alone." },
+  { text: "Write the next step, not the whole plan.", reason: "The day only needs one usable doorway." },
+  { text: "Put your hardest task into one sentence.", reason: "Naming it clearly makes it less shapeless." },
+  { text: "Stop working at a cleaner stopping point.", reason: "Leaving well is part of returning well." },
+  { text: "List three things you do well.", reason: "Confidence grows when evidence is allowed to count." },
+  { text: "Wear one thing that feels like you.", reason: "Self-expression can be a quiet source of steadiness." },
+  { text: "Say no to one unnecessary obligation.", reason: "A small boundary gives your energy a place to stay." },
+  { text: "Walk with relaxed, open posture for one minute.", reason: "The body can rehearse confidence before the mind believes it." },
+  { text: "Celebrate one recent tiny win.", reason: "Progress becomes motivating when you actually notice it." },
+  { text: "Share one honest opinion kindly.", reason: "Authenticity gets easier through low-stakes practice." },
+  { text: "Trust your first instinct on one small choice.", reason: "Self-trust grows through ordinary decisions." },
+  { text: "Do one thing slightly outside your routine.", reason: "A little novelty reminds you that you can move." },
+  { text: "Take one photo where you like the light.", reason: "Seeing yourself gently is a skill." },
+  { text: "Speak to yourself as if you were helping a friend.", reason: "Tone changes how safe effort feels." },
+  { text: "Doodle for five minutes.", reason: "Creativity gives emotion another way out." },
+  { text: "Hum or sing one song you like.", reason: "Sound can move tension without needing an explanation." },
+  { text: "Take a photo of something beautiful.", reason: "Beauty gets easier to find when you practice looking." },
+  { text: "Sketch one object nearby.", reason: "Observation slows the mind in a useful way." },
+  { text: "Make a small playlist for your current mood.", reason: "Sound can shape the room around you." },
+  { text: "Write a six-word story.", reason: "A tiny creative constraint can unlock play." },
+  { text: "Rearrange one small corner.", reason: "Changing the room can refresh your inner weather." },
+  { text: "Draw your current mood as a shape.", reason: "Feelings become less overwhelming when they become visible." },
+  { text: "Name today's mood like a playlist title.", reason: "Playfulness can make self-awareness less heavy." },
+  { text: "Make one ordinary task a little prettier.", reason: "Care can be aesthetic, not only practical." },
+  { text: "Do one happy dance to a song.", reason: "Movement can create joy before you feel ready." },
+  { text: "Watch a funny clip.", reason: "A short laugh can loosen the day's grip." },
+  { text: "Make a playful prediction about today.", reason: "Curiosity keeps the day from becoming too fixed." },
+  { text: "Draw with your non-dominant hand.", reason: "Imperfection is easier to accept when it is invited." },
+  { text: "Try one small spontaneous choice.", reason: "Adventure can be tiny and still count." },
+  { text: "Add something cozy to your space.", reason: "Comfort helps the body believe it is allowed to settle." },
+  { text: "Light a candle or turn on a softer lamp.", reason: "Atmosphere can help your nervous system shift gears." },
+  { text: "Make your next drink feel intentional.", reason: "Ritual turns a normal pause into care." },
+  { text: "Choose a color around you and follow it with your eyes.", reason: "A simple visual game can interrupt overthinking." },
+  { text: "Do something slowly on purpose.", reason: "Speed is not the same as safety." },
+  { text: "Write today's highlight.", reason: "Positive moments become stronger when they are saved." },
+  { text: "Reflect on one thing you learned.", reason: "Growth is easier to trust when you can name it." },
+  { text: "Think about a proud moment for thirty seconds.", reason: "Confidence needs memory, not just ambition." },
+  { text: "Review one small sign of progress.", reason: "Progress often hides in details." },
+  { text: "Write one thing you want to improve gently.", reason: "Growth works better without self-attack." },
+  { text: "Recall a happy childhood memory.", reason: "Older joy can still support the present." },
+  { text: "Reflect on one challenge you already survived.", reason: "Resilience is easier to feel when you remember the proof." },
+  { text: "Notice what energized you today.", reason: "Your energy leaves clues worth following." },
+  { text: "Name what truly matters today.", reason: "Priorities quiet the noise around them." },
+  { text: "End the day with one line of gratitude.", reason: "Gratitude gives the mind somewhere soft to land." },
 ];
 
 const DAILY_ZH = {
@@ -414,12 +600,12 @@ const DAILY_BY_LANGUAGE = {
   tasks: readonly DailyTask[];
 }>;
 
-const LUCKY_LABELS: Record<HintLanguage, { color: string; hour: string; direction: string; number: string; numberHint: string }> = {
-  en: { color: "Lucky color", hour: "Best hour", direction: "Direction", number: "Number", numberHint: "Use it as a small rhythm" },
-  zh: { color: "幸运色", hour: "幸运时段", direction: "幸运方位", number: "幸运数字", numberHint: "把它当作一个小节奏" },
-  es: { color: "Color de suerte", hour: "Mejor hora", direction: "Dirección", number: "Número", numberHint: "Úsalo como un pequeño ritmo" },
-  ja: { color: "ラッキーカラー", hour: "よい時間", direction: "方角", number: "数字", numberHint: "小さなリズムとして使う" },
-  ko: { color: "행운의 색", hour: "좋은 시간", direction: "방향", number: "숫자", numberHint: "작은 리듬처럼 사용하세요" },
+const LUCKY_LABELS: Record<HintLanguage, { color: string; jewelry: string; number: string; food: string; carry: string; flower: string; numberHint: string }> = {
+  en: { color: "Lucky color", jewelry: "Lucky jewelry", number: "Lucky number", food: "Lucky food", carry: "Lucky carry", flower: "Lucky flower", numberHint: "Use it as a small rhythm" },
+  zh: { color: "幸运色", jewelry: "幸运首饰", number: "幸运数字", food: "幸运食物", carry: "随身物", flower: "幸运花", numberHint: "把它当作今天的小节奏" },
+  es: { color: "Color de suerte", jewelry: "Joya", number: "Número", food: "Comida", carry: "Objeto", flower: "Flor", numberHint: "Úsalo como un pequeño ritmo" },
+  ja: { color: "ラッキーカラー", jewelry: "アクセサリー", number: "数字", food: "食べ物", carry: "持ち物", flower: "花", numberHint: "小さなリズムとして使う" },
+  ko: { color: "행운의 색", jewelry: "주얼리", number: "숫자", food: "음식", carry: "소지품", flower: "꽃", numberHint: "작은 리듬처럼 사용하세요" },
 };
 
 function hash(input: string): number {
@@ -435,22 +621,92 @@ function clampScore(score: number): number {
   return Math.max(42, Math.min(96, Math.round(score)));
 }
 
-function cardRank(cardId: string): string {
-  return cardId.split("-")[0] ?? "";
+function ritualBiasFor(streak: number | undefined, key: DailyScoreKey): number {
+  if (!streak) return 0;
+  const capped = Math.min(streak, 14);
+  const base = Math.min(4, Math.floor(capped / 4) + 1);
+  if (key === "career" || key === "study") return Math.max(0, base - 1);
+  if (key === "people") return Math.max(0, base - 2);
+  return base;
 }
 
-function cardBiasFor(card: DailyPull, key: DailyScoreKey): number {
-  const suitBias = card.suit ? SUIT_SCORE_BIAS[card.suit][key] ?? 0 : 0;
-  const majorBias = card.arcana === "major" ? MAJOR_SCORE_BIAS[card.cardId]?.[key] ?? 0 : 0;
-  const rankBias = card.arcana === "minor" ? RANK_SCORE_BIAS[cardRank(card.cardId)]?.[key] ?? 0 : 0;
-  const cardTexture = (hash(`${card.cardId}:${key}`) % 7) - 3;
-  return suitBias + majorBias + rankBias + cardTexture;
+function dayOfYear(date: Date): number {
+  const start = new Date(date.getFullYear(), 0, 0);
+  return Math.floor((date.getTime() - start.getTime()) / 86_400_000);
 }
 
-function birthBiasFor(birthDetails: BirthDetails | undefined, key: DailyScoreKey): number {
+function normalizeDegree(degree: number): number {
+  return ((degree % 360) + 360) % 360;
+}
+
+function sunDegreeFor(date: Date): number {
+  const springEquinox = dayOfYear(new Date(date.getFullYear(), 2, 20));
+  return normalizeDegree(((dayOfYear(date) - springEquinox) / 365.2425) * 360);
+}
+
+function moonDegreeFor(date: Date, sunDegree: number): number {
+  const knownNewMoonUtc = Date.UTC(2000, 0, 6, 18, 14);
+  const daysSince = (date.getTime() - knownNewMoonUtc) / 86_400_000;
+  const phase = ((daysSince % 29.530588853) + 29.530588853) % 29.530588853;
+  return normalizeDegree(sunDegree + (phase / 29.530588853) * 360);
+}
+
+function parseBirthDate(value?: string | null): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function angularDistance(a: number, b: number): number {
+  const distance = Math.abs(normalizeDegree(a - b));
+  return Math.min(distance, 360 - distance);
+}
+
+function aspectBias(distance: number, key: DailyScoreKey): number {
+  const aspect = [
+    { angle: 0, orb: 10, score: { love: 3, wealth: 4, career: 5, study: 4, people: 2 } },
+    { angle: 60, orb: 8, score: { love: 5, wealth: 3, career: 3, study: 4, people: 5 } },
+    { angle: 90, orb: 8, score: { love: -2, wealth: -1, career: -3, study: -3, people: 1 } },
+    { angle: 120, orb: 9, score: { love: 6, wealth: 4, career: 5, study: 5, people: 4 } },
+    { angle: 180, orb: 9, score: { love: 2, wealth: -2, career: -1, study: -2, people: 4 } },
+  ].find((item) => Math.abs(distance - item.angle) <= item.orb);
+
+  return aspect?.score[key] ?? 0;
+}
+
+function elementForDegree(degree: number): "fire" | "earth" | "air" | "water" {
+  const sign = Math.floor(normalizeDegree(degree) / 30) % 12;
+  return (["fire", "earth", "air", "water"] as const)[sign % 4];
+}
+
+function elementBias(natalDegree: number, transitDegree: number, key: DailyScoreKey): number {
+  const natal = elementForDegree(natalDegree);
+  const transit = elementForDegree(transitDegree);
+  if (natal === transit) {
+    return key === "love" || key === "people" ? 3 : 4;
+  }
+  if (
+    (natal === "fire" && transit === "air") ||
+    (natal === "air" && transit === "fire") ||
+    (natal === "earth" && transit === "water") ||
+    (natal === "water" && transit === "earth")
+  ) {
+    return key === "love" || key === "people" ? 4 : 2;
+  }
+  if (
+    (natal === "fire" && transit === "water") ||
+    (natal === "water" && transit === "fire") ||
+    (natal === "earth" && transit === "air") ||
+    (natal === "air" && transit === "earth")
+  ) {
+    return key === "career" || key === "study" ? -3 : -2;
+  }
+  return 0;
+}
+
+function birthChartTexture(birthDetails: BirthDetails | undefined, key: DailyScoreKey): number {
   if (!birthDetails?.birthDate) return 0;
-
-  const birthSeed = hash(
+  const detailSeed = hash(
     [
       birthDetails.birthDate,
       birthDetails.birthTime ?? "unknown-time",
@@ -458,24 +714,201 @@ function birthBiasFor(birthDetails: BirthDetails | undefined, key: DailyScoreKey
       key,
     ].join(":"),
   );
-  const hasFullerBirthData = Boolean(birthDetails.birthTime || birthDetails.birthPlace);
-  const range = hasFullerBirthData ? 11 : 7;
-  return (birthSeed % range) - Math.floor(range / 2);
+  const range = birthDetails.birthTime || birthDetails.birthPlace ? 7 : 5;
+  return (detailSeed % range) - Math.floor(range / 2);
 }
 
 function scoreFor(
-  seed: number,
   key: DailyScoreKey,
   offset: number,
-  card: DailyPull,
+  date: Date,
   birthDetails?: BirthDetails,
+  ritualStreak?: number,
 ): number {
-  const dailyNoise = hash(`${seed}:${key}:${offset}`) % 25;
-  return clampScore(58 + dailyNoise + cardBiasFor(card, key) + birthBiasFor(birthDetails, key));
+  const todaySun = sunDegreeFor(date);
+  const todayMoon = moonDegreeFor(date, todaySun);
+  const birthDate = parseBirthDate(birthDetails?.birthDate);
+  const natalSun = birthDate ? sunDegreeFor(birthDate) : normalizeDegree(hash(`guest:${key}`) % 360);
+  const sunDistance = angularDistance(natalSun, todaySun);
+  const moonDistance = angularDistance(natalSun, todayMoon);
+  const transitRhythm = (hash(`${getLocalDateString(date)}:${key}:${offset}`) % 7) - 3;
+  return clampScore(
+    66 +
+      aspectBias(sunDistance, key) +
+      Math.round(aspectBias(moonDistance, key) * 0.7) +
+      elementBias(natalSun, todaySun, key) +
+      birthChartTexture(birthDetails, key) +
+      transitRhythm +
+      ritualBiasFor(ritualStreak, key),
+  );
+}
+
+function aspectLabel(distance: number): string {
+  const aspects = [
+    { angle: 0, label: "Sun conjunct natal Sun" },
+    { angle: 60, label: "Sun sextile natal Sun" },
+    { angle: 90, label: "Sun square natal Sun" },
+    { angle: 120, label: "Sun trine natal Sun" },
+    { angle: 180, label: "Sun opposite natal Sun" },
+  ];
+  const aspect = aspects
+    .map((item) => ({ ...item, delta: Math.abs(distance - item.angle) }))
+    .sort((a, b) => a.delta - b.delta)[0];
+  return aspect && aspect.delta <= 12 ? aspect.label : "Sun in a quiet natal angle";
+}
+
+function astrologySummary(date: Date, birthDetails: BirthDetails | undefined, language: HintLanguage): string {
+  const todaySun = sunDegreeFor(date);
+  const birthDate = parseBirthDate(birthDetails?.birthDate);
+  const natalSun = birthDate ? sunDegreeFor(birthDate) : normalizeDegree(hash("guest:natal") % 360);
+  const distance = angularDistance(natalSun, todaySun);
+  const label = aspectLabel(distance);
+
+  if (language === "zh") {
+    if (label.includes("square")) return "太阳与本命太阳形成紧张角度，今天容易把小压力放大。事业和学习上先收窄目标，别急着证明自己。";
+    if (label.includes("trine")) return "太阳与本命太阳形成顺畅角度，今天比较适合推进重要事项，也适合让别人看见你的真实能力。";
+    if (label.includes("opposite")) return "太阳走到本命太阳的对面，今天会更敏感地看见关系里的回应与距离。别把没有被察觉等同于不被在乎。";
+    if (label.includes("sextile")) return "太阳与本命太阳形成支持角度，今天适合主动沟通、安排资源，也适合把想法落到一个小行动上。";
+    return "今天太阳没有强烈触发本命太阳，能量更适合稳定整理。把注意力放回身体、节奏和一个可完成的小目标。";
+  }
+
+  if (label.includes("square")) return "The Sun is pressing your natal Sun by square, so small pressure may feel louder. Narrow the goal before you push.";
+  if (label.includes("trine")) return "The Sun is supporting your natal Sun by trine, good for visible progress and cleaner confidence.";
+  if (label.includes("opposite")) return "The Sun is opposite your natal Sun, making relationship mirrors feel sharper. Ask for contact instead of guessing from silence.";
+  if (label.includes("sextile")) return "The Sun is supporting your natal Sun by sextile, good for a small message, a practical request, or one clean next step.";
+  return "The Sun is moving through a quieter natal angle today. Keep the rhythm steady and finish one small thing.";
+}
+
+function selfHintFor(reportSeed: number, language: HintLanguage): string {
+  const hints =
+    language === "zh"
+      ? [
+          "今天的你可能有一点小脆弱。如果没有人察觉你的情绪，可以主动说一句：我今天需要被听见。",
+          "今天别把所有事都自己消化。找一个安全的人讲清楚，比继续硬撑更有力量。",
+          "你的情绪不是麻烦，它只是需要出口。先照顾感受，再处理事情。",
+          "今天适合慢一点回应。你不需要立刻给所有人一个完美答案。",
+        ]
+      : [
+          "You may feel a little tender today. If nobody notices, name it gently and ask to be heard.",
+          "Do not digest everything alone today. One safe conversation will help more than pushing through.",
+          "Your feelings are not a problem; they need a doorway. Care for the feeling before fixing the task.",
+          "Respond a little slower today. You do not owe everyone a perfect answer immediately.",
+        ];
+  return hints[reportSeed % hints.length]!;
+}
+
+function psychologyFor(reportSeed: number, language: HintLanguage): string {
+  const notes =
+    language === "zh"
+      ? [
+          "心理上容易出现“没人懂我”的瞬间。先确认事实，再确认感受，别让一秒钟的失落替整天做结论。",
+          "今天的压力更像内在警报，不一定代表外界真的失控。把任务拆小，会让安全感回来。",
+          "你可能会同时想靠近和退后。允许自己先观察，再决定要不要表达。",
+        ]
+      : [
+          "A brief 'nobody gets me' moment may arrive. Check the facts, then honor the feeling, before making a whole-day conclusion.",
+          "Pressure may act like an inner alarm more than an external emergency. Smaller tasks bring steadiness back.",
+          "You may want closeness and distance at the same time. Let yourself observe before you explain.",
+        ];
+  return notes[reportSeed % notes.length]!;
+}
+
+function tarotCardForScores(scores: DailyScore[], date: Date, birthDetails: BirthDetails | undefined): string {
+  const top = [...scores].sort((a, b) => b.score - a.score)[0]?.key ?? "study";
+  const todaySun = sunDegreeFor(date);
+  const birthDate = parseBirthDate(birthDetails?.birthDate);
+  const natalSun = birthDate ? sunDegreeFor(birthDate) : normalizeDegree(hash("guest:natal") % 360);
+  const distance = angularDistance(natalSun, todaySun);
+  const tense = Math.abs(distance - 90) <= 10 || Math.abs(distance - 180) <= 10;
+
+  const pools: Record<DailyScoreKey, string[]> = {
+    love: tense ? ["18-moon", "14-temperance", "8-strength", "6-lovers"] : ["6-lovers", "3-empress", "17-star", "two-cups"],
+    wealth: tense ? ["four-pentacles", "11-justice", "seven-pentacles"] : ["nine-pentacles", "ten-pentacles", "1-magician", "10-wheel"],
+    career: tense ? ["4-emperor", "11-justice", "12-hanged-man"] : ["1-magician", "7-chariot", "4-emperor", "20-judgement"],
+    study: tense ? ["9-hermit", "four-swords", "12-hanged-man"] : ["2-high-priestess", "1-magician", "ace-swords", "9-hermit"],
+    people: tense ? ["14-temperance", "8-strength", "11-justice"] : ["three-cups", "19-sun", "6-lovers", "17-star"],
+  };
+
+  const pool = pools[top];
+  return pool[hash(`${getLocalDateString(date)}:${top}:${birthDetails?.birthDate ?? "guest"}`) % pool.length]!;
 }
 
 function pick<T>(items: readonly T[], seed: number, offset: number): T {
   return items[(seed + offset) % items.length]!;
+}
+
+const ENERGY_TASK_RANGES = {
+  body: [0, 10],
+  space: [10, 20],
+  connection: [20, 30],
+  emotion: [30, 40],
+  mindfulness: [40, 50],
+  productivity: [50, 60],
+  confidence: [60, 70],
+  creativity: [70, 80],
+  comfort: [80, 90],
+  reflection: [90, 100],
+} as const;
+
+type EnergyTaskRange = keyof typeof ENERGY_TASK_RANGES;
+
+const SUPPORT_TASK_RANGE: Record<DailyScoreKey, EnergyTaskRange> = {
+  love: "emotion",
+  wealth: "body",
+  career: "space",
+  study: "mindfulness",
+  people: "connection",
+};
+
+const MOMENTUM_TASK_RANGE: Record<DailyScoreKey, EnergyTaskRange> = {
+  love: "connection",
+  wealth: "productivity",
+  career: "confidence",
+  study: "creativity",
+  people: "confidence",
+};
+
+const ROTATING_TASK_RANGES: EnergyTaskRange[] = [
+  "body",
+  "space",
+  "mindfulness",
+  "creativity",
+  "comfort",
+  "reflection",
+  "connection",
+  "productivity",
+  "emotion",
+  "confidence",
+];
+
+function dayNumber(date: Date): number {
+  const start = Date.UTC(date.getFullYear(), 0, 1);
+  const current = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  return Math.floor((current - start) / 86_400_000);
+}
+
+function pickEnergyTask(range: EnergyTaskRange, seed: number): DailyTask {
+  const [start, end] = ENERGY_TASK_RANGES[range];
+  return TASKS[start + (seed % (end - start))]!;
+}
+
+function buildEnergyTasks(scores: DailyScore[], copySeed: number, date: Date): DailyTask[] {
+  const sorted = [...scores].sort((a, b) => a.score - b.score);
+  const lowest = sorted[0]?.key ?? "study";
+  const highest = sorted[sorted.length - 1]?.key ?? "career";
+  const day = dayNumber(date);
+  const rotatingRange = ROTATING_TASK_RANGES[(day + copySeed) % ROTATING_TASK_RANGES.length]!;
+  const candidates: DailyTask[] = [
+    pickEnergyTask(SUPPORT_TASK_RANGE[lowest], copySeed + day * 7),
+    pickEnergyTask(MOMENTUM_TASK_RANGE[highest], copySeed + day * 11 + 3),
+    pickEnergyTask(rotatingRange, copySeed + day * 17 + 6),
+  ];
+
+  for (let i = 0; candidates.length < 6 && i < ROTATING_TASK_RANGES.length; i += 1) {
+    candidates.push(pickEnergyTask(ROTATING_TASK_RANGES[(day + i) % ROTATING_TASK_RANGES.length]!, copySeed + day * 19 + i));
+  }
+
+  return candidates.filter((task, index) => candidates.findIndex((candidate) => candidate.text === task.text) === index).slice(0, 3);
 }
 
 export function getDailyReport({
@@ -483,58 +916,81 @@ export function getDailyReport({
   date = new Date(),
   language = "en",
   birthDetails,
+  ritualStreak,
 }: {
   anonId?: string;
   date?: Date;
   language?: HintLanguage;
   birthDetails?: BirthDetails;
+  ritualStreak?: number;
 } = {}): DailyReport {
   const dateString = getLocalDateString(date);
-  const seed = hash(`${anonId}:${dateString}`);
-  const card = getDailyPull(date, language);
+  const copySeed = hash(`${anonId}:${dateString}`);
   const text = DAILY_BY_LANGUAGE[language];
   const labels = LUCKY_LABELS[language];
 
   const scores = SCORE_BASE.map(({ offset, ...score }) => ({
     ...score,
     label: SCORE_LABELS[language][score.key],
-    score: scoreFor(seed, score.key, offset, card, birthDetails),
+    score: scoreFor(score.key, offset, date, birthDetails, ritualStreak),
   }));
+  const skyGuided = selectSkyGuidedTarot({
+    anonId,
+    date,
+    birthDetails,
+    tone: "honest",
+  });
+  const card = {
+    ...getDailyPullById(skyGuided.selectedCardId, language),
+    skyGuided,
+  };
 
   const overallScore = Math.round(
     scores.reduce((total, score) => total + score.score, 0) / scores.length,
   );
 
-  const [colorValue, colorHint] = pick(text.colors, seed, 3);
-  const [hourValue, hourHint] = pick(text.hours, seed, 11);
-  const [directionValue, directionHint] = pick(text.directions, seed, 23);
-  const numberValue = `${(seed % 8) + 1}/${(Math.floor(seed / 8) % 8) + 1}`;
+  const [colorValue, colorHint] = pick(text.colors, copySeed, 3);
+  const [jewelryValue, jewelryHint] = pick(JEWELRY, copySeed, 11);
+  const [foodValue, foodHint] = pick(FOODS, copySeed, 17);
+  const [carryValue, carryHint] = pick(CARRY_ITEMS, copySeed, 23);
+  const [flowerValue, flowerHint] = pick(FLOWERS, copySeed, 31);
+  const firstNumber = copySeed % 10;
+  const secondNumber = (Math.floor(copySeed / 10) + 3) % 10;
+  const numberValue = `${firstNumber} and ${secondNumber === firstNumber ? (secondNumber + 1) % 10 : secondNumber}`;
 
   const lucky: DailyLuckyItem[] = [
     { key: "color", label: labels.color, value: colorValue, hint: colorHint },
-    { key: "hour", label: labels.hour, value: hourValue, hint: hourHint },
-    { key: "direction", label: labels.direction, value: directionValue, hint: directionHint },
+    { key: "jewelry", label: labels.jewelry, value: jewelryValue, hint: jewelryHint },
     {
       key: "number",
       label: labels.number,
       value: numberValue,
       hint: labels.numberHint,
     },
+    { key: "food", label: labels.food, value: foodValue, hint: foodHint },
+    { key: "carry", label: labels.carry, value: carryValue, hint: carryHint },
+    { key: "flower", label: labels.flower, value: flowerValue, hint: flowerHint },
   ];
 
-  const firstTask = seed % text.tasks.length;
-  const tasks = Array.from({ length: 3 }, (_, i) => text.tasks[(firstTask + i) % text.tasks.length]!);
+  const firstTask = copySeed % text.tasks.length;
+  const tasks =
+    language === "en"
+      ? buildEnergyTasks(scores, copySeed, date)
+      : Array.from({ length: 3 }, (_, i) => text.tasks[(firstTask + i) % text.tasks.length]!);
 
   return {
     date: dateString,
     overallScore,
-    title: pick(text.titles, seed, 5),
-    summary: pick(text.summaries, seed, 17),
+    title: pick(text.titles, copySeed, 5),
+    summary: pick(text.summaries, copySeed, 17),
     card,
     scores,
     lucky,
-    suggestion: pick(text.suggestions, seed, 29),
-    avoid: pick(text.avoids, seed, 41),
+    suggestion: pick(text.suggestions, copySeed, 29),
+    avoid: pick(text.avoids, copySeed, 41),
+    selfHint: selfHintFor(copySeed, language),
+    psychology: psychologyFor(copySeed, language),
+    astrologyNote: astrologySummary(date, birthDetails, language),
     tasks,
   };
 }

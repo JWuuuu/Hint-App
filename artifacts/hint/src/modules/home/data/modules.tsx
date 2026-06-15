@@ -31,7 +31,6 @@ import {
   StepSigil,
   ClaritySigil,
   WeeklySigil,
-  MoreSigil,
 } from "./sigils";
 
 /* ── Sections ──────────────────────────────────────────────────
@@ -126,6 +125,14 @@ export const HOME_MODULES: ModuleDefinition[] = [
     section: "tarot",
   },
   {
+    id: "animal-tarot",
+    title: "Animal Tarot",
+    hint: "A gentler pull through instinct and symbols.",
+    ...soon(),
+    sigil: DailyPullSigil,
+    section: "tarot",
+  },
+  {
     id: "one-card",
     title: "One Card",
     hint: "A single card, turned in private.",
@@ -195,8 +202,8 @@ export const HOME_MODULES: ModuleDefinition[] = [
   /* ── Astrology ── */
   {
     id: "natal",
-    title: "Natal Chart",
-    hint: "The sky on the night you began.",
+    title: "Birth Chart",
+    hint: "Your personal sky map.",
     href: "/astrology",
     sigil: NatalSigil,
     section: "astrology",
@@ -219,8 +226,8 @@ export const HOME_MODULES: ModuleDefinition[] = [
   },
   {
     id: "daily-stars",
-    title: "Daily Stars",
-    hint: "Tonight's weather, from above.",
+    title: "Zodiac",
+    hint: "A quick read for your sign.",
     ...soon(),
     sigil: StarsSigil,
     section: "astrology",
@@ -278,6 +285,14 @@ export const HOME_MODULES: ModuleDefinition[] = [
     section: "growth",
   },
   {
+    id: "meditation",
+    title: "Meditation",
+    hint: "A quiet reset for your nervous system.",
+    ...soon(),
+    sigil: MoodSigil,
+    section: "growth",
+  },
+  {
     id: "small-step",
     title: "Small Step Tonight",
     hint: "Something gentle before sleep.",
@@ -305,13 +320,10 @@ export const HOME_MODULES: ModuleDefinition[] = [
 
 /** IDs surfaced in the compact home rail (live first, then notable rooms). */
 const FEATURED_IDS = [
-  "tarot",
-  "ask",
+  "daily-stars",
   "natal",
-  "compatibility",
-  "dreams",
-  "journal",
-  "daily-pull",
+  "animal-tarot",
+  "meditation",
 ];
 
 const SOON_IDS = [
@@ -320,30 +332,17 @@ const SOON_IDS = [
   "relationship-spread",
   "relationship-energy",
   "moon-phase",
-  "daily-stars",
   "personality",
   "small-step",
 ];
 
 /** Title overrides for the home grid (broader, more app-like labels). */
 const FEATURED_TITLES: Record<string, string> = {
-  tarot: "Tarot",
-  natal: "Astrology",
-  dreams: "Dream",
-  journal: "Journal",
+  "daily-stars": "Zodiac",
+  natal: "Birth Chart",
 };
 
-/** A synthetic tile that opens the full room library. */
-const MORE_TILE: ModuleDefinition = {
-  id: "more",
-  title: "More",
-  hint: "Every room in Hint.",
-  href: "/rooms",
-  sigil: MoreSigil,
-  section: "growth",
-};
-
-/** A curated, ordered subset for the home dashboard rail (8 tiles). */
+/** A curated, ordered subset for the home dashboard rail. */
 export function getFeaturedModules(): ModuleDefinition[] {
   const byId = new Map(HOME_MODULES.map((m) => [m.id, m]));
   const tiles = FEATURED_IDS.map((id) => byId.get(id))
@@ -351,7 +350,7 @@ export function getFeaturedModules(): ModuleDefinition[] {
     .map((m) =>
       FEATURED_TITLES[m.id] ? { ...m, title: FEATURED_TITLES[m.id]! } : m,
     );
-  return [...tiles, MORE_TILE];
+  return tiles;
 }
 
 /** Unfinished ideas that should be visible without competing with live paths. */

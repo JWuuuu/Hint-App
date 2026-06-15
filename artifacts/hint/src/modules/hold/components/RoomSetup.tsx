@@ -4,10 +4,12 @@ import { Check, ChevronRight, Image, Layers, Palette, Shuffle, Sparkles } from "
 import { Link } from "wouter";
 import {
   BACKGROUND_STYLES,
+  CARD_FACE_STYLES,
   DECK_STYLES,
   DEFAULT_TAROT_ROOM_SETUP,
   ROOM_PRESETS,
   SPREAD_CHOICES,
+  type CardFaceId,
   type DeckStyleId,
   type RoomBackgroundId,
   type RoomPreset,
@@ -15,6 +17,7 @@ import {
   type TarotRoomSetup,
 } from "../useHoldFlow";
 import type { SpreadType } from "../chat/types";
+import { getTarotCardImage } from "../../tarot/logic/cardImageMap";
 import { GOLD, IVORY, TEXT_HALO } from "../atmosphere";
 import { useLanguage } from "../../../lib/i18n";
 
@@ -189,6 +192,69 @@ function ChoiceButton({
         </span>
       </span>
       {selected && <Check className="shrink-0" size={13} style={{ color: GOLD.ink }} />}
+    </button>
+  );
+}
+
+function CardFaceButton({
+  label,
+  description,
+  cardArtId,
+  previewCards,
+  selected,
+  onClick,
+}: {
+  label: string;
+  description: string;
+  cardArtId: CardFaceId;
+  previewCards: readonly string[];
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const images = previewCards
+    .map((cardId) => getTarotCardImage(cardId, cardArtId))
+    .filter((image): image is string => Boolean(image));
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="grid min-h-[92px] grid-cols-[76px_1fr] gap-3 rounded-[8px] border p-2.5 text-left transition-all duration-500 hover:brightness-105 active:scale-[0.99]"
+      style={{
+        borderColor: selected ? GOLD.edge : "var(--hint-border)",
+        background: selected
+          ? "linear-gradient(135deg, rgba(228,198,138,0.14), rgba(255,255,255,0.05))"
+          : "var(--hint-card-surface-muted)",
+        boxShadow: selected ? "0 0 22px rgba(228,198,138,0.14)" : "none",
+      }}
+    >
+      <span className="relative h-[70px]">
+        {images.map((image, index) => (
+          <span
+            key={image}
+            className="absolute top-0 block h-[70px] w-[45px] overflow-hidden rounded-[6px] border bg-black/30 shadow-[0_9px_18px_rgba(0,0,0,0.24)]"
+            style={{
+              left: `${index * 14}px`,
+              transform: `rotate(${index === 0 ? -8 : index === 1 ? 0 : 8}deg)`,
+              borderColor: selected ? "rgba(228,198,138,0.58)" : "rgba(255,255,255,0.20)",
+              zIndex: index + 1,
+            }}
+          >
+            <img src={image} alt="" aria-hidden="true" className="h-full w-full object-cover" draggable={false} />
+          </span>
+        ))}
+      </span>
+      <span className="min-w-0">
+        <span className="flex items-start justify-between gap-2">
+          <span className="block font-sans text-[12.5px] font-semibold leading-tight" style={{ color: selected ? "#fff7df" : IVORY.strong }}>
+            {label}
+          </span>
+          {selected && <Check className="shrink-0" size={14} style={{ color: GOLD.ink }} />}
+        </span>
+        <span className="mt-1.5 block font-sans text-[10px] leading-snug" style={{ color: IVORY.dim }}>
+          {description}
+        </span>
+      </span>
     </button>
   );
 }
@@ -613,6 +679,10 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
     () => DECK_STYLES.find((item) => item.id === setup.deckStyleId) ?? DECK_STYLES[0]!,
     [setup.deckStyleId],
   );
+  const selectedCardFace = useMemo(
+    () => CARD_FACE_STYLES.find((item) => item.id === setup.cardFaceId) ?? CARD_FACE_STYLES[0]!,
+    [setup.cardFaceId],
+  );
   const selectedBackground = useMemo(
     () => BACKGROUND_STYLES.find((item) => item.id === setup.backgroundId) ?? BACKGROUND_STYLES[0]!,
     [setup.backgroundId],
@@ -633,6 +703,10 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
       deckStyleId,
       cardColor: deckColorLabel(deckStyleId),
     }));
+  };
+
+  const chooseCardFace = (cardFaceId: CardFaceId) => {
+    setSetup((current) => ({ ...current, cardFaceId }));
   };
 
   const chooseBackground = (backgroundId: RoomBackgroundId) => {
@@ -690,6 +764,9 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
               <p className="mt-2 max-w-md font-sans text-[12px] leading-relaxed" style={{ color: IVORY.mute }}>
                 {t("tarot.setup.body")}
               </p>
+              <p className="mt-2 font-sans text-[10px] uppercase tracking-[0.16em]" style={{ color: GOLD.ink }}>
+                {t(`tarot.cardFace.${selectedCardFace.id}.label`)} · {t(`tarot.deck.${selectedDeck.id}.label`)}
+              </p>
             </div>
           </header>
 
@@ -730,6 +807,22 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
                       preview={deck.preview}
                       selected={setup.deckStyleId === deck.id}
                       onClick={() => chooseDeck(deck.id)}
+                    />
+                  ))}
+                </div>
+              </SetupSection>
+
+              <SetupSection icon={<Layers size={15} />} title={t("tarot.setup.cardArt")}>
+                <div className="grid gap-2 min-[520px]:grid-cols-2 min-[560px]:grid-cols-1">
+                  {CARD_FACE_STYLES.map((cardFace) => (
+                    <CardFaceButton
+                      key={cardFace.id}
+                      label={t(`tarot.cardFace.${cardFace.id}.label`)}
+                      description={t(`tarot.cardFace.${cardFace.id}.description`)}
+                      cardArtId={cardFace.id}
+                      previewCards={cardFace.previewCards}
+                      selected={setup.cardFaceId === cardFace.id}
+                      onClick={() => chooseCardFace(cardFace.id)}
                     />
                   ))}
                 </div>

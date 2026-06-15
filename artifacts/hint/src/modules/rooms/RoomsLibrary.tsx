@@ -1,18 +1,56 @@
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Sparkles } from "lucide-react";
 import { ACCENT } from "../hold/atmosphere";
 import { getModulesBySection } from "../home/data/modules";
 import { ModuleTileWrapper } from "../home/components/ModuleTile";
 import { useLanguage } from "../../lib/i18n";
+import type { SectionKey } from "../home/types/home.types";
+
+type RoomFilter = SectionKey | "all";
 
 export function RoomsLibrary() {
   const { t } = useLanguage();
-  const groups = getModulesBySection();
+  const [activeFilter, setActiveFilter] = useState<RoomFilter>("all");
+  const groups = useMemo(() => getModulesBySection(), []);
+  const totalRooms = useMemo(
+    () => groups.reduce((total, group) => total + group.modules.length, 0),
+    [groups],
+  );
+  const liveRooms = useMemo(
+    () => groups.flatMap((group) => group.modules).filter((module) => module.href),
+    [groups],
+  );
+  const visibleGroups = useMemo(
+    () =>
+      activeFilter === "all"
+        ? groups
+        : groups.filter((group) => group.section.key === activeFilter),
+    [activeFilter, groups],
+  );
+  const activeLiveRooms = useMemo(
+    () =>
+      activeFilter === "all"
+        ? liveRooms
+        : liveRooms.filter((module) => module.section === activeFilter),
+    [activeFilter, liveRooms],
+  );
+  const filterOptions = useMemo(
+    () => [
+      { key: "all" as const, label: "All", count: totalRooms },
+      ...groups.map((group) => ({
+        key: group.section.key,
+        label: t(`section.${group.section.key}.label`),
+        count: group.modules.length,
+      })),
+    ],
+    [groups, t, totalRooms],
+  );
 
   return (
     <div className="h-full w-full overflow-y-auto overscroll-none pb-16">
-      <div className="mx-auto w-full max-w-lg px-4 pt-24 sm:max-w-3xl sm:px-6 md:pt-24 lg:max-w-6xl">
+      <div className="mx-auto w-full max-w-lg px-4 pt-32 sm:max-w-3xl sm:px-6 md:pt-32 lg:max-w-6xl lg:pt-28">
         <motion.header
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -51,6 +89,14 @@ export function RoomsLibrary() {
                 <p className="mt-3 max-w-xl font-sans text-[13.5px] leading-relaxed" style={{ color: "var(--hint-muted)" }}>
                   {t("rooms.subtitle")}
                 </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="rounded-[8px] border px-3 py-1.5 font-sans text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: ACCENT.gold, borderColor: "rgba(206,178,110,0.24)", background: "rgba(206,178,110,0.08)" }}>
+                    {liveRooms.length} open now
+                  </span>
+                  <span className="rounded-[8px] border px-3 py-1.5 font-sans text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: "var(--hint-muted)", borderColor: "var(--hint-border)", background: "var(--hint-input-bg)" }}>
+                    {totalRooms} total rooms
+                  </span>
+                </div>
               </div>
               <div
                 className="flex h-11 items-center gap-3 rounded-[8px] border px-4"
@@ -68,8 +114,65 @@ export function RoomsLibrary() {
           </div>
         </motion.header>
 
+        <div className="mb-6 flex gap-2 overflow-x-auto rounded-[16px] border p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ background: "var(--hint-surface-strong)", borderColor: "var(--hint-border)" }}>
+          {filterOptions.map((option) => {
+            const selected = activeFilter === option.key;
+            return (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setActiveFilter(option.key)}
+                aria-pressed={selected}
+                className="flex h-10 shrink-0 items-center gap-2 rounded-[12px] border px-3 font-sans text-[12px] font-black transition-[transform,opacity] duration-200 hover:-translate-y-0.5"
+                style={{
+                  background: selected ? "linear-gradient(145deg, rgba(243,212,144,0.9), rgba(122,226,214,0.72))" : "transparent",
+                  borderColor: selected ? "rgba(255,255,255,0.34)" : "transparent",
+                  color: selected ? "#17110c" : "var(--hint-muted)",
+                }}
+              >
+                <span>{option.label}</span>
+                <span className="rounded-full px-2 py-0.5 text-[10px]" style={{ background: selected ? "rgba(0,0,0,0.12)" : "var(--hint-input-bg)", color: selected ? "#17110c" : "var(--hint-faint)" }}>
+                  {option.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {activeLiveRooms.length ? (
+          <motion.section
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.58, ease: "easeOut" }}
+            className="mb-8"
+          >
+            <div className="mb-4 flex items-center justify-between gap-4 px-1">
+              <div>
+                <h2 className="inline-flex items-center gap-2 font-serif text-[22px] leading-none" style={{ color: ACCENT.gold }}>
+                  <Sparkles size={18} />
+                  Open now
+                </h2>
+                <p className="mt-2 max-w-lg font-sans text-[12.5px] leading-relaxed" style={{ color: "var(--hint-muted)" }}>
+                  Live paths you can enter immediately.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+              {activeLiveRooms.map((module, idx) => (
+                <ModuleTileWrapper
+                  key={`live-${module.id}`}
+                  module={module}
+                  index={idx}
+                  baseDelay={0}
+                  variant="library"
+                />
+              ))}
+            </div>
+          </motion.section>
+        ) : null}
+
         <div className="flex flex-col gap-8">
-          {groups.map(({ section, modules }, i) => (
+          {visibleGroups.map(({ section, modules }, i) => (
             <motion.section
               key={section.key}
               initial={{ opacity: 0, y: 14 }}

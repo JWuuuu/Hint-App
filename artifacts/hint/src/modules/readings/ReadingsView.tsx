@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Link, useRoute } from "wouter";
 import { ACCENT, GLASS } from "../hold/atmosphere";
@@ -24,12 +24,19 @@ import {
   type LocalTarotReading,
 } from "./localTarotReadings";
 import type { SpreadType } from "../hold/chat/types";
+import type { RitualCard } from "../tarot/logic/createHiddenDeck";
 import { getTarotCardImage } from "../tarot/logic/cardImageMap";
+import { SPREAD_CHOICES } from "../hold/useHoldFlow";
+import { TarotHintReadingChat } from "../tarot/components/TarotHintReadingChat";
+import { readBirthProfile } from "../../lib/astro/userBirthProfile";
+import type { BirthProfile } from "../../types/astrology";
 
 /**
  * ReadingsView — the room's memory. A real archive of every tarot reading the
  * user has sat with, newest first, scoped to their anonymous id.
  */
+
+type HistoryTab = "all" | "tarot" | "daily" | "astrology" | "questions";
 
 function fmt(iso: string, todayLabel: string): string {
   const d = new Date(iso);
@@ -154,6 +161,62 @@ function tarotToSummary(reading: LocalTarotReading): ReadingSummary {
   };
 }
 
+function questionFromTarotReading(reading: LocalTarotReading): QuestionHistoryItem | null {
+  const question = reading.question?.trim();
+  if (!question) return null;
+  return {
+    id: `reading-question-${reading.id}`,
+    anonId: reading.anonId,
+    question,
+    focus: reading.focusLabel ?? reading.spreadLabel,
+    spreadType: reading.spreadType as SpreadType,
+    readingId: reading.id,
+    createdAt: reading.createdAt,
+  };
+}
+
+function mergeQuestionHistory(
+  stored: QuestionHistoryItem[],
+  tarotReadings: LocalTarotReading[],
+): QuestionHistoryItem[] {
+  const byKey = new Map<string, QuestionHistoryItem>();
+  for (const item of stored) {
+    byKey.set(item.readingId ?? item.id, item);
+  }
+  for (const reading of tarotReadings) {
+    const item = questionFromTarotReading(reading);
+    if (!item) continue;
+    byKey.set(item.readingId ?? item.id, item);
+  }
+  return [...byKey.values()].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
+function tarotReadingToRitualCards(reading: LocalTarotReading): RitualCard[] {
+  return reading.cards.map((card, index) => ({
+    visualId: `${reading.id}-${index}-${card.cardId}`,
+    cardId: card.cardId,
+    name: card.name,
+    orientation: card.orientation,
+    x: 50,
+    y: 50,
+    rotation: 0,
+    rotate: 0,
+    zIndex: index,
+    selected: true,
+    revealed: true,
+  }));
+}
+
+function displayQuestionMeaning(reading: LocalTarotReading): string {
+  const question = reading.question?.trim();
+  if (!question) return reading.questionMeaning;
+  return reading.questionMeaning
+    .replace(`For "${question}", `, "For this question, ")
+    .replace(`For “${question}”, `, "For this question, ");
+}
+
 const SPREAD_LABELS: Record<SpreadType, string> = {
   single: "One card",
   three: "Three cards",
@@ -216,7 +279,7 @@ function QuestionCard({
   );
 }
 
-function EmptyPanel({ children }: { children: string }) {
+function EmptyPanel({ children }: { children: ReactNode }) {
   return (
     <div
       className="rounded-[8px] px-4 py-5 text-center font-sans text-[13px] leading-relaxed"
@@ -231,11 +294,159 @@ function EmptyPanel({ children }: { children: string }) {
   );
 }
 
+function buildAstrologyArchive(profile: BirthProfile | null) {
+  return [
+    {
+      id: "birth",
+      title: profile ? "Birth profile saved" : "Birth profile",
+      label: profile ? `${profile.birthDate} · ${profile.birthPlace}` : "Add birth details",
+      body: profile
+        ? "Your account birth details are ready for charts, transits, together, and reports."
+        : "Add birth date, time, and place once, then reuse it across Astrology.",
+      href: "/astrology?tab=birth",
+    },
+    {
+      id: "chart",
+      title: "Chart graph",
+      label: "Natal wheel",
+      body: "Return to the visual chart and element balance whenever you need the map.",
+      href: "/astrology?tab=chart",
+    },
+    {
+      id: "transits",
+      title: "Transit checks",
+      label: "Date-based sky",
+      body: "Look up a transit window for any date, not only today.",
+      href: "/astrology?tab=transits",
+    },
+    {
+      id: "together",
+      title: "Together invites",
+      label: "Synastry",
+      body: "Open relationship maps and invite another person into the web flow.",
+      href: "/astrology?tab=together",
+    },
+    {
+      id: "reports",
+      title: "Astrology reports",
+      label: "Long reads",
+      body: "Keep birth, transit, and relationship report previews in one place.",
+      href: "/astrology?tab=reports",
+    },
+  ];
+}
+
+function ReadingList({
+  readings,
+  language,
+  todayLabel,
+  empty,
+  limit,
+}: {
+  readings: ReadingSummary[];
+  language: HintLanguage;
+  todayLabel: string;
+  empty: string;
+  limit?: number;
+}) {
+  const rows = typeof limit === "number" ? readings.slice(0, limit) : readings;
+  if (!rows.length) return <EmptyPanel>{empty}</EmptyPanel>;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {rows.map((reading, i) => (
+        <motion.div
+          key={reading.id}
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6, ease: "easeOut", delay: Math.min(i, 6) * 0.05 }}
+        >
+          <ReadingCard
+            reading={reading}
+            language={language}
+            todayLabel={todayLabel}
+          />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function QuestionList({
+  items,
+  todayLabel,
+  empty,
+  limit,
+}: {
+  items: QuestionHistoryItem[];
+  todayLabel: string;
+  empty: string;
+  limit?: number;
+}) {
+  const rows = typeof limit === "number" ? items.slice(0, limit) : items;
+  if (!rows.length) return <EmptyPanel>{empty}</EmptyPanel>;
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      {rows.map((item, i) => (
+        <motion.div
+          key={item.id}
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6, ease: "easeOut", delay: Math.min(i, 6) * 0.05 }}
+        >
+          <QuestionCard item={item} todayLabel={todayLabel} />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function AstrologyArchiveGrid({ profile }: { profile: BirthProfile | null }) {
+  const items = buildAstrologyArchive(profile);
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      {items.map((item, index) => (
+        <motion.div
+          key={item.id}
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.25 }}
+          transition={{ duration: 0.56, ease: "easeOut", delay: Math.min(index, 6) * 0.04 }}
+        >
+          <Link
+            href={item.href}
+            className="block rounded-[8px] border p-4 transition-[transform,opacity] duration-200 hover:-translate-y-0.5"
+            style={{ background: GLASS.panel, borderColor: GLASS.border }}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="font-sans text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: ACCENT.gold }}>
+                Astrology
+              </span>
+              <span className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: GLASS.faint, borderColor: GLASS.border, background: "rgba(255,255,255,0.04)" }}>
+                {item.label}
+              </span>
+            </div>
+            <p className="font-serif text-[20px] leading-tight" style={{ color: GLASS.text }}>
+              {item.title}
+            </p>
+            <p className="mt-2 font-sans text-[12.5px] leading-relaxed" style={{ color: GLASS.muted }}>
+              {item.body}
+            </p>
+          </Link>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 export function ReadingsView() {
   const { language, t } = useLanguage();
   const anonId = getAnonId();
   const { data, isLoading } = useListReadings({ anonId });
-  const [activeTab, setActiveTab] = useState<"readings" | "questions">("readings");
+  const [activeTab, setActiveTab] = useState<HistoryTab>("all");
   const [localReadings, setLocalReadings] = useState<ReadingSummary[]>(() =>
     listLocalDailyReadings(anonId),
   );
@@ -245,27 +456,48 @@ export function ReadingsView() {
   const [tarotReadings, setTarotReadings] = useState<LocalTarotReading[]>(() =>
     listLocalTarotReadings(anonId),
   );
+  const [birthProfile, setBirthProfile] = useState<BirthProfile | null>(() => readBirthProfile());
+  const apiReadings = useMemo(() => (data ?? []) as ReadingSummary[], [data]);
+  const tarotHistory = useMemo(
+    () =>
+      tarotReadings
+        .map(tarotToSummary)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [tarotReadings],
+  );
+  const dailyHistory = useMemo(
+    () =>
+      [...localReadings].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
+    [localReadings],
+  );
   const readings = useMemo(() => {
-    const apiReadings = (data ?? []) as ReadingSummary[];
     const byId = new Map<string, ReadingSummary>();
-    [...tarotReadings.map(tarotToSummary), ...localReadings, ...apiReadings].forEach((reading) => {
+    [...tarotHistory, ...dailyHistory, ...apiReadings].forEach((reading) => {
       byId.set(reading.id, reading);
     });
     return [...byId.values()].sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  }, [data, localReadings, tarotReadings]);
-  const savedReadings = useMemo(
-    () =>
-      [...tarotReadings.map(tarotToSummary), ...localReadings, ...((data ?? []) as ReadingSummary[])].sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      ),
-    [data, localReadings, tarotReadings],
+  }, [apiReadings, dailyHistory, tarotHistory]);
+  const displayedQuestionHistory = useMemo(
+    () => mergeQuestionHistory(questionHistory, tarotReadings),
+    [questionHistory, tarotReadings],
   );
   const lastReading = readings[0];
   const recentHistory = readings.slice(1, 7);
+  const historyTabs = useMemo(
+    () => [
+      { key: "all" as const, label: t("readings.tab.all"), count: readings.length + displayedQuestionHistory.length + buildAstrologyArchive(birthProfile).length },
+      { key: "tarot" as const, label: t("readings.tab.tarot"), count: tarotHistory.length },
+      { key: "daily" as const, label: t("readings.tab.daily"), count: dailyHistory.length },
+      { key: "astrology" as const, label: t("readings.tab.astrology"), count: buildAstrologyArchive(birthProfile).length },
+      { key: "questions" as const, label: t("readings.tab.questions"), count: displayedQuestionHistory.length },
+    ],
+    [birthProfile, dailyHistory.length, displayedQuestionHistory.length, readings.length, t, tarotHistory.length],
+  );
 
   useEffect(() => {
     return subscribeToLocalDailyReadings(() => {
@@ -284,6 +516,16 @@ export function ReadingsView() {
       setTarotReadings(listLocalTarotReadings(anonId));
     });
   }, [anonId]);
+
+  useEffect(() => {
+    const syncBirthProfile = () => setBirthProfile(readBirthProfile());
+    window.addEventListener("hint.birthProfile.updated", syncBirthProfile);
+    window.addEventListener("storage", syncBirthProfile);
+    return () => {
+      window.removeEventListener("hint.birthProfile.updated", syncBirthProfile);
+      window.removeEventListener("storage", syncBirthProfile);
+    };
+  }, []);
 
   return (
     <AppScreen>
@@ -308,70 +550,68 @@ export function ReadingsView() {
       </div>
 
       <div
-        className="mb-7 grid grid-cols-2 rounded-[14px] border p-1"
+        className="mb-7 flex gap-2 overflow-x-auto rounded-[14px] border p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{
           background: "rgba(255,255,255,0.045)",
           borderColor: GLASS.border,
         }}
       >
-        <TabButton active={activeTab === "readings"} onClick={() => setActiveTab("readings")}>
-          {t("readings.tab.readings")}
-        </TabButton>
-        <TabButton active={activeTab === "questions"} onClick={() => setActiveTab("questions")}>
-          {t("readings.tab.questions")}
-        </TabButton>
+        {historyTabs.map((tab) => (
+          <TabButton key={tab.key} active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
+            <span>{tab.label}</span>
+            <span
+              className="ml-2 rounded-full px-2 py-0.5 text-[10px]"
+              style={{ background: activeTab === tab.key ? "rgba(206,178,110,0.16)" : "rgba(255,255,255,0.05)" }}
+            >
+              {tab.count}
+            </span>
+          </TabButton>
+        ))}
       </div>
 
-      {isLoading && readings.length === 0 && questionHistory.length === 0 ? (
+      {isLoading && readings.length === 0 && displayedQuestionHistory.length === 0 ? (
         <p className="font-serif italic text-[13px] py-8 text-center" style={{ color: GLASS.muted }}>
           {t("readings.loading")}
         </p>
       ) : activeTab === "questions" ? (
         <section className="mb-10">
           <SectionLabel>{t("readings.questions")}</SectionLabel>
-          {questionHistory.length === 0 ? (
-            <EmptyPanel>{t("readings.questionsEmpty")}</EmptyPanel>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {questionHistory.map((item, i) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.6, ease: "easeOut", delay: Math.min(i, 6) * 0.05 }}
-                >
-                  <QuestionCard item={item} todayLabel={t("readings.today")} />
-                </motion.div>
-              ))}
-            </div>
-          )}
+          <QuestionList
+            items={displayedQuestionHistory}
+            todayLabel={t("readings.today")}
+            empty={t("readings.questionsEmpty")}
+          />
         </section>
-      ) : readings.length === 0 ? (
+      ) : activeTab === "astrology" ? (
         <section className="mb-10">
-          <SectionLabel>{t("readings.section")}</SectionLabel>
-          <GlassPanel hero>
-            <p className="font-sans text-[13px] leading-relaxed text-center mb-4" style={{ color: GLASS.muted }}>
-              {t("readings.empty")}
-            </p>
-            <Link
-              href="/tarot"
-              className="inline-flex items-center justify-center w-full h-11 rounded-[8px] font-serif text-[12px] uppercase tracking-[0.24em]"
-              style={{
-                background: "rgba(206,178,110,0.12)",
-                border: "1px solid rgba(206,178,110,0.3)",
-                color: ACCENT.gold,
-              }}
-            >
-              {t("readings.enter")}
-            </Link>
-          </GlassPanel>
+          <SectionLabel>{t("readings.astrologyHistory")}</SectionLabel>
+          <AstrologyArchiveGrid profile={birthProfile} />
+        </section>
+      ) : activeTab === "daily" ? (
+        <section className="mb-10">
+          <SectionLabel>{t("readings.dailyCalendarHistory")}</SectionLabel>
+          <ReadingList
+            readings={dailyHistory}
+            language={language}
+            todayLabel={t("readings.today")}
+            empty={t("readings.dailyEmpty")}
+          />
+        </section>
+      ) : activeTab === "tarot" ? (
+        <section className="mb-10">
+          <SectionLabel>{t("readings.tarotHistory")}</SectionLabel>
+          <ReadingList
+            readings={tarotHistory}
+            language={language}
+            todayLabel={t("readings.today")}
+            empty={t("readings.tarotEmpty")}
+          />
         </section>
       ) : (
         <>
           <section className="mb-9">
             <SectionLabel>{t("readings.last")}</SectionLabel>
-            {lastReading && (
+            {lastReading ? (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -384,57 +624,56 @@ export function ReadingsView() {
                   featured
                 />
               </motion.div>
+            ) : (
+              <EmptyPanel>{t("readings.empty")}</EmptyPanel>
             )}
           </section>
 
           <section className="mb-9">
+            <SectionLabel>{t("readings.tab.astrology")}</SectionLabel>
+            <AstrologyArchiveGrid profile={birthProfile} />
+          </section>
+
+          <section className="mb-9">
+            <SectionLabel>{t("readings.tab.tarot")}</SectionLabel>
+            <ReadingList
+              readings={tarotHistory}
+              language={language}
+              todayLabel={t("readings.today")}
+              empty={t("readings.tarotEmpty")}
+              limit={4}
+            />
+          </section>
+
+          <section className="mb-9">
+            <SectionLabel>{t("readings.dailyCalendar")}</SectionLabel>
+            <ReadingList
+              readings={dailyHistory}
+              language={language}
+              todayLabel={t("readings.today")}
+              empty={t("readings.dailyEmpty")}
+              limit={4}
+            />
+          </section>
+
+          <section className="mb-9">
             <SectionLabel>{t("readings.recent")}</SectionLabel>
-            {recentHistory.length === 0 ? (
-              <EmptyPanel>{t("readings.recentEmpty")}</EmptyPanel>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {recentHistory.map((reading, i) => (
-                  <motion.div
-                    key={reading.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.3 }}
-                    transition={{ duration: 0.6, ease: "easeOut", delay: Math.min(i, 6) * 0.05 }}
-                  >
-                    <ReadingCard
-                      reading={reading}
-                      language={language}
-                      todayLabel={t("readings.today")}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            )}
+            <ReadingList
+              readings={recentHistory}
+              language={language}
+              todayLabel={t("readings.today")}
+              empty={t("readings.recentEmpty")}
+            />
           </section>
 
           <section className="mb-10">
-            <SectionLabel>{t("readings.saved")}</SectionLabel>
-            {savedReadings.length === 0 ? (
-              <EmptyPanel>{t("readings.savedEmpty")}</EmptyPanel>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {savedReadings.map((reading, i) => (
-                  <motion.div
-                    key={reading.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.3 }}
-                    transition={{ duration: 0.6, ease: "easeOut", delay: Math.min(i, 6) * 0.05 }}
-                  >
-                    <ReadingCard
-                      reading={reading}
-                      language={language}
-                      todayLabel={t("readings.today")}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            )}
+            <SectionLabel>{t("readings.questions")}</SectionLabel>
+            <QuestionList
+              items={displayedQuestionHistory}
+              todayLabel={t("readings.today")}
+              empty={t("readings.questionsEmpty")}
+              limit={4}
+            />
           </section>
         </>
       )}
@@ -443,9 +682,11 @@ export function ReadingsView() {
 }
 
 export function ReadingDetailView() {
+  const { t } = useLanguage();
   const [, params] = useRoute("/readings/:id");
   const id = params?.id ?? "";
   const anonId = getAnonId();
+  const [chatOpen, setChatOpen] = useState(false);
   const { data } = useListReadings({ anonId });
   const tarotReading = getLocalTarotReading(id, anonId);
   const dailyReading = getLocalDailyReading(id, anonId);
@@ -454,26 +695,72 @@ export function ReadingDetailView() {
   const fallbackReading = dailyReading ?? apiReading;
 
   if (tarotReading) {
+    const spread = SPREAD_CHOICES.find((choice) => choice.id === tarotReading.spreadType) ?? SPREAD_CHOICES[0]!;
+    const selectedCards = tarotReadingToRitualCards(tarotReading);
+
+    if (chatOpen) {
+      return (
+        <div className="absolute inset-x-0 bottom-0 top-32 z-30 overflow-hidden lg:top-28">
+          <button
+            type="button"
+            onClick={() => setChatOpen(false)}
+            className="absolute left-4 top-3 z-50 inline-flex h-10 items-center justify-center rounded-full border px-4 font-sans text-[12px] font-semibold"
+            style={{
+              color: "#f7ead0",
+              borderColor: "rgba(228,193,116,0.28)",
+              background: "rgba(1,2,7,0.72)",
+              boxShadow: "0 12px 28px rgba(0,0,0,0.28)",
+            }}
+          >
+            {t("readings.backToDetail")}
+          </button>
+          <TarotHintReadingChat
+            selectedCards={selectedCards}
+            spread={spread}
+            cardArtId={tarotReading.cardArtId ?? "original"}
+            question={tarotReading.question}
+            story={tarotReading.story}
+            focusLabel={tarotReading.focusLabel}
+            archiveOnOpen={false}
+          />
+        </div>
+      );
+    }
+
     return (
       <AppScreen>
         <ScreenHeader
-          eyebrow="Reading detail"
+          eyebrow={t("readings.detail")}
           title={tarotReading.spreadLabel}
-          subtitle={tarotReading.question ?? "A saved Tarot Room reading."}
+          subtitle={tarotReading.focusLabel ?? t("readings.savedTarot")}
           backHref="/readings"
-          backLabel="History"
+          backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
           spreadType={tarotReading.spreadLabel}
           createdAt={tarotReading.createdAt}
           question={tarotReading.question}
         />
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={() => setChatOpen(true)}
+            className="inline-flex h-11 items-center justify-center rounded-[999px] px-5 font-sans text-[14px] font-medium"
+            style={{
+              color: "#08070B",
+              background: "linear-gradient(145deg, rgba(243,212,144,0.98), rgba(122,226,214,0.92))",
+              boxShadow: "0 14px 30px rgba(0,0,0,0.22)",
+            }}
+          >
+            {t("readings.returnToChat")}
+          </button>
+        </div>
         <section className="mb-6">
-          <SectionLabel>Cards drawn</SectionLabel>
+          <SectionLabel>{t("readings.cardsDrawn")}</SectionLabel>
           <GlassPanel>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {tarotReading.cards.map((card, index) => {
-                const image = getTarotCardImage(card.cardId);
+                const image = getTarotCardImage(card.cardId, tarotReading.cardArtId ?? "original");
                 return (
                   <div key={`${card.cardId}-${index}`} className="min-w-0 text-center">
                     <div
@@ -504,7 +791,7 @@ export function ReadingDetailView() {
           </GlassPanel>
         </section>
         <section className="mb-6">
-          <SectionLabel>Answer</SectionLabel>
+          <SectionLabel>{t("readings.answer")}</SectionLabel>
           <GlassPanel>
             <p className="font-serif text-[18px] leading-relaxed" style={{ color: GLASS.text }}>
               {tarotReading.shortAnswer}
@@ -521,7 +808,7 @@ export function ReadingDetailView() {
               ))}
             </div>
             <p className="mt-4 font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>
-              {tarotReading.questionMeaning}
+              {displayQuestionMeaning(tarotReading)}
             </p>
           </GlassPanel>
         </section>
@@ -533,11 +820,11 @@ export function ReadingDetailView() {
     return (
       <AppScreen>
         <ScreenHeader
-          eyebrow="Reading detail"
+          eyebrow={t("readings.detail")}
           title={fallbackReading.cardName}
-          subtitle={fallbackReading.question ?? "Saved daily reading."}
+          subtitle={t("readings.savedReading")}
           backHref="/readings"
-          backLabel="History"
+          backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
           spreadType={String(fallbackReading.spreadType)}
@@ -557,11 +844,11 @@ export function ReadingDetailView() {
     return (
       <AppScreen>
         <ScreenHeader
-          eyebrow="Question detail"
+          eyebrow={t("readings.questionDetail")}
           title={SPREAD_LABELS[question.spreadType] ?? question.spreadType}
-          subtitle={question.question}
+          subtitle={question.focus}
           backHref="/readings"
-          backLabel="History"
+          backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
           spreadType={SPREAD_LABELS[question.spreadType] ?? question.spreadType}
@@ -580,13 +867,13 @@ export function ReadingDetailView() {
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow="History"
-        title="Reading not found"
-        subtitle="This saved reading is not available in this browser."
+        eyebrow={t("nav.history")}
+        title={t("readings.notFound")}
+        subtitle={t("readings.notFoundBody")}
         backHref="/readings"
-        backLabel="History"
+        backLabel={t("nav.history")}
       />
-      <EmptyPanel>Try opening History again after completing a reading.</EmptyPanel>
+      <EmptyPanel>{t("readings.notFoundHint")}</EmptyPanel>
     </AppScreen>
   );
 }
@@ -600,28 +887,30 @@ function ReadingDetailMeta({
   createdAt: string;
   question?: string;
 }) {
+  const { t } = useLanguage();
+
   return (
     <section className="mb-6">
-      <SectionLabel>Summary</SectionLabel>
+      <SectionLabel>{t("readings.summary")}</SectionLabel>
       <GlassPanel>
         <div className="grid gap-3 font-sans text-[13px] sm:grid-cols-3" style={{ color: GLASS.muted }}>
           <p>
             <span className="block text-[10px] uppercase tracking-[0.18em]" style={{ color: GLASS.faint }}>
-              Spread
+              {t("readings.meta.spread")}
             </span>
             {spreadType}
           </p>
           <p>
             <span className="block text-[10px] uppercase tracking-[0.18em]" style={{ color: GLASS.faint }}>
-              Time
+              {t("readings.meta.time")}
             </span>
             {new Date(createdAt).toLocaleString()}
           </p>
           <p>
             <span className="block text-[10px] uppercase tracking-[0.18em]" style={{ color: GLASS.faint }}>
-              Question
+              {t("readings.meta.question")}
             </span>
-            {question || "No question saved."}
+            {question || t("readings.meta.noQuestion")}
           </p>
         </div>
       </GlassPanel>
@@ -636,13 +925,13 @@ function TabButton({
 }: {
   active: boolean;
   onClick: () => void;
-  children: string;
+  children: ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="h-11 rounded-[10px] px-3 font-sans text-[13px] font-semibold transition"
+      className="inline-flex h-11 shrink-0 items-center rounded-[10px] px-3 font-sans text-[13px] font-semibold transition"
       style={{
         color: active ? GLASS.text : GLASS.muted,
         background: active ? "rgba(206,178,110,0.13)" : "transparent",

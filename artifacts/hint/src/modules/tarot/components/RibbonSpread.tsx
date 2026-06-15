@@ -17,16 +17,16 @@ type RibbonSpreadProps = {
 
 function getFanLayout(index: number, total: number) {
   const progress = total <= 1 ? 0.5 : index / (total - 1);
-  const angle = -58 + progress * 116;
+  const angle = -70 + progress * 140;
   const radians = (angle * Math.PI) / 180;
   const edge = Math.abs(progress - 0.5) * 2;
 
   return {
-    x: 50 + Math.sin(radians) * 48,
-    y: 70 - Math.cos(radians) * 38 + Math.pow(edge, 1.8) * 3,
-    rotate: angle * 0.74,
-    centerOffsetX: -Math.sin(radians) * 540,
-    centerOffsetY: 88 + Math.cos(radians) * 56,
+    x: 50 + Math.sin(radians) * 50,
+    y: 72 - Math.cos(radians) * 37 + Math.pow(edge, 1.6) * 3,
+    rotate: angle * 0.62,
+    centerOffsetX: -Math.sin(radians) * 390,
+    centerOffsetY: 124 + Math.cos(radians) * 34,
     spreadDelay: Math.abs(progress - 0.5) * 0.1 + Math.min(index * 0.00055, 0.04),
     zIndex: Math.round(1200 - edge * 130 + index * 0.02),
   };
@@ -39,14 +39,14 @@ function slotSizeClass(cardCount: number) {
 }
 
 function slotFieldClass(cardCount: number) {
-  if (cardCount === 1) return "top-[51%] h-[25%] sm:top-[51%] sm:h-[27%]";
-  if (cardCount === 3) return "top-[50%] h-[30%] sm:top-[49%] sm:h-[32%]";
-  if (cardCount <= 5) return "top-[45%] h-[42%] sm:top-[44%] sm:h-[44%]";
-  return "top-[41%] h-[52%] sm:top-[40%] sm:h-[54%]";
+  if (cardCount === 1) return "top-[49%] h-[24%] sm:top-[48%] sm:h-[25%]";
+  if (cardCount === 3) return "top-[46%] h-[31%] sm:top-[45%] sm:h-[32%]";
+  if (cardCount <= 5) return "top-[41%] h-[39%] sm:top-[40%] sm:h-[40%]";
+  return "top-[38%] h-[43%] sm:top-[37%] sm:h-[44%]";
 }
 
 function fanCardSizeClass() {
-  return "!h-[70px] !w-[45px] sm:!h-[98px] sm:!w-[63px] md:!h-[118px] md:!w-[75px]";
+  return "!h-[66px] !w-[42px] sm:!h-[92px] sm:!w-[58px] md:!h-[110px] md:!w-[70px] lg:!h-[120px] lg:!w-[76px]";
 }
 
 function getSlotPoint(
@@ -160,7 +160,7 @@ export function RibbonSpread({
       }
     }
 
-    const hitRadius = rect.width < 500 ? 130 : 190;
+    const hitRadius = rect.width < 500 ? 116 : 164;
     if (!nearestCard || nearestDistance > hitRadius) return null;
     return nearestCard;
   }
@@ -214,6 +214,9 @@ export function RibbonSpread({
   }
 
   const activePreviewVisualId = previewVisualId ?? hoveredVisualId;
+  const activePreviewIndex = activePreviewVisualId
+    ? finalDeckOrder.findIndex((card) => card.visualId === activePreviewVisualId)
+    : -1;
 
   return (
     <section className="relative h-full w-full overflow-hidden px-4 py-5 text-center sm:px-6">
@@ -227,14 +230,20 @@ export function RibbonSpread({
           <span>{spread.label} spread</span>
           <span className="h-1 w-1 rounded-full bg-[#e4c174]/45" />
           <span>{selectedCards.length} / {maxCards} selected</span>
+          {activePreviewIndex >= 0 && (
+            <>
+              <span className="h-1 w-1 rounded-full bg-[#e4c174]/35" />
+              <span>card {activePreviewIndex + 1} / {finalDeckOrder.length}</span>
+            </>
+          )}
         </div>
         <p className="mt-2 font-sans text-sm text-[#d8c7a6]/68">
-          Choose {maxCards} face-down {maxCards === 1 ? "card" : "cards"} from the arc.
+          Choose {maxCards} face-down {maxCards === 1 ? "card" : "cards"} from the lower arc.
         </p>
       </div>
 
       <div className={`pointer-events-none absolute inset-x-4 ${slotField} z-20 mx-auto max-w-6xl sm:inset-x-8`}>
-        <p className="absolute left-1/2 top-0 -translate-x-1/2 font-sans text-[10px] uppercase tracking-[0.22em] text-[#e4c174]/58">
+        <p className="absolute left-1/2 top-0 z-50 -translate-x-1/2 font-sans text-[10px] uppercase tracking-[0.22em] text-[#e4c174]/58">
           Selected Hints
         </p>
 
@@ -262,7 +271,7 @@ export function RibbonSpread({
                 {selectedCard && (
                   <motion.div
                     layoutId={`spread-card-${selectedCard.visualId}`}
-                    initial={reduceMotion ? { opacity: 0, scale: 0.98 } : { opacity: 0, y: -104, scale: 1.08, rotate: 4 }}
+                    initial={reduceMotion ? { opacity: 0, scale: 0.98 } : { opacity: 0, y: -24, scale: 1.025, rotate: 1 }}
                     animate={reduceMotion
                       ? { opacity: 1, scale: 1, rotate: 0 }
                       : {
@@ -274,7 +283,7 @@ export function RibbonSpread({
                     transition={reduceMotion
                       ? { duration: 0.22, ease: "easeOut" }
                       : { type: "spring", stiffness: 132, damping: 24, mass: 0.82 }}
-                    className="absolute left-0 top-0 z-50 will-change-transform"
+                    className="absolute left-0 top-0 z-30 will-change-transform"
                   >
                     {!reduceMotion && (
                       <motion.div
@@ -309,10 +318,10 @@ export function RibbonSpread({
         onPointerMove={handleFanPointerMove}
         onPointerLeave={handleFanPointerLeave}
         onPointerDown={handleFanPointerDown}
-        className="absolute inset-x-0 top-[9%] z-10 h-[41vh] min-h-[282px] w-full cursor-pointer touch-none overflow-visible sm:top-[8%] sm:h-[43vh] sm:min-h-[326px]"
+        className="absolute inset-x-0 bottom-[-9%] z-10 h-[42vh] min-h-[294px] w-full cursor-pointer touch-none overflow-visible sm:bottom-[-8%] sm:h-[45vh] sm:min-h-[332px] lg:bottom-[-7%]"
       >
-        <div className="absolute inset-x-0 top-0 mx-auto h-full max-w-[92rem]">
-          <div className="pointer-events-none absolute left-1/2 top-[72%] h-[34px] w-[70%] -translate-x-1/2 rounded-full bg-black/18 blur-xl" />
+        <div className="absolute inset-x-0 top-0 mx-auto h-full max-w-[96rem]">
+          <div className="pointer-events-none absolute left-1/2 top-[76%] h-[30px] w-[72%] -translate-x-1/2 rounded-full bg-black/18 blur-xl" />
           {finalDeckOrder.map((card, index) => {
             const selectedInFan = selectedIds.has(card.visualId);
             const activePreview = activePreviewVisualId === card.visualId && !selectedInFan;
@@ -324,7 +333,7 @@ export function RibbonSpread({
                 style={{
                   left: `${layout.x}%`,
                   top: `${layout.y}%`,
-                  zIndex: activePreview ? layout.zIndex + 36 : layout.zIndex,
+                  zIndex: activePreview ? layout.zIndex + 80 : layout.zIndex,
                   transform: "translate(-50%, -50%)",
                 }}
               >
@@ -340,13 +349,13 @@ export function RibbonSpread({
                   animate={{
                     opacity: selectedInFan ? 0 : 1,
                     x: 0,
-                    y: activePreview ? -4 : 0,
-                    rotate: layout.rotate,
-                    scale: activePreview ? 1.006 : 1,
+                    y: activePreview ? -14 : 0,
+                    rotate: activePreview ? layout.rotate * 0.96 : layout.rotate,
+                    scale: activePreview ? 1.035 : 1,
                   }}
                   transition={
                     activePreview
-                      ? { duration: reduceMotion ? 0.08 : 0.12, ease: "easeOut" }
+                      ? { duration: reduceMotion ? 0.08 : 0.16, ease: "easeOut" }
                       : {
                           delay: reduceMotion ? 0 : layout.spreadDelay,
                           type: reduceMotion ? "tween" : "spring",
@@ -358,17 +367,28 @@ export function RibbonSpread({
                   }
                   style={{
                     pointerEvents: "none",
-                    transformOrigin: "50% 96%",
+                    transformOrigin: "50% 104%",
                     willChange: "transform, opacity",
                   }}
                 >
+                  {activePreview && (
+                    <motion.div
+                      aria-hidden="true"
+                      initial={{ opacity: 0, y: 2 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: reduceMotion ? 0.08 : 0.12, ease: "easeOut" }}
+                      className="pointer-events-none absolute left-1/2 top-[-20px] z-20 -translate-x-1/2 rounded-full border border-[#e4c174]/35 bg-black/42 px-2 py-0.5 font-sans text-[8px] uppercase tracking-[0.14em] text-[#f7ead0]/80 shadow-[0_6px_14px_rgba(0,0,0,0.24)] backdrop-blur-sm"
+                    >
+                      {index + 1} / {finalDeckOrder.length}
+                    </motion.div>
+                  )}
                   <div className="pointer-events-none">
                     <TarotCardVisual
                       card={card}
                       compact
-                      subtleBack={!activePreview}
+                      subtleBack
                       backStyle={backStyle}
-                      className={`${fanCardClass} ${activePreview ? "drop-shadow-[0_9px_12px_rgba(0,0,0,0.24)]" : "drop-shadow-[0_7px_12px_rgba(0,0,0,0.22)]"}`}
+                      className={`${fanCardClass} ${activePreview ? "drop-shadow-[0_9px_12px_rgba(0,0,0,0.26)]" : "drop-shadow-[0_7px_12px_rgba(0,0,0,0.22)]"}`}
                     />
                   </div>
                 </motion.div>

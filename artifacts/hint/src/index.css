@@ -103,6 +103,17 @@
   --hint-card-surface: linear-gradient(155deg, rgba(19, 29, 50, 0.84), rgba(10, 15, 28, 0.94) 58%, rgba(8, 11, 20, 0.96));
   --hint-card-surface-muted: rgba(255, 255, 255, 0.035);
   --hint-card-inner: rgba(0, 0, 0, 0.18);
+  --hint-lucky-stroke: rgba(255, 244, 222, 0.82);
+  --hint-lucky-ink: rgba(255, 240, 214, 0.96);
+  --hint-lucky-soft-line: rgba(255, 244, 222, 0.48);
+  --hint-lucky-swatch-rim: rgba(255, 244, 222, 0.42);
+  --hint-lucky-swatch-shadow: rgba(0, 0, 0, 0.38);
+  --hint-lucky-number-swoosh: #d7c0ff;
+  --hint-lucky-tile-bg: color-mix(in srgb, var(--hint-surface-soft) 88%, rgba(255, 255, 255, 0.06));
+  --hint-lucky-tile-bg-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035));
+  --hint-lucky-icon-bg: #fffdf8;
+  --hint-lucky-icon-border: rgba(255, 255, 255, 0.92);
+  --hint-lucky-icon-shadow: 0 10px 24px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.86);
   --hint-me-avatar-bg: radial-gradient(circle at 50% 35%, rgba(100,156,158,0.35), rgba(10,15,26,0.9));
   --hint-me-avatar-shadow: 0 0 22px rgba(100,156,158,0.22);
   --hint-me-plus-surface: linear-gradient(150deg, rgba(196,169,98,0.18) 0%, rgba(120,98,52,0.10) 40%, rgba(10,15,26,0.6) 100%);
@@ -128,6 +139,45 @@
   --hint-nav-bg: rgba(5, 8, 14, 0.78);
   --hint-nav-shadow: 0 18px 44px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.08);
   --hint-elevated-shadow: 0 24px 70px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.08);
+
+  --astro-text: #fff8e8;
+  --astro-text-strong: #fffaf0;
+  --astro-muted: rgba(255,248,232,0.74);
+  --astro-faint: rgba(255,248,232,0.52);
+  --astro-gold: #d9b765;
+  --astro-gold-bright: #ffe6a3;
+  --astro-aqua: #8beee4;
+  --astro-rose: #ff8dad;
+  --astro-lavender: #c7a7ff;
+  --astro-green: #91d38f;
+  --astro-orange: #f0a46d;
+  --astro-bg: radial-gradient(circle at 18% 6%, rgba(217,183,101,0.18), transparent 34%), radial-gradient(circle at 88% 18%, rgba(139,238,228,0.14), transparent 34%), linear-gradient(180deg, #090b12 0%, #10121b 48%, #070910 100%);
+  --astro-border: rgba(217,183,101,0.26);
+  --astro-stroke: rgba(217,183,101,0.34);
+  --astro-surface: linear-gradient(145deg, rgba(16,18,27,0.96), rgba(25,22,33,0.94) 52%, rgba(13,21,25,0.94));
+  --astro-hero: linear-gradient(145deg, rgba(14,17,27,0.97), rgba(29,24,36,0.94) 50%, rgba(10,25,29,0.92));
+  --astro-inner: linear-gradient(145deg, rgba(255,255,255,0.085), rgba(255,255,255,0.035));
+  --astro-locked: linear-gradient(145deg, rgba(28,25,34,0.96), rgba(18,16,24,0.96));
+  --astro-panel: linear-gradient(145deg, rgba(10,13,20,0.97), rgba(24,20,31,0.95) 48%, rgba(11,23,27,0.94));
+  --astro-panel-inner: linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
+  --astro-tile: rgba(255,255,255,0.055);
+  --astro-tile-border: rgba(255,255,255,0.10);
+  --astro-input: rgba(7,9,14,0.64);
+  --astro-chart-panel: radial-gradient(circle at 50% 42%, rgba(134,214,199,0.16), transparent 34%), linear-gradient(145deg, rgba(5,7,12,0.60), rgba(16,18,26,0.42));
+  --astro-chart-header: rgba(7,9,14,0.84);
+  --astro-wheel-outer: rgba(8,11,20,0.96);
+  --astro-wheel-core: rgba(3,4,6,0.46);
+  --astro-wheel-dot-bg: rgba(8,11,20,0.95);
+  --astro-wheel-glow-center: rgba(134,214,199,0.28);
+  --astro-wheel-glow-mid: rgba(203,168,102,0.12);
+  --astro-wheel-glow-edge: rgba(7,9,14,0.98);
+  --astro-wheel-line: rgba(255,255,255,0.20);
+  --astro-wheel-axis: rgba(255,255,255,0.28);
+  --astro-button: linear-gradient(135deg, var(--astro-gold-bright), var(--astro-gold));
+  --astro-button-text: #080B14;
+  --astro-shadow: 0 24px 72px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.08);
+  --astro-shadow-soft: 0 16px 42px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.06);
+  --astro-button-shadow: 0 12px 28px rgba(203,168,102,0.18);
 }
 
 [data-hint-theme="bright"] {
@@ -173,6 +223,17 @@
   --hint-card-surface: linear-gradient(155deg, rgba(255, 252, 246, 0.9), rgba(239, 247, 245, 0.88) 56%, rgba(245, 235, 247, 0.86));
   --hint-card-surface-muted: rgba(255, 255, 255, 0.34);
   --hint-card-inner: rgba(255, 255, 255, 0.42);
+  --hint-lucky-stroke: #5b5365;
+  --hint-lucky-ink: #3f3948;
+  --hint-lucky-soft-line: rgba(63, 57, 72, 0.42);
+  --hint-lucky-swatch-rim: rgba(63, 57, 72, 0.12);
+  --hint-lucky-swatch-shadow: rgba(78, 58, 92, 0.2);
+  --hint-lucky-number-swoosh: #b9a6e8;
+  --hint-lucky-tile-bg: color-mix(in srgb, var(--hint-surface-soft) 72%, transparent);
+  --hint-lucky-tile-bg-strong: linear-gradient(180deg, color-mix(in srgb, var(--hint-surface-soft) 86%, transparent), color-mix(in srgb, var(--hint-input-bg) 58%, transparent));
+  --hint-lucky-icon-bg: #fffdf8;
+  --hint-lucky-icon-border: rgba(255, 255, 255, 0.88);
+  --hint-lucky-icon-shadow: 0 4px 12px rgba(78, 58, 92, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.82);
   --hint-me-avatar-bg: radial-gradient(circle at 50% 34%, rgba(100, 156, 158, 0.24), rgba(255, 252, 246, 0.88) 58%, rgba(224, 244, 240, 0.76));
   --hint-me-avatar-shadow: 0 14px 32px rgba(75, 56, 85, 0.14), inset 0 1px 0 rgba(255,255,255,0.72);
   --hint-me-plus-surface: linear-gradient(150deg, rgba(255, 248, 232, 0.88) 0%, rgba(245, 237, 247, 0.78) 48%, rgba(224, 244, 240, 0.78) 100%);
@@ -198,6 +259,45 @@
   --hint-nav-bg: rgba(255, 251, 244, 0.78);
   --hint-nav-shadow: 0 18px 44px rgba(70, 49, 88, 0.18), inset 0 1px 0 rgba(255,255,255,0.82);
   --hint-elevated-shadow: 0 24px 70px rgba(75, 56, 85, 0.18), inset 0 1px 0 rgba(255,255,255,0.72);
+
+  --astro-text: rgba(31, 25, 35, 0.96);
+  --astro-text-strong: #241d18;
+  --astro-muted: rgba(74, 63, 82, 0.74);
+  --astro-faint: rgba(74, 63, 82, 0.52);
+  --astro-gold: #9a692d;
+  --astro-gold-bright: #bd812d;
+  --astro-aqua: #247f84;
+  --astro-rose: #b84f75;
+  --astro-lavender: #7356b8;
+  --astro-green: #4f874f;
+  --astro-orange: #b76534;
+  --astro-bg: radial-gradient(circle at 16% 8%, rgba(218,176,98,0.18), transparent 34%), radial-gradient(circle at 88% 14%, rgba(62,162,160,0.16), transparent 34%), linear-gradient(180deg, #fffaf3 0%, #f8f5fb 48%, #eef9f6 100%);
+  --astro-border: rgba(116, 89, 58, 0.18);
+  --astro-stroke: rgba(154, 105, 45, 0.34);
+  --astro-surface: linear-gradient(145deg, rgba(255,255,252,0.96), rgba(244,251,249,0.92) 52%, rgba(250,243,250,0.92));
+  --astro-hero: linear-gradient(145deg, rgba(255,253,248,0.97), rgba(247,241,251,0.93) 50%, rgba(234,249,246,0.93));
+  --astro-inner: linear-gradient(145deg, rgba(255,255,255,0.72), rgba(255,255,255,0.38));
+  --astro-locked: linear-gradient(145deg, rgba(255,250,242,0.94), rgba(239,233,246,0.92));
+  --astro-panel: linear-gradient(145deg, rgba(255,253,248,0.97), rgba(247,241,251,0.93) 48%, rgba(234,249,246,0.93));
+  --astro-panel-inner: linear-gradient(145deg, rgba(255,255,255,0.76), rgba(255,255,255,0.42));
+  --astro-tile: rgba(255,255,255,0.62);
+  --astro-tile-border: rgba(72, 55, 78, 0.12);
+  --astro-input: rgba(255,255,255,0.66);
+  --astro-chart-panel: radial-gradient(circle at 50% 42%, rgba(36,127,132,0.12), transparent 36%), linear-gradient(145deg, rgba(255,255,255,0.72), rgba(246,250,250,0.48));
+  --astro-chart-header: rgba(255,252,246,0.86);
+  --astro-wheel-outer: rgba(255,251,242,0.96);
+  --astro-wheel-core: rgba(255,255,255,0.5);
+  --astro-wheel-dot-bg: rgba(255,252,246,0.96);
+  --astro-wheel-glow-center: rgba(36,127,132,0.18);
+  --astro-wheel-glow-mid: rgba(154,105,45,0.12);
+  --astro-wheel-glow-edge: rgba(255,252,246,0.96);
+  --astro-wheel-line: rgba(54,42,61,0.24);
+  --astro-wheel-axis: rgba(54,42,61,0.34);
+  --astro-button: linear-gradient(135deg, #f3cc83, #d7973e);
+  --astro-button-text: #241d18;
+  --astro-shadow: 0 24px 64px rgba(93, 73, 105, 0.13), inset 0 1px 0 rgba(255,255,255,0.76);
+  --astro-shadow-soft: 0 18px 42px rgba(83, 64, 98, 0.10), inset 0 1px 0 rgba(255,255,255,0.68);
+  --astro-button-shadow: 0 12px 24px rgba(154,105,45,0.18);
 }
 
 @layer base {
@@ -226,6 +326,11 @@
 
 .hint-chat-input::placeholder {
   color: var(--hint-chat-placeholder, var(--hint-faint));
+  opacity: 1;
+}
+
+.astro-themed-input::placeholder {
+  color: var(--astro-faint, var(--hint-faint));
   opacity: 1;
 }
 

@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 import type { RitualCard } from "../logic/createHiddenDeck";
-import { getTarotCardImage } from "../logic/cardImageMap";
+import { getTarotCardImage, type TarotCardArtId } from "../logic/cardImageMap";
 import { getCardKeywords } from "../logic/createHiddenDeck";
 import type { TarotCardBackStyle } from "./TarotCardVisual";
 
 type HintTarotCardFrontProps = {
   card: RitualCard;
   backStyle?: TarotCardBackStyle;
+  cardArtId?: TarotCardArtId;
   compact?: boolean;
   positionLabel?: string;
   showCaption?: boolean;
@@ -272,6 +273,7 @@ function SuitName({ suit }: { suit: string }) {
 export function HintTarotCardFront({
   card,
   backStyle = "nocturne",
+  cardArtId = "original",
   compact = false,
   positionLabel,
   showCaption = true,
@@ -280,7 +282,7 @@ export function HintTarotCardFront({
   const keywords = getCardKeywords(card.cardId);
   const parts = getCardParts(card);
   const reversed = card.orientation === "reversed";
-  const cardImageUrl = getTarotCardImage(card.cardId);
+  const cardImageUrl = getTarotCardImage(card.cardId, cardArtId);
 
   if (cardImageUrl) {
     return (

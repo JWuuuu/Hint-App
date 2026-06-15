@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { SkyGuidedTarotResult } from "../../../lib/tarot/skyGuidedTarot";
 
 /** Top-level taxonomy used by the home rail and the All Rooms library. */
 export type SectionKey =
@@ -74,14 +75,10 @@ export interface DailyPull {
   work?: string;
   self?: string;
   themeNote?: string;
+  skyGuided?: SkyGuidedTarotResult;
 }
 
-export type DailyScoreKey =
-  | "love"
-  | "resources"
-  | "work"
-  | "focus"
-  | "connection";
+export type DailyScoreKey = "love" | "wealth" | "career" | "study" | "people";
 
 export interface DailyScore {
   key: DailyScoreKey;
@@ -91,7 +88,7 @@ export interface DailyScore {
 }
 
 export interface DailyLuckyItem {
-  key: "color" | "hour" | "direction" | "number";
+  key: "color" | "jewelry" | "number" | "food" | "carry" | "flower";
   label: string;
   value: string;
   hint: string;
@@ -112,5 +109,8 @@ export interface DailyReport {
   lucky: DailyLuckyItem[];
   suggestion: string;
   avoid: string;
+  selfHint: string;
+  psychology: string;
+  astrologyNote: string;
   tasks: DailyTask[];
 }

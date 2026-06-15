@@ -33,9 +33,9 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
   ]);
 
   const navItems = [
-    { href: "/#today", label: "Today", section: true },
-    { href: "/#rewards", label: "Rewards", section: true },
-    { href: "/readings", label: "History", section: false },
+    { href: "/#today", label: t("nav.today"), section: true },
+    { href: "/#rewards", label: t("nav.rewards"), section: true },
+    { href: "/readings", label: t("nav.history"), section: false },
     { href: "/me", label: t("nav.me"), section: false },
   ];
 
@@ -118,7 +118,7 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
             type="button"
             onClick={() => setMenuOpen((open) => !open)}
             aria-expanded={menuOpen}
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
             className="inline-grid size-9 place-items-center rounded-full border lg:hidden"
             style={{
               borderColor: "var(--hint-border)",
@@ -138,7 +138,7 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
               boxShadow: isDark ? "0 14px 28px rgba(241,166,107,0.18)" : "0 14px 28px rgba(41,35,49,0.14)",
             }}
           >
-            Open Tarot
+            {t("nav.openTarot")}
             <ArrowMark />
           </Link>
         </div>
@@ -276,6 +276,8 @@ function HeaderControls({
   bright: boolean;
   onThemeToggle: () => void;
 }) {
+  const { t } = useLanguage();
+
   return (
     <>
       <div
@@ -285,17 +287,17 @@ function HeaderControls({
           borderColor: "var(--hint-border)",
         }}
       >
-        <ThemePillButton active={bright} label="Day" onClick={() => !bright && onThemeToggle()}>
+        <ThemePillButton active={bright} ariaLabel={t("theme.switchBright")} onClick={() => !bright && onThemeToggle()}>
           <Sun aria-hidden="true" className="size-4" />
         </ThemePillButton>
-        <ThemePillButton active={!bright} label="Night" onClick={() => bright && onThemeToggle()}>
+        <ThemePillButton active={!bright} ariaLabel={t("theme.switchDark")} onClick={() => bright && onThemeToggle()}>
           <Moon aria-hidden="true" className="size-4" />
         </ThemePillButton>
       </div>
       <button
         type="button"
         onClick={onThemeToggle}
-        aria-label={bright ? "Switch to night mode" : "Switch to day mode"}
+        aria-label={bright ? t("theme.switchDark") : t("theme.switchBright")}
         className="grid size-9 place-items-center rounded-full border lg:hidden"
         style={{ borderColor: "var(--hint-border)", color: "var(--hint-text)", background: "var(--hint-surface-soft)" }}
       >
@@ -307,12 +309,12 @@ function HeaderControls({
 
 function ThemePillButton({
   active,
-  label,
+  ariaLabel,
   onClick,
   children,
 }: {
   active: boolean;
-  label: string;
+  ariaLabel: string;
   onClick: () => void;
   children: ReactNode;
 }) {
@@ -320,7 +322,7 @@ function ThemePillButton({
     <button
       type="button"
       onClick={onClick}
-      aria-label={`Switch to ${label.toLowerCase()} mode`}
+      aria-label={ariaLabel}
       className="grid size-9 place-items-center rounded-full transition"
       style={{
         background: active ? "linear-gradient(135deg, #efa260, #f6c28f)" : "transparent",

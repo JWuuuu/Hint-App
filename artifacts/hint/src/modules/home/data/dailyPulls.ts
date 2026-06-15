@@ -675,6 +675,11 @@ export function getDailyPull(now: Date = new Date(), language: HintLanguage = "e
   return localizeDailyPull(toDailyPull(DAILY_TAROT_DECK[idx]!), language);
 }
 
+export function getDailyPullById(cardId: string, language: HintLanguage = "en"): DailyPull {
+  const entry = DAILY_TAROT_BY_ID.get(cardId) ?? DAILY_TAROT_DECK[0]!;
+  return localizeDailyPull(toDailyPull(entry), language);
+}
+
 export function localizeDailyPull(pull: DailyPull, language: HintLanguage): DailyPull {
   const canonical = DAILY_TAROT_BY_ID.get(pull.cardId);
   const merged = canonical ? { ...toDailyPull(canonical), ...pull } : pull;

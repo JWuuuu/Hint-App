@@ -6,10 +6,11 @@ import { LanguageProvider } from "./lib/i18n";
 import { HomeDashboard } from "./modules/home";
 import { TarotRoom } from "./modules/tarot";
 import { AskHint } from "./modules/ask";
+import { LoginView } from "./modules/auth";
 import { RoomsLibrary } from "./modules/rooms";
 import { ReadingDetailView, ReadingsView } from "./modules/readings";
 import { MeView } from "./modules/me";
-import { ContactView, DisclaimerView, PrivacyPolicyView, TermsView } from "./modules/legal";
+import { AboutView, ContactView, DisclaimerView, PrivacyPolicyView, TermsView } from "./modules/legal";
 import {
   AstrologyView,
   CompatibilityView,
@@ -29,8 +30,11 @@ function Router() {
       <Route path="/rooms" component={RoomsLibrary} />
       <Route path="/readings/:id" component={ReadingDetailView} />
       <Route path="/readings" component={ReadingsView} />
+      <Route path="/login" component={LoginView} />
       <Route path="/me" component={MeView} />
       <Route path="/astrology" component={AstrologyView} />
+      <Route path="/compatibility/invite/:token" component={CompatibilityView} />
+      <Route path="/compatibility/:id" component={CompatibilityView} />
       <Route path="/compatibility" component={CompatibilityView} />
       <Route path="/dream" component={DreamView} />
       <Route path="/journal" component={JournalView} />
@@ -55,6 +59,7 @@ function App() {
               <Route path="/terms" component={TermsView} />
               <Route path="/disclaimer" component={DisclaimerView} />
               <Route path="/contact" component={ContactView} />
+              <Route path="/about" component={AboutView} />
               <Route path="*">
                 <OnboardingGate>
                   <Router />

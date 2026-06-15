@@ -5,10 +5,11 @@ import { useLanguage, type HintLanguage } from "../lib/i18n";
 
 interface Props {
   className?: string;
+  compact?: boolean;
   menuPlacement?: "top" | "bottom";
 }
 
-export function LanguageToggle({ className = "", menuPlacement = "top" }: Props) {
+export function LanguageToggle({ className = "", compact = false, menuPlacement = "top" }: Props) {
   const { language, languages, setLanguage, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -48,7 +49,11 @@ export function LanguageToggle({ className = "", menuPlacement = "top" }: Props)
         aria-expanded={open}
         title={t("language.switchAria")}
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex h-11 items-center gap-2 rounded-[8px] border px-3 font-sans text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors md:h-9"
+        className={
+          compact
+            ? "relative grid size-9 place-items-center rounded-full border font-sans text-[8px] font-bold uppercase tracking-[0.04em] transition-colors lg:size-12"
+            : "inline-flex h-11 items-center gap-2 rounded-[8px] border px-3 font-sans text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors md:h-9"
+        }
         style={{
           color: "var(--hint-text)",
           background: "var(--hint-nav-bg)",
@@ -61,14 +66,32 @@ export function LanguageToggle({ className = "", menuPlacement = "top" }: Props)
         }}
         data-testid="button-language-toggle"
       >
-        <Languages size={14} strokeWidth={1.8} style={{ color: ACCENT.aqua }} />
-        <span>{activeLanguage.shortLabel}</span>
-        <ChevronDown
-          size={12}
-          strokeWidth={2}
-          className={`transition-transform ${open ? "rotate-180" : ""}`}
-          style={{ color: "var(--hint-faint)" }}
-        />
+        {compact ? (
+          <>
+            <Languages size={16} strokeWidth={1.8} style={{ color: ACCENT.aqua }} />
+            <span
+              className="absolute bottom-1 right-1 rounded-full px-1 leading-none lg:bottom-1.5 lg:right-1.5"
+              style={{
+                color: "var(--hint-text)",
+                background: "var(--hint-surface-soft)",
+                border: "1px solid var(--hint-border)",
+              }}
+            >
+              {activeLanguage.shortLabel}
+            </span>
+          </>
+        ) : (
+          <>
+            <Languages size={14} strokeWidth={1.8} style={{ color: ACCENT.aqua }} />
+            <span>{activeLanguage.shortLabel}</span>
+            <ChevronDown
+              size={12}
+              strokeWidth={2}
+              className={`transition-transform ${open ? "rotate-180" : ""}`}
+              style={{ color: "var(--hint-faint)" }}
+            />
+          </>
+        )}
       </button>
 
       {open ? (

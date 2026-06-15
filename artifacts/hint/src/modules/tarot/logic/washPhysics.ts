@@ -373,6 +373,33 @@ export function squareDeckAtCenter(ritualCards: readonly RitualCard[]): RitualCa
   });
 }
 
+export function quickCutDeckAtCenter(ritualCards: readonly RitualCard[]): RitualCard[] {
+  const midpoint = Math.floor(ritualCards.length / 2);
+
+  return ritualCards.map((card, index) => {
+    const isTopPacket = index >= midpoint;
+    const packetIndex = isTopPacket ? index - midpoint : index;
+    const side = isTopPacket ? 1 : -1;
+    const row = packetIndex % 18;
+    const stack = Math.floor(packetIndex / 18);
+    const rotation = side * (1.05 + (row % 5) * 0.08);
+
+    return {
+      ...card,
+      x: 50 + side * 4.6 + (row - 8.5) * 0.045,
+      y: 52 + side * 0.34 - stack * 0.18 - (row % 4) * 0.025,
+      rotate: rotation,
+      rotation,
+      velocityX: 0,
+      velocityY: 0,
+      velocityRotate: 0,
+      lift: 0,
+      gatherDelay: (packetIndex % 9) * 0.012,
+      zIndex: index,
+    };
+  });
+}
+
 export function settleWashedDeck(ritualCards: readonly RitualCard[]): RitualCard[] {
   return ritualCards.map((card, index) => {
     const baseLayer = isBaseLayer(card, index);

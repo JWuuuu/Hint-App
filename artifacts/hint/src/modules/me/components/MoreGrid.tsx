@@ -1,5 +1,6 @@
 import {
   MessageSquare,
+  UserRound,
   Sparkles,
   Ticket,
   ShieldCheck,
@@ -16,6 +17,7 @@ import { useLanguage } from "../../../lib/i18n";
 
 const ITEMS: { icon: LucideIcon; labelKey: string; href?: string; comingSoon?: boolean }[] = [
   { icon: MessageSquare, labelKey: "me.more.feedback", href: "/contact" },
+  { icon: UserRound, labelKey: "me.account", href: "/login" },
   { icon: Sparkles, labelKey: "me.more.creator", comingSoon: true },
   { icon: Ticket, labelKey: "me.more.invite", comingSoon: true },
   { icon: ShieldCheck, labelKey: "me.more.trust", href: "/disclaimer" },

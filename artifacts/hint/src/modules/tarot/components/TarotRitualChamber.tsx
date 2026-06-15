@@ -9,6 +9,7 @@ import {
   applyTableCurrent,
   gatherDeckToCenter,
   loosenDeckForWash,
+  quickCutDeckAtCenter,
   settleWashedDeck,
   squareDeckAtCenter,
 } from "../logic/washPhysics";
@@ -23,7 +24,7 @@ import { TarotHintReadingChat } from "./TarotHintReadingChat";
 import { SPREAD_CHOICES } from "../../hold/useHoldFlow";
 import type { TarotRoomSetup } from "../../hold/useHoldFlow";
 
-type RitualStage = "placed" | "washing" | "gathering" | "rested" | "selecting" | "reveal" | "reading";
+type RitualStage = "placed" | "washing" | "gathering" | "cutting" | "rested" | "selecting" | "reveal" | "reading";
 
 type ChamberDeckState = {
   hiddenDeckOrder: RitualCard[];
@@ -93,6 +94,7 @@ export function TarotRitualChamber({
   onComplete?: () => void;
 }) {
   const theme = getTheme(setup);
+  const cardArtId = setup?.cardFaceId ?? "hint-classic";
   const selectedSpread = SPREAD_CHOICES.find((spread) => spread.id === setup?.spreadType) ?? SPREAD_CHOICES[0]!;
   const maxSelectedCards = selectedSpread.cardCount;
   const [deckState, setDeckState] = useState<ChamberDeckState>(() => {
@@ -211,14 +213,21 @@ export function TarotRitualChamber({
     clearGatherTimers();
     gatherTimers.current = [
       window.setTimeout(() => {
+        setStage("cutting");
+        setDeckState((current) => ({
+          ...current,
+          ritualCards: quickCutDeckAtCenter(current.ritualCards),
+        }));
+      }, 360),
+      window.setTimeout(() => {
         setDeckState((current) => ({
           ...current,
           ritualCards: squareDeckAtCenter(current.ritualCards),
         }));
-      }, 360),
+      }, 690),
       window.setTimeout(() => {
         enterSelectCards();
-      }, 820),
+      }, 1080),
     ];
   }
 
@@ -265,14 +274,21 @@ export function TarotRitualChamber({
     gatherTimers.current.forEach((timer) => window.clearTimeout(timer));
     gatherTimers.current = [
       window.setTimeout(() => {
+        setStage("cutting");
+        setDeckState((current) => ({
+          ...current,
+          ritualCards: quickCutDeckAtCenter(current.ritualCards),
+        }));
+      }, 880),
+      window.setTimeout(() => {
         setDeckState((current) => ({
           ...current,
           ritualCards: squareDeckAtCenter(current.ritualCards),
         }));
-      }, 1450),
+      }, 1360),
       window.setTimeout(() => {
         setStage("rested");
-      }, 2350),
+      }, 2050),
     ];
   }
 
@@ -354,7 +370,7 @@ export function TarotRitualChamber({
         <Home size={17} strokeWidth={1.8} aria-hidden="true" />
       </Link>
 
-      {(stage === "placed" || stage === "washing" || stage === "gathering" || stage === "rested") && (
+      {(stage === "placed" || stage === "washing" || stage === "gathering" || stage === "cutting" || stage === "rested") && (
         <CardWashRitual
           stage={stage}
           ritualCards={deckState.ritualCards}
@@ -394,6 +410,7 @@ export function TarotRitualChamber({
           onReveal={revealCard}
           onRestart={restartRitual}
           backStyle={theme.cardBackStyle}
+          cardArtId={cardArtId}
         />
       )}
 
@@ -402,6 +419,7 @@ export function TarotRitualChamber({
           selectedCards={selectedCards}
           spread={selectedSpread}
           backStyle={theme.cardBackStyle}
+          cardArtId={cardArtId}
           question={setup?.question}
           story={setup?.story}
           focusLabel={setup?.focusLabel}

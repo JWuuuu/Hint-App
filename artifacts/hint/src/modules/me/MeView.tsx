@@ -5,6 +5,7 @@ import { ACCENT, GLASS } from "../hold/atmosphere";
 import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
 import { useGetUserStats } from "@workspace/api-client-react";
 import { useProfile } from "../../lib/useProfile";
+import { saveBirthProfileFromAccountProfile } from "../../lib/astro/userBirthProfile";
 import { getAnonId } from "../../lib/identity";
 import { ProfileForm } from "../../components/app/ProfileForm";
 import { ProfileCard } from "./components/ProfileCard";
@@ -68,7 +69,8 @@ export function MeView() {
   }, [anonId]);
 
   async function handleSave(input: Parameters<typeof saveProfile>[0]) {
-    await saveProfile(input);
+    const saved = await saveProfile(input);
+    saveBirthProfileFromAccountProfile(saved, anonId);
     setEditing(false);
   }
 

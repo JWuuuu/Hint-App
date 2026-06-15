@@ -17,7 +17,7 @@ export function AppScreen({ children }: { children: ReactNode }) {
       className="h-full w-full overflow-y-auto overscroll-none flex flex-col items-center pb-16"
       style={{ background: "transparent" }}
     >
-      <div className="w-full max-w-lg md:max-w-3xl lg:max-w-5xl px-4 pt-24 sm:px-6 md:pt-28">
+      <div className="w-full max-w-lg md:max-w-3xl lg:max-w-5xl px-4 pt-32 sm:px-6 md:pt-32 lg:pt-28">
         {children}
       </div>
     </div>

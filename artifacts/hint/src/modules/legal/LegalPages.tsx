@@ -1,8 +1,9 @@
 import { Link } from "wouter";
-import { Mail, ShieldCheck, ScrollText } from "lucide-react";
+import { Info, Mail, ShieldCheck, ScrollText } from "lucide-react";
 import { ACCENT, GLASS } from "../hold/atmosphere";
 import { AppScreen, GlassPanel, ScreenHeader, SectionLabel } from "../../components/app/AppChrome";
-import { CONTACT_EMAIL, LEGAL_DISCLAIMER } from "../../components/LegalNotice";
+import { CONTACT_EMAIL } from "../../components/LegalNotice";
+import { useLanguage } from "../../lib/i18n";
 
 function LegalText({ children }: { children: string }) {
   return (
@@ -26,13 +27,15 @@ function LegalList({ items }: { items: string[] }) {
 }
 
 function LegalLinks() {
+  const { t } = useLanguage();
   return (
     <div className="mt-6 flex flex-wrap gap-2">
       {[
-        { href: "/privacy", label: "Privacy Policy" },
-        { href: "/terms", label: "Terms" },
-        { href: "/disclaimer", label: "Disclaimer" },
-        { href: "/contact", label: "Contact" },
+        { href: "/about", label: t("legal.aboutTitle") },
+        { href: "/privacy", label: t("me.privacyPolicy") },
+        { href: "/terms", label: t("me.terms") },
+        { href: "/disclaimer", label: t("legal.disclaimerTitle") },
+        { href: "/contact", label: t("me.contact") },
       ].map((item) => (
         <Link
           key={item.href}
@@ -52,37 +55,72 @@ function LegalLinks() {
 }
 
 function DisclaimerPanel() {
+  const { t } = useLanguage();
   return (
     <GlassPanel hero className="mb-6">
       <p className="font-serif text-[16px] leading-snug" style={{ color: GLASS.text }}>
-        {LEGAL_DISCLAIMER}
+        {t("legal.disclaimer")}
       </p>
     </GlassPanel>
   );
 }
 
 export function PrivacyPolicyView() {
+  const { t } = useLanguage();
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow="Legal"
-        title="Privacy Policy"
-        subtitle="A simple beta summary of what Hint stores and how it is used."
+        eyebrow={t("legal.eyebrow")}
+        title={t("me.privacyPolicy")}
+        subtitle={t("legal.privacySubtitle")}
         sigil={ShieldCheck}
         backHref="/me"
-        backLabel="Me"
+        backLabel={t("nav.me")}
       />
       <DisclaimerPanel />
 
       <section className="mb-6">
-        <SectionLabel>Privacy Basics</SectionLabel>
+        <SectionLabel>{t("legal.privacyBasics")}</SectionLabel>
         <GlassPanel>
           <LegalList
             items={[
-              "Hint uses an anonymous browser id to keep your profile, readings, daily pulls, and journal entries connected to this device.",
-              "Profile details and emotional notes are used to make the website feel continuous and personal inside your own Hint experience.",
-              "You can clear local and saved Hint history from the Me page settings.",
-              `For beta support or privacy questions, contact ${CONTACT_EMAIL}.`,
+              t("legal.privacy.item1"),
+              t("legal.privacy.item2"),
+              t("legal.privacy.item3"),
+              t("legal.privacy.item4"),
+            ]}
+          />
+        </GlassPanel>
+      </section>
+
+      <LegalLinks />
+    </AppScreen>
+  );
+}
+
+export function AboutView() {
+  const { t } = useLanguage();
+  return (
+    <AppScreen>
+      <ScreenHeader
+        eyebrow={t("legal.aboutEyebrow")}
+        title={t("legal.aboutTitle")}
+        subtitle={t("legal.aboutSubtitle")}
+        sigil={Info}
+        backHref="/me"
+        backLabel={t("nav.me")}
+      />
+      <DisclaimerPanel />
+
+      <section className="mb-6">
+        <SectionLabel>{t("legal.whatHintIs")}</SectionLabel>
+        <GlassPanel>
+          <LegalList
+            items={[
+              t("legal.about.item1"),
+              t("legal.about.item2"),
+              t("legal.about.item3"),
+              t("legal.about.item4"),
             ]}
           />
         </GlassPanel>
@@ -94,27 +132,28 @@ export function PrivacyPolicyView() {
 }
 
 export function TermsView() {
+  const { t } = useLanguage();
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow="Legal"
-        title="Terms"
-        subtitle="Basic beta terms for using Hint."
+        eyebrow={t("legal.eyebrow")}
+        title={t("me.terms")}
+        subtitle={t("legal.termsSubtitle")}
         sigil={ScrollText}
         backHref="/me"
-        backLabel="Me"
+        backLabel={t("nav.me")}
       />
       <DisclaimerPanel />
 
       <section className="mb-6">
-        <SectionLabel>Use Of Hint</SectionLabel>
+        <SectionLabel>{t("legal.useOfHint")}</SectionLabel>
         <GlassPanel>
           <LegalList
             items={[
-              "Hint is a reflective tarot and journaling experience, not a professional advice service.",
-              "Do not use Hint as a substitute for medical care, therapy, legal advice, financial advice, emergency support, or crisis services.",
-              "You are responsible for the choices you make outside the web experience.",
-              "Beta features may change, break, or be removed as the product develops.",
+              t("legal.terms.item1"),
+              t("legal.terms.item2"),
+              t("legal.terms.item3"),
+              t("legal.terms.item4"),
             ]}
           />
         </GlassPanel>
@@ -126,27 +165,28 @@ export function TermsView() {
 }
 
 export function DisclaimerView() {
+  const { t } = useLanguage();
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow="Legal"
-        title="Disclaimer"
-        subtitle="The boundaries for using Hint during beta."
+        eyebrow={t("legal.eyebrow")}
+        title={t("legal.disclaimerTitle")}
+        subtitle={t("legal.disclaimerSubtitle")}
         sigil={ShieldCheck}
         backHref="/me"
-        backLabel="Me"
+        backLabel={t("nav.me")}
       />
       <DisclaimerPanel />
 
       <section className="mb-6">
-        <SectionLabel>Use Boundaries</SectionLabel>
+        <SectionLabel>{t("legal.useBoundaries")}</SectionLabel>
         <GlassPanel>
           <LegalList
             items={[
-              "Hint is for entertainment, journaling, tarot-inspired reflection, and self-inquiry.",
-              "Hint does not diagnose, treat, advise, or replace qualified medical, mental health, legal, financial, or emergency professionals.",
-              "Do not use Hint as the only basis for decisions involving safety, health, money, legal rights, employment, housing, or urgent personal risk.",
-              "If you are in immediate danger or crisis, contact local emergency services or a qualified crisis resource.",
+              t("legal.disclaimer.item1"),
+              t("legal.disclaimer.item2"),
+              t("legal.disclaimer.item3"),
+              t("legal.disclaimer.item4"),
             ]}
           />
         </GlassPanel>
@@ -158,23 +198,24 @@ export function DisclaimerView() {
 }
 
 export function ContactView() {
+  const { t } = useLanguage();
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow="Support"
-        title="Contact"
-        subtitle="Questions, privacy requests, and beta feedback can start here."
+        eyebrow={t("me.support")}
+        title={t("me.contact")}
+        subtitle={t("legal.contactSubtitle")}
         sigil={Mail}
         backHref="/me"
-        backLabel="Me"
+        backLabel={t("nav.me")}
       />
       <DisclaimerPanel />
 
       <section className="mb-6">
-        <SectionLabel>Contact Email</SectionLabel>
+        <SectionLabel>{t("legal.contactEmail")}</SectionLabel>
         <GlassPanel>
           <LegalText>
-            {`For support, privacy questions, feedback, or beta issues, email ${CONTACT_EMAIL}.`}
+            {t("legal.contactBody")}
           </LegalText>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
@@ -185,7 +226,7 @@ export function ContactView() {
               color: "rgba(150,206,208,0.95)",
             }}
           >
-            Email Support
+            {t("legal.emailSupport")}
           </a>
         </GlassPanel>
       </section>

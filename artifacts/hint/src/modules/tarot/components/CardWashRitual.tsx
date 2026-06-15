@@ -17,7 +17,7 @@ export type WashRitualTheme = {
 };
 
 type CardWashRitualProps = {
-  stage: "placed" | "washing" | "gathering" | "rested";
+  stage: "placed" | "washing" | "gathering" | "cutting" | "rested";
   ritualCards: RitualCard[];
   activeVisualIds: readonly string[];
   canRest: boolean;
@@ -81,7 +81,11 @@ export function CardWashRitual({
       ? ["Hint is washing the deck.", "The order was set before the wash.", "When the room settles, they will rest."]
     : stage === "placed"
       ? ["The cards have already been placed.", "Their hidden order is already set.", "Move them in circles."]
-      : stage === "gathering" || stage === "rested"
+      : stage === "gathering"
+        ? ["Let the deck settle.", "The cards are coming back together."]
+        : stage === "cutting"
+          ? ["Cutting the deck.", "One clean cut before choosing."]
+      : stage === "rested"
         ? ["The deck is quiet now.", "The cards are finding their center."]
         : washCopy;
 
@@ -143,7 +147,7 @@ export function CardWashRitual({
             "0 22px 58px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}
         onPointerDown={(event) => {
-          if (stage === "gathering" || stage === "rested") return;
+          if (stage === "gathering" || stage === "cutting" || stage === "rested") return;
           washing.current = true;
           lastPoint.current = null;
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -187,9 +191,9 @@ export function CardWashRitual({
               zIndex: card.zIndex,
               transform: `translate3d(${card.x}%, ${card.y}%, 0)`,
               transition:
-                stage === "gathering" || stage === "rested"
-                  ? `transform ${stage === "gathering" ? 480 : 360}ms cubic-bezier(0.22, 0.72, 0.21, 1) ${card.gatherDelay ?? 0}s`
-                  : "transform 88ms linear",
+                stage === "gathering" || stage === "cutting" || stage === "rested"
+                  ? `transform ${stage === "gathering" ? 500 : stage === "cutting" ? 360 : 360}ms cubic-bezier(0.22, 0.72, 0.21, 1) ${card.gatherDelay ?? 0}s`
+                  : "transform 70ms linear",
             }}
           >
             <div
@@ -197,9 +201,9 @@ export function CardWashRitual({
               style={{
                 transform: `translate3d(-50%, -50%, 0) rotate(${card.rotate}deg)`,
                 transition:
-                  stage === "gathering" || stage === "rested"
-                    ? `transform ${stage === "gathering" ? 480 : 360}ms cubic-bezier(0.22, 0.72, 0.21, 1) ${card.gatherDelay ?? 0}s`
-                    : "transform 88ms linear",
+                  stage === "gathering" || stage === "cutting" || stage === "rested"
+                    ? `transform ${stage === "gathering" ? 500 : stage === "cutting" ? 360 : 360}ms cubic-bezier(0.22, 0.72, 0.21, 1) ${card.gatherDelay ?? 0}s`
+                    : "transform 70ms linear",
               }}
             >
               <TarotCardVisual

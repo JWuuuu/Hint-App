@@ -1237,7 +1237,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                               {t("tarot.intake.summaryRoom")}
                             </p>
                             <p className="mt-0.5 line-clamp-1 font-sans text-[12px] leading-relaxed" style={{ color: IVORY.mute }}>
-                              {t(`tarot.deck.${roomSetup.deckStyleId}.color`)}
+                              {t(`tarot.cardFace.${roomSetup.cardFaceId}.label`)} · {t(`tarot.deck.${roomSetup.deckStyleId}.color`)}
                             </p>
                           </div>
                         )}
