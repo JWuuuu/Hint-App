@@ -10,6 +10,7 @@ import {
   type DailySkyDeck,
 } from "../../lib/skydeck/generateDailySkyDeck";
 import { getAnonId } from "../../lib/identity";
+import { getOrCreateDailyReceipt, parseServerDailyKey } from "../../lib/dailyReceipts";
 import { readBirthProfile } from "../../lib/astro/userBirthProfile";
 
 const EMBER = "#f1a66b";
@@ -95,13 +96,12 @@ function EnergyTask({ deck }: { deck: DailySkyDeck }) {
 export function SkyDeckView() {
   const [deck, setDeck] = useState<DailySkyDeck | null>(null);
   const [error, setError] = useState(false);
+  const [lockNotice, setLockNotice] = useState("");
 
   useEffect(() => {
     let mounted = true;
     const userId = getAnonId();
-    generateDailySkyDeck({
-      userId,
-      birthProfile: (() => {
+    const birthProfile = (() => {
         const profile = readBirthProfile();
         if (!profile?.birthDate) return null;
         return {
@@ -114,10 +114,24 @@ export function SkyDeckView() {
           longitude: profile.longitude,
           timezone: profile.timezoneOffset ?? profile.timezone,
         };
-      })(),
-    })
+      })();
+    getOrCreateDailyReceipt("sky-deck")
+      .then((receipt) =>
+        generateDailySkyDeck({
+          userId,
+          date: parseServerDailyKey(receipt.dailyKey),
+          birthProfile,
+          cardIdOverride: receipt.assignedCardId,
+        }).then((next) => ({ next, receipt })),
+      )
       .then((next) => {
-        if (mounted) setDeck(next);
+        if (!mounted) return;
+        setDeck(next.next);
+        setLockNotice(
+          next.receipt.source === "local-fallback"
+            ? "Backend daily lock is unavailable. Sky Deck is using local fallback state until the API returns."
+            : "",
+        );
       })
       .catch(() => {
         generateDailySkyDeck({ userId, birthProfile: null })
@@ -145,6 +159,11 @@ export function SkyDeckView() {
         <p className="mt-3 max-w-xl font-sans text-[13px] leading-relaxed" style={{ color: GLASS.muted }}>
           Daily scores and card selection are generated from the sky-deck logic. Full evidence and reports stay inside the app.
         </p>
+        {lockNotice && (
+          <p className="mt-2 max-w-xl font-sans text-[12px] leading-relaxed" style={{ color: GLASS.faint }}>
+            {lockNotice}
+          </p>
+        )}
       </header>
 
       <GlassPanel hero>

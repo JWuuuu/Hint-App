@@ -13,7 +13,11 @@ import {
   readingsTable,
   profilesTable,
 } from "@workspace/db";
-import { drawDailyPull } from "../modules/hint/dailyPullDeck.js";
+import {
+  dailyPullCardById,
+  getOrCreateDailyReceipt,
+  openDailyReceipt,
+} from "../modules/hint/dailyReceipts.js";
 
 const router = Router();
 
@@ -28,6 +32,47 @@ function serializeDailyPull(row: typeof dailyPullsTable.$inferSelect) {
     note: row.note,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+async function getOrCreateServerDailyPull(anonId: string, now = new Date()) {
+  const receipt = await getOrCreateDailyReceipt({
+    anonymousDeviceId: anonId,
+    featureType: "daily-card",
+    now,
+  });
+  const [existing] = await db
+    .select()
+    .from(dailyPullsTable)
+    .where(and(eq(dailyPullsTable.anonId, anonId), eq(dailyPullsTable.pullDate, receipt.dailyKey)))
+    .limit(1);
+
+  if (existing) return existing;
+
+  const card = dailyPullCardById(receipt.assignedCardId);
+  const [created] = await db
+    .insert(dailyPullsTable)
+    .values({
+      anonId,
+      pullDate: receipt.dailyKey,
+      cardId: card.id,
+      cardName: card.name,
+      whisper: card.whisper,
+      isFlipped: Boolean(receipt.openedAt),
+    })
+    .onConflictDoNothing({
+      target: [dailyPullsTable.anonId, dailyPullsTable.pullDate],
+    })
+    .returning();
+
+  if (created) return created;
+
+  const [row] = await db
+    .select()
+    .from(dailyPullsTable)
+    .where(and(eq(dailyPullsTable.anonId, anonId), eq(dailyPullsTable.pullDate, receipt.dailyKey)))
+    .limit(1);
+
+  return row ?? null;
 }
 
 function serializeJournal(row: typeof journalEntriesTable.$inferSelect) {
@@ -57,7 +102,7 @@ function serializeReading(row: typeof readingsTable.$inferSelect) {
 
 const dailyPullRequestSchema = z.object({
   anonId: z.string().min(1).max(200),
-  date: z.string().min(1).max(40),
+  date: z.string().min(1).max(40).optional(),
 });
 
 router.post("/daily-pull", async (req, res) => {
@@ -67,45 +112,8 @@ router.post("/daily-pull", async (req, res) => {
     return;
   }
 
-  const { anonId, date } = parsed.data;
-
-  const [existing] = await db
-    .select()
-    .from(dailyPullsTable)
-    .where(and(eq(dailyPullsTable.anonId, anonId), eq(dailyPullsTable.pullDate, date)))
-    .limit(1);
-
-  if (existing) {
-    res.json(serializeDailyPull(existing));
-    return;
-  }
-
-  const card = drawDailyPull();
-  const [created] = await db
-    .insert(dailyPullsTable)
-    .values({
-      anonId,
-      pullDate: date,
-      cardId: card.id,
-      cardName: card.name,
-      whisper: card.whisper,
-    })
-    .onConflictDoNothing({
-      target: [dailyPullsTable.anonId, dailyPullsTable.pullDate],
-    })
-    .returning();
-
-  if (created) {
-    res.json(serializeDailyPull(created));
-    return;
-  }
-
-  // Lost a race — another request created it; read it back.
-  const [row] = await db
-    .select()
-    .from(dailyPullsTable)
-    .where(and(eq(dailyPullsTable.anonId, anonId), eq(dailyPullsTable.pullDate, date)))
-    .limit(1);
+  const { anonId } = parsed.data;
+  const row = await getOrCreateServerDailyPull(anonId);
 
   if (!row) {
     res.status(500).json({ error: "Could not draw a card tonight" });
@@ -119,7 +127,7 @@ router.post("/daily-pull", async (req, res) => {
 
 const dailyPullUpdateSchema = z.object({
   anonId: z.string().min(1).max(200),
-  date: z.string().min(1).max(40),
+  date: z.string().min(1).max(40).optional(),
   isFlipped: z.boolean().optional(),
   note: z.string().max(2000).optional(),
 });
@@ -131,7 +139,21 @@ router.patch("/daily-pull", async (req, res) => {
     return;
   }
 
-  const { anonId, date, isFlipped, note } = parsed.data;
+  const { anonId, isFlipped, note } = parsed.data;
+  const dailyPull = await getOrCreateServerDailyPull(anonId);
+
+  if (!dailyPull) {
+    res.status(500).json({ error: "Could not draw a card tonight" });
+    return;
+  }
+
+  if (isFlipped === true) {
+    await openDailyReceipt({
+      anonymousDeviceId: anonId,
+      featureType: "daily-card",
+    });
+  }
+
   const set: Partial<typeof dailyPullsTable.$inferInsert> = {};
   if (isFlipped !== undefined) set.isFlipped = isFlipped;
   if (note !== undefined) set.note = note;
@@ -144,7 +166,7 @@ router.patch("/daily-pull", async (req, res) => {
   const [row] = await db
     .update(dailyPullsTable)
     .set(set)
-    .where(and(eq(dailyPullsTable.anonId, anonId), eq(dailyPullsTable.pullDate, date)))
+    .where(and(eq(dailyPullsTable.anonId, anonId), eq(dailyPullsTable.pullDate, dailyPull.pullDate)))
     .returning();
 
   if (!row) {

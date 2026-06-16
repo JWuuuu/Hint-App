@@ -15,7 +15,14 @@ import {
 import { useGetUserStats } from "@workspace/api-client-react";
 import { ACCENT, GOLD } from "../../hold/atmosphere";
 import { getAnonId } from "../../../lib/identity";
+import {
+  getOrCreateDailyReceipt,
+  openDailyReceipt,
+  parseServerDailyKey,
+  type DailyReceipt,
+} from "../../../lib/dailyReceipts";
 import { getDailyReport } from "../data/dailyReport";
+import { getDailyPullById } from "../data/dailyPulls";
 import {
   getRitualProgress,
   subscribeToRitualProgress,
@@ -28,10 +35,8 @@ import { CardSigil } from "../../hold/components/CardSigil";
 import { useLanguage } from "../../../lib/i18n";
 import { generateSkyCardReading } from "../../../lib/readings/generateSkyCardReading";
 import {
-  getLocalDailyReadingForDateKey,
   listLocalDailyReadings,
   saveLocalDailyReading,
-  subscribeToLocalDailyReadings,
 } from "../../readings/localDailyReadings";
 import { useProfile } from "../../../lib/useProfile";
 import { readBirthProfile } from "../../../lib/astro/userBirthProfile";
@@ -680,11 +685,13 @@ function DailyHintSection({
   revealed,
   onReveal,
   birthPersonalized,
+  lockNotice,
 }: {
   report: DailyReport;
   revealed: boolean;
   onReveal: () => void;
   birthPersonalized: boolean;
+  lockNotice?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
@@ -853,6 +860,11 @@ function DailyHintSection({
               >
                 Add birth details
               </Link>
+            )}
+            {lockNotice && (
+              <p className="mx-auto mt-3 max-w-[16rem] font-sans text-[11px] leading-relaxed" style={{ color: "var(--hint-muted)" }}>
+                {lockNotice}
+              </p>
             )}
             {revealed && report.card.skyGuided && (
               <div className="mx-auto mt-3 w-full max-w-[16rem]">
@@ -1580,6 +1592,7 @@ export function HomeDashboard() {
   const [birthProfile, setBirthProfile] = useState(() => readBirthProfile());
   const [ritual, setRitual] = useState(() => getRitualProgress());
   const [dailyCardRevealed, setDailyCardRevealed] = useState(false);
+  const [dailyReceipt, setDailyReceipt] = useState<DailyReceipt | null>(null);
   const activeBirthDetails = profile?.birthDate
     ? {
         birthDate: profile.birthDate,
@@ -1594,23 +1607,44 @@ export function HomeDashboard() {
         }
       : null;
   const report = useMemo(
-    () =>
-      getDailyReport({
+    () => {
+      const baseReport = getDailyReport({
         anonId: getAnonId(),
+        date: dailyReceipt?.dailyKey ? parseServerDailyKey(dailyReceipt.dailyKey) : undefined,
         language,
         birthDetails: activeBirthDetails ?? undefined,
         ritualStreak: ritual.currentStreak,
-      }),
-    [activeBirthDetails?.birthDate, activeBirthDetails?.birthPlace, activeBirthDetails?.birthTime, language, ritual.currentStreak],
+      });
+      if (!dailyReceipt?.assignedCardId) return baseReport;
+      return {
+        ...baseReport,
+        card: getDailyPullById(dailyReceipt.assignedCardId, language),
+      };
+    },
+    [
+      activeBirthDetails?.birthDate,
+      activeBirthDetails?.birthPlace,
+      activeBirthDetails?.birthTime,
+      dailyReceipt?.assignedCardId,
+      dailyReceipt?.dailyKey,
+      language,
+      ritual.currentStreak,
+    ],
   );
 
   useEffect(() => {
-    const syncDailyReveal = () => {
-      setDailyCardRevealed(Boolean(getLocalDailyReadingForDateKey(report.date)));
+    let mounted = true;
+    getOrCreateDailyReceipt("daily-card", {
+      fallbackAssignedCardId: report.card.cardId,
+    }).then((receipt) => {
+      if (!mounted) return;
+      setDailyReceipt(receipt);
+      setDailyCardRevealed(Boolean(receipt.openedAt));
+    });
+    return () => {
+      mounted = false;
     };
-    syncDailyReveal();
-    return subscribeToLocalDailyReadings(syncDailyReveal);
-  }, [report.date]);
+  }, [report.card.cardId]);
 
   useEffect(() => {
     return subscribeToRitualProgress(() => setRitual(getRitualProgress()));
@@ -1626,10 +1660,17 @@ export function HomeDashboard() {
     };
   }, []);
 
-  function revealDailyCard() {
+  async function revealDailyCard() {
     if (dailyCardRevealed) return;
     setDailyCardRevealed(true);
-    saveLocalDailyReading(report.card);
+    const openedReceipt = await openDailyReceipt("daily-card", {
+      fallbackAssignedCardId: report.card.cardId,
+    });
+    setDailyReceipt(openedReceipt);
+    saveLocalDailyReading(
+      report.card,
+      openedReceipt.dailyKey ? parseServerDailyKey(openedReceipt.dailyKey) : new Date(),
+    );
   }
 
   function handleToggleRitualTask(index: number) {
@@ -1698,6 +1739,11 @@ export function HomeDashboard() {
             revealed={dailyCardRevealed}
             onReveal={revealDailyCard}
             birthPersonalized={Boolean(activeBirthDetails?.birthDate)}
+            lockNotice={
+              dailyReceipt?.source === "local-fallback"
+                ? "Backend daily lock is unavailable. This session is using local fallback state until the API returns."
+                : undefined
+            }
           />
         </section>
 

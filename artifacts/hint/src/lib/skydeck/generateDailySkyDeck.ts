@@ -56,11 +56,13 @@ export async function generateDailySkyDeck({
   date = new Date(),
   birthProfile = null,
   tone = "honest",
+  cardIdOverride,
 }: {
   userId?: string;
   date?: Date | string;
   birthProfile?: BirthProfileInput | null;
   tone?: SkyGuidedTone;
+  cardIdOverride?: string | null;
 } = {}): Promise<DailySkyDeck> {
   const isoDate = toISODate(date);
   const birthProfileId = birthProfile?.userId ?? birthProfile?.birthday ?? "general";
@@ -82,15 +84,23 @@ export async function generateDailySkyDeck({
     tone,
     seedSalt: seed,
   });
+  const selectedCardId = cardIdOverride ?? sky.selectedCardId;
+  const lockedSky = cardIdOverride
+    ? {
+        ...sky,
+        selectedCardId,
+        whyThisCard: `${sky.whyThisCard} Server daily receipt locked this card for today.`,
+      }
+    : sky;
   const dailyCard = {
-    ...getDailyPullById(sky.selectedCardId, "en"),
-    skyGuided: sky,
+    ...getDailyPullById(selectedCardId, "en"),
+    skyGuided: lockedSky,
   };
   const reading = generateSkyCardReading({
     cardId: dailyCard.cardId,
     cardName: dailyCard.cardName,
     cardWhisper: dailyCard.whisper,
-    sky,
+    sky: lockedSky,
     tone,
   });
   const bars = scoreBars(seed, evidence);
@@ -109,7 +119,7 @@ export async function generateDailySkyDeck({
     },
     scoreBars: bars,
     dailyCard,
-    sky,
+    sky: lockedSky,
     reading,
     evidence,
     shortInterpretation: reading.shortAnswer,

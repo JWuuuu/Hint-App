@@ -10,16 +10,18 @@ import { CardSigil } from "../../hold/components/CardSigil";
 import { FollowUpInput, type FollowUpInputHandle } from "../../hold/chat/components/FollowUpInput";
 import { ChatMessage } from "../../hold/chat/components/ChatMessage";
 import { useAskHintChat } from "../../ask/useAskHintChat";
-import { getDailyPull } from "../data/dailyPulls";
+import { getDailyPull, getDailyPullById } from "../data/dailyPulls";
 import { CornerOrnaments, EtchedBorder, StarlitDivider } from "./CardChrome";
 import { useLanguage } from "../../../lib/i18n";
 import { getAnonId, getLocalDateString } from "../../../lib/identity";
-import { trackEvent } from "../../../lib/analytics";
 import {
-  getLocalDailyReadingForDateKey,
-  saveLocalDailyReading,
-  subscribeToLocalDailyReadings,
-} from "../../readings/localDailyReadings";
+  getOrCreateDailyReceipt,
+  openDailyReceipt,
+  parseServerDailyKey,
+  type DailyReceipt,
+} from "../../../lib/dailyReceipts";
+import { trackEvent } from "../../../lib/analytics";
+import { saveLocalDailyReading } from "../../readings/localDailyReadings";
 
 /**
  * Tonight's Pull — a single major arcana card sitting beside the Emotional
@@ -37,7 +39,12 @@ interface Props {
 
 export function DailyPullCard({ delay = 0, autoRevealKey = 0 }: Props = {}) {
   const { language, t } = useLanguage();
-  const pull = useMemo(() => getDailyPull(new Date(), language), [language]);
+  const fallbackPull = useMemo(() => getDailyPull(new Date(), language), [language]);
+  const [dailyReceipt, setDailyReceipt] = useState<DailyReceipt | null>(null);
+  const pull = useMemo(
+    () => dailyReceipt?.assignedCardId ? getDailyPullById(dailyReceipt.assignedCardId, language) : fallbackPull,
+    [dailyReceipt?.assignedCardId, fallbackPull, language],
+  );
   const [flipped, setFlipped] = useState(false);
   const [saved, setSaved] = useState(false);
   const drawMutation = useGetOrCreateDailyPull();
@@ -45,23 +52,34 @@ export function DailyPullCard({ delay = 0, autoRevealKey = 0 }: Props = {}) {
   const chat = useAskHintChat();
   const inputRef = useRef<FollowUpInputHandle | null>(null);
   const localDate = useMemo(() => getLocalDateString(), []);
-  const alreadyOpenedToday = () => Boolean(getLocalDailyReadingForDateKey(localDate));
 
   useEffect(() => {
-    const syncOpenedState = () => {
-      const opened = alreadyOpenedToday();
+    let mounted = true;
+    getOrCreateDailyReceipt("daily-card", {
+      fallbackAssignedCardId: fallbackPull.cardId,
+    }).then((receipt) => {
+      if (!mounted) return;
+      setDailyReceipt(receipt);
+      const opened = Boolean(receipt.openedAt);
       setFlipped(opened);
       setSaved(opened);
+    });
+    return () => {
+      mounted = false;
     };
-    syncOpenedState();
-    return subscribeToLocalDailyReadings(syncOpenedState);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localDate]);
+  }, [fallbackPull.cardId]);
 
-  function revealCard() {
+  async function revealCard() {
     if (flipped) return;
     setFlipped(true);
-    saveLocalDailyReading(pull);
+    const openedReceipt = await openDailyReceipt("daily-card", {
+      fallbackAssignedCardId: pull.cardId,
+    });
+    setDailyReceipt(openedReceipt);
+    saveLocalDailyReading(
+      pull,
+      openedReceipt.dailyKey ? parseServerDailyKey(openedReceipt.dailyKey) : new Date(),
+    );
     setSaved(true);
     trackEvent("daily_card_pulled", {
       cardId: pull.cardId,
