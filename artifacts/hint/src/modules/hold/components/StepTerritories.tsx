@@ -12,6 +12,7 @@ import {
 } from "../useHoldFlow";
 import { GOLD, IVORY, TEXT_HALO } from "../atmosphere";
 import { useLanguage } from "../../../lib/i18n";
+import { getTarotCardImage } from "../../tarot/logic/cardImageMap";
 
 interface Props {
   roomSetup?: TarotRoomSetup | null;
@@ -62,6 +63,16 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 const SELECT_BLOOM_MS = 650;
 const STEP_ORDER: IntakePanel[] = ["context", "spread"];
 const QUICK_SPREAD_IDS: readonly SpreadType[] = ["single", "three", "relationship"];
+const APP_TAROT_SPREAD_IDS: readonly SpreadType[] = [
+  "single",
+  "three",
+  "relationship",
+  "peachBlossom",
+  "trueHeart",
+  "futureLover",
+  "reconciliation",
+  "loveTree",
+];
 const MAX_VISIBLE_LONG_POSITION_CHIPS = 4;
 
 interface SpreadRecommendation {
@@ -93,7 +104,7 @@ const GUIDED_SPREAD_CHOICE_COPY = [
   },
   {
     id: "deep",
-    spreadType: "xRelationship",
+    spreadType: "loveTree",
     titleKey: "tarot.readingShape.deep.title",
     cardCountKey: "tarot.readingShape.deep.cards",
     bodyKey: "tarot.readingShape.deep.body",
@@ -151,19 +162,94 @@ function panelIndex(panel: IntakePanel): number {
 function StepDots({ panel }: { panel: IntakePanel }) {
   const active = panelIndex(panel);
   return (
-    <div className="flex items-center gap-2" aria-hidden>
+    <div
+      className="flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-1.5"
+      style={{
+        borderColor: "rgba(228,198,138,0.16)",
+        background: "rgba(255,255,255,0.035)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+      }}
+      aria-hidden
+    >
       {STEP_ORDER.map((step, i) => (
         <span
           key={step}
           className="h-1.5 rounded-full transition-all duration-500"
           style={{
-            width: i === active ? 22 : 6,
+            width: i === active ? 18 : 6,
             background:
               i <= active ? "rgba(228, 198, 138, 0.78)" : "var(--hint-border)",
             boxShadow: i === active ? "0 0 12px rgba(228, 198, 138, 0.28)" : "none",
           }}
         />
       ))}
+    </div>
+  );
+}
+
+const INTAKE_ART_CARDS = ["2-high-priestess", "6-lovers", "19-sun"] as const;
+
+function TarotIntakeArtwork({ spread }: { spread?: SpreadChoice }) {
+  const images = INTAKE_ART_CARDS
+    .map((cardId) => getTarotCardImage(cardId, "hint-classic") ?? getTarotCardImage(cardId, "original"))
+    .filter((image): image is string => Boolean(image));
+
+  return (
+    <div
+      className="relative min-h-[142px] overflow-hidden rounded-[10px] border"
+      style={{
+        borderColor: "rgba(228,198,138,0.18)",
+        background:
+          "radial-gradient(circle at 20% 20%, rgba(64,224,208,0.14), transparent 32%), radial-gradient(circle at 78% 28%, rgba(228,198,138,0.18), transparent 34%), linear-gradient(135deg, rgba(5,8,16,0.96), rgba(15,20,34,0.96))",
+        boxShadow: "0 18px 44px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.06)",
+      }}
+    >
+      <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.62)_0_1px,transparent_1px),radial-gradient(circle_at_80%_22%,rgba(228,198,138,0.72)_0_1px,transparent_1px),radial-gradient(circle_at_62%_76%,rgba(64,224,208,0.58)_0_1px,transparent_1px)] [background-size:86px_94px]" />
+      <motion.div
+        aria-hidden
+        className="absolute left-[8%] top-1/2 h-28 w-28 -translate-y-1/2 rounded-full border border-[#e4c174]/18"
+        animate={{ opacity: [0.22, 0.58, 0.22], scale: [0.96, 1.08, 0.96] }}
+        transition={{ duration: 4.6, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <div className="absolute bottom-3 left-5 flex h-[118px] w-[148px] items-end justify-center">
+        {images.map((image, index) => (
+          <motion.span
+            key={image}
+            className="absolute bottom-0 block h-[108px] w-[68px] overflow-hidden rounded-[8px] border bg-black/30 shadow-[0_18px_34px_rgba(0,0,0,0.38)]"
+            style={{
+              left: `${index * 34}px`,
+              borderColor: index === 1 ? "rgba(228,198,138,0.72)" : "rgba(255,255,255,0.24)",
+              zIndex: index + 1,
+            }}
+            animate={{
+              y: index === 1 ? [0, -5, 0] : [0, -2, 0],
+              rotate: index === 0 ? -10 : index === 1 ? 0 : 10,
+            }}
+            transition={{ duration: 5.2 + index * 0.3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <img
+              src={image}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="h-full w-full object-cover"
+            />
+          </motion.span>
+        ))}
+      </div>
+      <div className="absolute inset-y-0 right-0 flex w-[48%] flex-col justify-center px-4 text-left">
+        <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD.ink }}>
+          Energy-selected
+        </p>
+        <p className="mt-1 font-serif text-[22px] leading-tight" style={{ color: IVORY.primary, textShadow: TEXT_HALO.soft }}>
+          The cards wait for your hand.
+        </p>
+        <p className="mt-2 line-clamp-2 font-sans text-[11px] leading-relaxed" style={{ color: IVORY.dim }}>
+          {spread
+            ? `${spread.label} · ${spread.cardCount} ${spread.cardCount === 1 ? "card" : "cards"}`
+            : "Ask first, then choose from a fixed hidden deck."}
+        </p>
+      </div>
     </div>
   );
 }
@@ -402,7 +488,7 @@ function recommendSpreadType({
       "阻碍",
     ])
   ) {
-    return { spreadType: "xRelationship", reasonKey: "tarot.spreadRecommendation.reason.xRelationship" };
+    return { spreadType: "loveTree", reasonKey: "tarot.spreadRecommendation.reason.loveTree" };
   }
 
   if (focus.id === "someone" || includesAny(text, ["relationship", "connection", "between us", "we", "them", "him", "her", "关系"])) {
@@ -519,7 +605,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
   const [context, setContext] = useState("");
   const [question, setQuestion] = useState(DEFAULT_TAROT_QUESTION);
   const [spreadType, setSpreadType] = useState<SpreadType>(
-    roomSetup?.spreadType ?? initialFocus.spreadType
+    roomSetup?.spreadType === "xRelationship" ? "loveTree" : roomSetup?.spreadType ?? initialFocus.spreadType
   );
   const [spreadTouched, setSpreadTouched] = useState(false);
   const [listeningField, setListeningField] = useState<DictationField | null>(null);
@@ -529,7 +615,9 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
   const [showAdvancedSpreads, setShowAdvancedSpreads] = useState(false);
 
   const localizedSpreads = useMemo(
-    () => SPREAD_CHOICES.map((choice) => translateSpreadChoice(choice, t)),
+    () => SPREAD_CHOICES
+      .filter((choice) => APP_TAROT_SPREAD_IDS.includes(choice.id))
+      .map((choice) => translateSpreadChoice(choice, t)),
     [t]
   );
   const specializedSpreads = useMemo(
@@ -723,7 +811,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
 
         <div className="relative flex max-h-[82vh] flex-col">
           <header
-            className="flex items-center justify-between border-b px-5 py-4"
+            className="flex flex-col items-start gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
             style={{ borderColor: "var(--hint-border)" }}
           >
             <div className="flex items-center gap-3">
@@ -753,6 +841,8 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                   transition={{ duration: 0.45, ease: "easeOut" }}
                   className="space-y-5"
                 >
+                  <TarotIntakeArtwork />
+
                   <div className="space-y-3">
                     <FieldLabel>What do you want the cards to look into?</FieldLabel>
                     <div className="relative">
@@ -873,6 +963,8 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                   transition={{ duration: 0.45, ease: "easeOut" }}
                   className="space-y-4"
                 >
+                  <TarotIntakeArtwork spread={selectedSpread} />
+
                   <div className="space-y-2.5">
                     <FieldLabel>{t("tarot.intake.style")}</FieldLabel>
                     <button

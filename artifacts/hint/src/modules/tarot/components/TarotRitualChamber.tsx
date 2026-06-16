@@ -146,7 +146,8 @@ export function TarotRitualChamber({
 }) {
   const theme = getTheme(setup);
   const cardArtId = setup?.cardFaceId ?? "hint-classic";
-  const selectedSpread = SPREAD_CHOICES.find((spread) => spread.id === setup?.spreadType) ?? SPREAD_CHOICES[0]!;
+  const setupSpreadType = setup?.spreadType === "xRelationship" ? "loveTree" : setup?.spreadType;
+  const selectedSpread = SPREAD_CHOICES.find((spread) => spread.id === setupSpreadType) ?? SPREAD_CHOICES[0]!;
   const maxSelectedCards = selectedSpread.cardCount;
   const [deckState, setDeckState] = useState<ChamberDeckState>(() => {
     const hiddenDeckOrder = createHiddenDeck();
@@ -388,7 +389,6 @@ export function TarotRitualChamber({
           selectedCards={selectedCards}
           revealedIds={revealedIds}
           spread={selectedSpread}
-          autoReveal
           onContinue={() => setStage("reading")}
           onReveal={revealCard}
           onRestart={restartRitual}

@@ -210,6 +210,15 @@ function newMessageId() {
   return `hint-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function trimReading(value: string, maxSentences = 2, maxChars = 280) {
+  const clean = value.replace(/\s+/g, " ").trim();
+  if (clean.length <= maxChars) return clean;
+  const sentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((sentence) => sentence.trim()) ?? [clean];
+  const clipped = sentences.slice(0, maxSentences).join(" ");
+  if (clipped.length <= maxChars) return clipped;
+  return `${clipped.slice(0, maxChars - 1).trim()}...`;
+}
+
 function getCardSuit(cardId: string) {
   const suit = cardId.split("-").at(-1);
   return suit === "wands" || suit === "cups" || suit === "swords" || suit === "pentacles"
@@ -265,8 +274,8 @@ function buildShortAnswer(cards: RitualCard[], spread: SpreadChoice, question?: 
   return `${questionPrefix}${firstMeaning?.sentence ?? "start with the clearest signal and take one honest next step."}`;
 }
 
-function buildCardMeaning(card: RitualCard, index: number) {
-  return `Hint ${index + 1}: ${getReadableCardMeaning(card).sentence}`;
+function buildCardMeaning(card: RitualCard, index: number, spread: SpreadChoice) {
+  return `${getSpreadPositionLabel(spread, index)}: ${getReadableCardMeaning(card).sentence}`;
 }
 
 function buildQuestionMeaning(cards: RitualCard[], question?: string, story?: string) {
@@ -286,7 +295,7 @@ function buildFollowUpReply(question: string, cards: RitualCard[]) {
   return `For "${cleanQuestion}", I would return to ${anchor?.name ?? "the first Hint"}. ${anchor ? getReadableCardMeaning(anchor).sentence : "Name what is true, then choose the smallest action that matches it."}`;
 }
 
-function toApiCardDraw(card: RitualCard, index: number): TarotCardDraw {
+function toApiCardDraw(card: RitualCard, index: number, spread: SpreadChoice): TarotCardDraw {
   const meaning = getReadableCardMeaning(card);
   const isMajor = /^\d+-/.test(card.cardId);
   return {
@@ -300,7 +309,7 @@ function toApiCardDraw(card: RitualCard, index: number): TarotCardDraw {
       reversed: meaning.reversed,
     },
     isReversed: card.orientation === "reversed",
-    position: `Hint ${index + 1}`,
+    position: getSpreadPositionLabel(spread, index),
   };
 }
 
@@ -343,10 +352,16 @@ export function TarotHintReadingChat({
   });
   const shortAnswer = useMemo(() => buildShortAnswer(selectedCards, spread, question), [selectedCards, spread, question]);
   const cardMeanings = useMemo(
-    () => selectedCards.map((card, index) => buildCardMeaning(card, index)),
-    [selectedCards],
+    () => selectedCards.map((card, index) => buildCardMeaning(card, index, spread)),
+    [selectedCards, spread],
   );
   const questionMeaning = useMemo(() => buildQuestionMeaning(selectedCards, question, story), [selectedCards, question, story]);
+  const overallSummary = useMemo(() => trimReading(shortAnswer, 2, 320), [shortAnswer]);
+  const finalAdvice = useMemo(() => trimReading(questionMeaning, 2, 320), [questionMeaning]);
+  const compactCardMeanings = useMemo(
+    () => cardMeanings.map((meaning) => trimReading(meaning, 2, 260)),
+    [cardMeanings],
+  );
   const previewCardSize = previewCardSizeClass(selectedCards.length);
   const previewItemWidth = previewItemWidthClass(selectedCards.length);
 
@@ -374,7 +389,7 @@ export function TarotHintReadingChat({
         cardId: card.cardId,
         name: card.name,
         orientation: card.orientation,
-        positionLabel: `Hint ${index + 1}`,
+        positionLabel: getSpreadPositionLabel(spread, index),
         keywords: getReadableCardMeaning(card).keywords,
       })),
     });
@@ -413,7 +428,7 @@ export function TarotHintReadingChat({
           territory: focusLabel?.trim() || spread.label,
           emotionalContext: story?.trim() || undefined,
           spreadType: spread.id,
-          cards: selectedCards.map(toApiCardDraw),
+          cards: selectedCards.map((card, index) => toApiCardDraw(card, index, spread)),
           initialReading: [shortAnswer, ...cardMeanings, questionMeaning].join("\n\n"),
           messages: priorMessages.map((message) => ({
             role: message.role,
@@ -462,7 +477,7 @@ export function TarotHintReadingChat({
           Read my Hint
         </h1>
         <p className="mt-1.5 max-w-2xl font-sans text-[12px] leading-relaxed text-[#d8c7a6]/74 sm:text-[13px]">
-          Here is the answer first, then what the {selectedCards.length === 1 ? "card is" : "cards are"} pointing toward.
+          Summary first, then the cards, then the next honest move.
         </p>
         {(question || focusLabel) && (
           <p className="mt-2 max-w-2xl truncate font-sans text-xs leading-relaxed text-[#d8c7a6]/58">
@@ -498,13 +513,13 @@ export function TarotHintReadingChat({
                       revealed
                       backStyle={backStyle}
                       cardArtId={cardArtId}
-                      positionLabel={`Hint ${index + 1}`}
-                      ariaLabel={`Hint ${index + 1}, ${card.name}, ${card.orientation}`}
+                      positionLabel={getSpreadPositionLabel(spread, index)}
+                      ariaLabel={`${getSpreadPositionLabel(spread, index)}, ${card.name}, ${card.orientation}`}
                       showFrontCaption={false}
                       className={previewCardSize}
                     />
                     <p className="mt-2 truncate font-sans text-[9px] uppercase tracking-[0.16em] text-[#e4c174]/68">
-                      Hint {index + 1}
+                      {getSpreadPositionLabel(spread, index)}
                     </p>
                     <p className="mt-0.5 truncate font-serif text-[12px] leading-tight text-[#f7ead0] sm:text-[13px]">
                       {card.name}
@@ -523,19 +538,19 @@ export function TarotHintReadingChat({
               className="rounded-[14px] border border-[#e4c174]/14 bg-white/[0.04] p-3.5 shadow-[0_14px_30px_rgba(0,0,0,0.20)] sm:p-4"
             >
               <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#e4c174]/76">
-                Hint
+                Reading
               </p>
               <div className="mt-3 space-y-3">
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Short answer</h3>
-                  <p className="mt-1.5 font-sans text-[15px] leading-7 text-[#f7ead0]/92 sm:text-[16px]">{shortAnswer}</p>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Overall summary</h3>
+                  <p className="mt-1.5 font-sans text-[15px] leading-6 text-[#f7ead0]/92 sm:text-[16px]">{overallSummary}</p>
                 </section>
                 <section>
                   <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">
-                    {selectedCards.length === 1 ? "What the card means" : "What the cards mean"}
+                    Card by card
                   </h3>
                   <div className="mt-2 grid gap-2 md:grid-cols-2">
-                    {cardMeanings.map((meaning, index) => (
+                    {compactCardMeanings.map((meaning, index) => (
                       <p key={`${selectedCards[index]?.visualId ?? index}-meaning`} className="rounded-[10px] border border-white/8 bg-black/20 px-3 py-2 font-sans text-[12.5px] leading-5 text-[#f7ead0]/86 sm:text-[13px]">
                         {meaning}
                       </p>
@@ -543,8 +558,8 @@ export function TarotHintReadingChat({
                   </div>
                 </section>
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">What this means for your question</h3>
-                  <p className="mt-1.5 font-sans text-[13.5px] leading-7 text-[#f7ead0]/88 sm:text-sm">{questionMeaning}</p>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Final advice</h3>
+                  <p className="mt-1.5 font-sans text-[13.5px] leading-6 text-[#f7ead0]/88 sm:text-sm">{finalAdvice}</p>
                 </section>
               </div>
             </motion.article>

@@ -299,6 +299,18 @@ export function HintTarotCardFront({
           aria-hidden="true"
           draggable={false}
           className={`h-full w-full bg-[#05060b] object-contain ${reversed ? "rotate-180" : ""}`}
+          onError={(event) => {
+            const fallback = cardArtId === "original" ? null : getTarotCardImage(card.cardId, "original");
+            if (fallback && event.currentTarget.src !== fallback) {
+              event.currentTarget.src = fallback;
+              return;
+            }
+            event.currentTarget.style.display = "none";
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-[12px] bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.08),transparent_38%,rgba(0,0,0,0.12))]"
         />
         <div
           className="pointer-events-none absolute inset-0 rounded-[12px] border"

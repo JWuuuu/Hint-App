@@ -88,7 +88,7 @@ export function SettingsList() {
       icon: Sparkles,
       label: "Tarot room",
       detail: "Change your saved deck, room mood, and background.",
-      href: "/tarot?setup=1",
+      href: "/app/tarot?setup=1",
     },
     { icon: Lock, label: t("me.privacyPolicy"), detail: t("me.settings.privacyDetail"), href: "/privacy" },
     { icon: Info, label: t("me.terms"), detail: t("me.termsDetail"), href: "/terms" },

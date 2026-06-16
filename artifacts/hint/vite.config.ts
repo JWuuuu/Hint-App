@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import fs from "fs";
 import path from "path";
 
 const rawPort = process.env.PORT ?? "5173";
@@ -15,9 +16,21 @@ const basePath = process.env.BASE_PATH ?? "/";
 
 const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:5050";
 
+function copyTarotDeckAssets() {
+  return {
+    name: "copy-tarot-deck-assets",
+    closeBundle() {
+      const source = path.resolve(import.meta.dirname, "public/brand/tarot/decks");
+      const destination = path.resolve(import.meta.dirname, "dist/public/brand/tarot/decks");
+      if (!fs.existsSync(source)) return;
+      fs.cpSync(source, destination, { recursive: true });
+    },
+  };
+}
+
 export default defineConfig({
   base: basePath,
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), copyTarotDeckAssets()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),

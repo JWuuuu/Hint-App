@@ -33,7 +33,6 @@ const ADVANCED_SPREAD_IDS: readonly SpreadType[] = [
   "reconciliation",
   "trueHeart",
   "loveTree",
-  "xRelationship",
 ];
 const POSITION_PREVIEW_LIMIT = 4;
 const READING_SHAPE_CHOICES = [
@@ -60,7 +59,7 @@ const READING_SHAPE_CHOICES = [
   },
   {
     id: "deep",
-    spreadType: "xRelationship",
+    spreadType: "loveTree",
     titleKey: "tarot.readingShape.deep.title",
     cardCountKey: "tarot.readingShape.deep.cards",
     bodyKey: "tarot.readingShape.deep.body",
@@ -495,11 +494,11 @@ function CompactSpreadPreview({
         ? t("tarot.readingShape.simple.title")
         : spread.id === "relationship"
           ? t("tarot.readingShape.between.title")
-          : spread.id === "xRelationship"
+          : spread.id === "loveTree"
             ? t("tarot.readingShape.deep.title")
             : spread.label;
   const selectedShapeCount =
-    spread.id === "xRelationship"
+    spread.id === "loveTree"
       ? t("tarot.readingShape.deep.cards")
       : `${spread.cardCount} ${spread.cardCount === 1 ? cardLabel : cardsLabel}`;
 
@@ -667,7 +666,10 @@ function translateSpread(spread: SpreadChoice, t: (key: string) => string): Spre
 export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: Props) {
   const { t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const [setup, setSetup] = useState<TarotRoomSetup>(initialSetup);
+  const [setup, setSetup] = useState<TarotRoomSetup>(() => ({
+    ...initialSetup,
+    spreadType: initialSetup.spreadType === "xRelationship" ? "loveTree" : initialSetup.spreadType,
+  }));
   const [showAdvancedSpreads, setShowAdvancedSpreads] = useState(false);
   const [showAllPositions, setShowAllPositions] = useState(false);
 

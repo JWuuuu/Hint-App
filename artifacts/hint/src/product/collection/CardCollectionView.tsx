@@ -84,7 +84,7 @@ export function CardCollectionView() {
           </p>
         </div>
         <Link
-          href="/tarot"
+          href="/app/tarot"
           className="inline-flex h-11 w-fit items-center justify-center rounded-full px-5 font-sans text-[13px] font-black"
           style={{ color: "#fffaf2", background: EMBER }}
         >

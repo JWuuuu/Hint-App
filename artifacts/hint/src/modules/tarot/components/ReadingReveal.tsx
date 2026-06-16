@@ -21,26 +21,26 @@ type ReadingRevealProps = {
 
 function revealGridClass(count: number) {
   if (count === 1) return "grid-cols-1 max-w-sm";
-  if (count === 2) return "grid-cols-1 sm:grid-cols-2 max-w-2xl";
-  if (count === 3) return "grid-cols-3 max-w-3xl";
-  if (count <= 5) return "grid-cols-3 sm:grid-cols-5 max-w-5xl";
-  return "grid-cols-3 sm:grid-cols-5 xl:grid-cols-9 max-w-6xl";
+  if (count === 2) return "grid-cols-1 min-[520px]:grid-cols-2 max-w-2xl";
+  if (count === 3) return "grid-cols-1 min-[520px]:grid-cols-3 max-w-3xl";
+  if (count <= 5) return "grid-cols-2 min-[520px]:grid-cols-3 sm:grid-cols-5 max-w-5xl";
+  return "grid-cols-2 min-[520px]:grid-cols-4 lg:grid-cols-7 max-w-6xl";
 }
 
 function revealCardSizeClass(count: number) {
   if (count === 1) return "";
   if (count === 2) return "!h-[202px] !w-[124px] sm:!h-[256px] sm:!w-[156px] md:!h-[288px] md:!w-[176px]";
-  if (count === 3) return "!h-[164px] !w-[100px] sm:!h-[236px] sm:!w-[144px] md:!h-[276px] md:!w-[168px]";
-  if (count <= 5) return "!h-[146px] !w-[90px] sm:!h-[216px] sm:!w-[132px] md:!h-[250px] md:!w-[152px]";
-  return "!h-[126px] !w-[78px] sm:!h-[188px] sm:!w-[116px] md:!h-[224px] md:!w-[136px]";
+  if (count === 3) return "!h-[172px] !w-[106px] min-[520px]:!h-[164px] min-[520px]:!w-[100px] sm:!h-[236px] sm:!w-[144px] md:!h-[276px] md:!w-[168px]";
+  if (count <= 5) return "!h-[142px] !w-[88px] sm:!h-[216px] sm:!w-[132px] md:!h-[250px] md:!w-[152px]";
+  return "!h-[126px] !w-[78px] sm:!h-[184px] sm:!w-[114px] md:!h-[214px] md:!w-[130px]";
 }
 
 function revealCardShellClass(count: number) {
   if (count === 1) return "h-[218px] w-[132px] sm:h-[264px] sm:w-[160px] md:h-[294px] md:w-[178px]";
   if (count === 2) return "h-[202px] w-[124px] sm:h-[256px] sm:w-[156px] md:h-[288px] md:w-[176px]";
-  if (count === 3) return "h-[164px] w-[100px] sm:h-[236px] sm:w-[144px] md:h-[276px] md:w-[168px]";
-  if (count <= 5) return "h-[146px] w-[90px] sm:h-[216px] sm:w-[132px] md:h-[250px] md:w-[152px]";
-  return "h-[126px] w-[78px] sm:h-[188px] sm:w-[116px] md:h-[224px] md:w-[136px]";
+  if (count === 3) return "h-[172px] w-[106px] min-[520px]:h-[164px] min-[520px]:w-[100px] sm:h-[236px] sm:w-[144px] md:h-[276px] md:w-[168px]";
+  if (count <= 5) return "h-[142px] w-[88px] sm:h-[216px] sm:w-[132px] md:h-[250px] md:w-[152px]";
+  return "h-[126px] w-[78px] sm:h-[184px] sm:w-[114px] md:h-[214px] md:w-[130px]";
 }
 
 export function ReadingReveal({
@@ -86,13 +86,25 @@ export function ReadingReveal({
     <section className="relative h-full w-full overflow-y-auto overflow-x-hidden px-4 py-10 text-center sm:py-12">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(226,190,116,0.17),transparent_28%),radial-gradient(circle_at_50%_72%,rgba(8,19,34,0.74),transparent_34%),linear-gradient(180deg,#050816,#010207)]" />
       <div className="pointer-events-none absolute inset-x-0 top-[22%] mx-auto h-[55%] max-w-5xl rounded-full bg-[#e4c174]/[0.045] blur-3xl" />
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[45%] h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#e4c174]/12"
+        animate={{ opacity: [0.16, 0.46, 0.16], scale: [0.9, 1.16, 0.9] }}
+        transition={{ duration: 6.2, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[45%] h-[180px] w-[180px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#72e3d5]/10"
+        animate={{ opacity: [0.12, 0.38, 0.12], scale: [1.08, 0.92, 1.08] }}
+        transition={{ duration: 5.4, repeat: Infinity, ease: "easeInOut" }}
+      />
 
-      <div className="relative z-30 mx-auto mb-10 max-w-3xl sm:mb-12">
-        <p className="font-serif text-[34px] leading-tight text-[#f7ead0] sm:text-5xl">{title}</p>
+      <div className="relative z-30 mx-auto mb-8 max-w-3xl sm:mb-10">
+        <p className="font-serif text-[30px] leading-tight text-[#f7ead0] sm:text-5xl">{title}</p>
         <p className="mt-3 font-sans text-sm text-[#d8c7a6]/78 sm:text-[15px]">{subtitle}</p>
       </div>
 
-      <div className={`relative z-10 mx-auto grid w-full ${gridClass} place-items-center gap-3 sm:gap-7`}>
+      <div className={`relative z-10 mx-auto grid w-full ${gridClass} place-items-center gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-7`}>
         {selectedCards.map((card, index) => {
           const revealed = revealedIds.includes(card.visualId);
           const label = getSpreadPositionLabel(spread, index);
@@ -116,10 +128,18 @@ export function ReadingReveal({
                 className={`relative grid place-items-center ${cardShellClass}`}
               >
                 <motion.div
-                  className="pointer-events-none absolute -inset-5 rounded-[20px] bg-[#e4c174]/18 blur-2xl"
-                  animate={{ opacity: revealed ? 0.72 : 0.2, scale: revealed ? 1.06 : 0.86 }}
+                  className="pointer-events-none absolute -inset-6 rounded-[24px] bg-[radial-gradient(circle,rgba(228,193,116,0.28),rgba(114,227,213,0.08)_45%,transparent_72%)] blur-2xl"
+                  animate={{ opacity: revealed ? 0.82 : 0.24, scale: revealed ? 1.08 : 0.86 }}
                   transition={{ duration: 0.92, ease: [0.2, 0.74, 0.18, 1] }}
                 />
+                {!revealed && canReveal && (
+                  <motion.div
+                    aria-hidden
+                    className="pointer-events-none absolute -inset-3 rounded-[18px] border border-[#e4c174]/28"
+                    animate={{ opacity: [0.22, 0.62, 0.22], scale: [0.96, 1.05, 0.96] }}
+                    transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                )}
                 <TarotCardVisual
                   card={card}
                   faceDown={!revealed}
@@ -145,7 +165,7 @@ export function ReadingReveal({
         <button
           type="button"
           onClick={onContinue}
-          className="relative z-10 mt-10 rounded-full border border-[#e4c174]/58 bg-[#e4c174]/10 px-7 py-3.5 font-sans text-xs uppercase tracking-[0.22em] text-[#ffe8aa] shadow-[0_12px_30px_rgba(0,0,0,0.35)] transition-colors hover:bg-[#e4c174]/16"
+          className="relative z-10 mt-10 rounded-full border border-[#e4c174]/58 bg-[linear-gradient(135deg,rgba(228,193,116,0.18),rgba(114,227,213,0.10))] px-7 py-3.5 font-sans text-xs uppercase tracking-[0.22em] text-[#ffe8aa] shadow-[0_12px_30px_rgba(0,0,0,0.35),0_0_24px_rgba(228,193,116,0.12)] transition-[background,transform] hover:scale-[1.02] hover:bg-[#e4c174]/16"
         >
           Read my Hint
         </button>

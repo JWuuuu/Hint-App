@@ -1,6 +1,5 @@
 import { Route, Switch } from "wouter";
 import { HomeDashboard } from "../modules/home";
-import { TarotRoom } from "../modules/tarot";
 import { AskHint } from "../modules/ask";
 import { LoginView } from "../modules/auth";
 import { RoomsLibrary } from "../modules/rooms";
@@ -18,6 +17,16 @@ import { AnimalTarotView } from "./animal/AnimalTarotView";
 import { CardCollectionView } from "./collection/CardCollectionView";
 import { SettingsView } from "./settings/SettingsView";
 import { SkyDeckView } from "./skydeck/SkyDeckView";
+import { TarotRoomApp } from "./tarot/TarotRoomApp";
+
+function legacyTarotTarget() {
+  if (typeof window === "undefined") return "/app/tarot";
+  return `/app/tarot${window.location.search}${window.location.hash}`;
+}
+
+function LegacyTarotRedirect() {
+  return <RedirectTo to={legacyTarotTarget()} />;
+}
 
 export function ProductRouter() {
   return (
@@ -27,7 +36,10 @@ export function ProductRouter() {
       <Route path="/daily-pull">
         <RedirectTo to="/daily" />
       </Route>
-      <Route path="/tarot" component={TarotRoom} />
+      <Route path="/app/tarot" component={TarotRoomApp} />
+      <Route path="/app/tarot/:rest*" component={TarotRoomApp} />
+      <Route path="/tarot" component={LegacyTarotRedirect} />
+      <Route path="/tarot/:rest*" component={LegacyTarotRedirect} />
       <Route path="/animal-tarot" component={AnimalTarotView} />
       <Route path="/sky-deck" component={SkyDeckView} />
       <Route path="/astrology" component={AstrologyView} />

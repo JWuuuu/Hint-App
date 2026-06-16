@@ -34,16 +34,16 @@ function getFanLayout(index: number, total: number) {
 }
 
 function slotSizeClass(cardCount: number) {
-  if (cardCount >= 7) return "h-[58px] w-[38px] sm:h-[68px] sm:w-[44px] lg:h-[82px] lg:w-[54px]";
-  if (cardCount >= 5) return "h-[82px] w-[54px] sm:h-[98px] sm:w-[64px] lg:h-[128px] lg:w-[82px]";
-  return "h-[108px] w-[68px] sm:h-[128px] sm:w-[82px] lg:h-[154px] lg:w-[98px]";
+  if (cardCount >= 7) return "!h-[46px] !w-[30px] min-[430px]:!h-[56px] min-[430px]:!w-[36px] sm:!h-[68px] sm:!w-[44px] lg:!h-[82px] lg:!w-[54px]";
+  if (cardCount >= 5) return "!h-[66px] !w-[42px] min-[430px]:!h-[78px] min-[430px]:!w-[50px] sm:!h-[98px] sm:!w-[64px] lg:!h-[124px] lg:!w-[80px]";
+  return "!h-[96px] !w-[60px] min-[430px]:!h-[108px] min-[430px]:!w-[68px] sm:!h-[128px] sm:!w-[82px] lg:!h-[154px] lg:!w-[98px]";
 }
 
 function slotFieldClass(cardCount: number) {
-  if (cardCount === 1) return "top-[55%] h-[24%] sm:top-[54%] sm:h-[25%]";
-  if (cardCount === 3) return "top-[51%] h-[30%] sm:top-[50%] sm:h-[31%]";
-  if (cardCount <= 5) return "top-[47%] h-[36%] sm:top-[46%] sm:h-[37%]";
-  return "top-[45%] h-[40%] sm:top-[44%] sm:h-[41%]";
+  if (cardCount === 1) return "top-[56%] h-[24%] sm:top-[54%] sm:h-[25%]";
+  if (cardCount === 3) return "top-[51%] h-[31%] sm:top-[50%] sm:h-[31%]";
+  if (cardCount <= 5) return "top-[47%] h-[38%] sm:top-[46%] sm:h-[38%]";
+  return "top-[43%] h-[43%] sm:top-[43%] sm:h-[43%]";
 }
 
 function fanCardSizeClass() {
@@ -244,16 +244,25 @@ export function RibbonSpread({
 
   return (
     <section className="relative h-full w-full overflow-hidden px-4 py-5 text-center sm:px-6">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(54,105,126,0.34),transparent_20%),radial-gradient(circle_at_50%_58%,rgba(226,190,116,0.11),transparent_32%),linear-gradient(180deg,#050816,#010207_54%,#03040c)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(64,224,208,0.18),transparent_22%),radial-gradient(circle_at_50%_46%,rgba(54,105,126,0.34),transparent_22%),radial-gradient(circle_at_50%_58%,rgba(226,190,116,0.13),transparent_34%),linear-gradient(180deg,#050816,#010207_54%,#03040c)]" />
       <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.65)_0_1px,transparent_1px),radial-gradient(circle_at_74%_19%,rgba(239,205,139,0.55)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(255,255,255,0.34)_0_1px,transparent_1px)] [background-size:132px_148px]" />
       <div className="pointer-events-none absolute inset-x-[-10%] bottom-[-8%] h-[60%] bg-[radial-gradient(ellipse_at_50%_64%,rgba(78,117,145,0.28),rgba(8,18,34,0.24)_38%,transparent_70%)]" />
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[19%] h-[180px] w-[180px] -translate-x-1/2 rounded-full border border-[#e4c174]/14"
+        animate={{ opacity: [0.18, 0.48, 0.18], scale: [0.92, 1.12, 0.92] }}
+        transition={{ duration: 5.8, repeat: Infinity, ease: "easeInOut" }}
+      />
 
       <div className="relative z-30 mx-auto max-w-3xl">
         <p className="font-serif text-[30px] leading-tight text-[#f7ead0] sm:text-4xl">Spread the deck.</p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-[#e4c174]/78">
-          <span>{spread.label} spread</span>
-          <span className="h-1 w-1 rounded-full bg-[#e4c174]/45" />
-          <span>{selectedCards.length} / {maxCards} selected</span>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 font-sans text-[10px] uppercase tracking-[0.16em] text-[#e4c174]/78">
+          <span className="rounded-full border border-[#e4c174]/18 bg-black/20 px-2.5 py-1">
+            {spread.label} spread
+          </span>
+          <span className="rounded-full border border-[#e4c174]/18 bg-[#e4c174]/8 px-2.5 py-1">
+            {selectedCards.length} / {maxCards} selected
+          </span>
         </div>
         <p className="mt-2 font-sans text-sm text-[#d8c7a6]/68">
           {instruction}
@@ -279,13 +288,12 @@ export function RibbonSpread({
               style={{ left: `${slotPoint.x}%`, top: `${slotPoint.y}%` }}
             >
               <div className={`relative grid place-items-center ${cardSizeClass}`}>
+                <span className="pointer-events-none absolute -right-2 -top-2 z-40 grid h-5 w-5 place-items-center rounded-full border border-[#e4c174]/42 bg-[#080b13]/92 font-sans text-[9px] uppercase tracking-[0.04em] text-[#ffe6aa] shadow-[0_0_14px_rgba(228,193,116,0.18)]">
+                  {index + 1}
+                </span>
                 <div
-                  className="absolute inset-0 rounded-[10px] border border-dashed border-[#e4c174]/48 bg-[#e4c174]/[0.045] shadow-[inset_0_0_22px_rgba(228,193,116,0.08)]"
-                >
-                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-sans text-[9px] uppercase tracking-[0.16em] text-[#e4c174]/64">
-                    {label}
-                  </span>
-                </div>
+                  className="absolute inset-0 rounded-[10px] border border-dashed border-[#e4c174]/42 bg-[radial-gradient(circle_at_50%_44%,rgba(228,193,116,0.10),rgba(64,224,208,0.035)_42%,rgba(0,0,0,0.08))] shadow-[inset_0_0_22px_rgba(228,193,116,0.08),0_0_18px_rgba(64,224,208,0.045)]"
+                />
                 {selectedCard && (
                   <motion.div
                     layoutId={`spread-card-${selectedCard.visualId}`}
@@ -322,7 +330,7 @@ export function RibbonSpread({
                 )}
               </div>
               {showOuterLabel && (
-                <p className="max-w-[7rem] truncate font-sans text-[9px] uppercase tracking-[0.14em] text-[#d8c7a6]/72">
+                <p className="max-w-[5.8rem] truncate font-sans text-[8px] uppercase tracking-[0.1em] text-[#d8c7a6]/72 sm:max-w-[7rem] sm:text-[9px] sm:tracking-[0.14em]">
                   {label}
                 </p>
               )}
@@ -426,7 +434,7 @@ export function RibbonSpread({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
           onClick={onContinue}
-          className="absolute bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-[#e4c174]/58 bg-[#e4c174]/12 px-6 py-3 font-sans text-[11px] uppercase tracking-[0.2em] text-[#ffe8aa] shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-[#e4c174]/18"
+          className="absolute bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-[21rem] -translate-x-1/2 rounded-full border border-[#e4c174]/58 bg-[#e4c174]/12 px-5 py-3 font-sans text-[10px] uppercase tracking-[0.16em] text-[#ffe8aa] shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-[#e4c174]/18 sm:bottom-5 sm:w-auto sm:max-w-none sm:px-6 sm:text-[11px] sm:tracking-[0.2em]"
         >
           Reveal the Reading
         </motion.button>

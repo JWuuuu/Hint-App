@@ -130,7 +130,7 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
           </button>
           <HeaderControls bright={bright} onThemeToggle={onThemeToggle} />
           <Link
-            href="/tarot"
+            href="/app/tarot"
             className="hidden h-12 items-center justify-center gap-2 rounded-full px-6 font-sans text-[14px] font-semibold lg:inline-flex"
             style={{
               color: "#fffaf2",

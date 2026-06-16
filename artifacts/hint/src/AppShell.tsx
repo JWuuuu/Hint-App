@@ -156,7 +156,7 @@ function WebsiteHomeNav({
   const homeNavItems = [
     { href: "/#today", label: t("nav.today"), section: true },
     { href: "/daily", label: t("nav.daily"), section: false },
-    { href: "/tarot", label: t("nav.openTarot"), section: false },
+    { href: "/app/tarot", label: t("nav.openTarot"), section: false },
     { href: "/sky-deck", label: "Sky Deck", section: false },
     { href: "/collection", label: "Collection", section: false },
     { href: "/astrology", label: t("nav.astrology"), section: false },

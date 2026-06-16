@@ -1326,7 +1326,7 @@ function DailyHintHero({ report }: { report: DailyReport }) {
           </p>
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <PrimaryLink href="/tarot">{t("home.startReading")}</PrimaryLink>
+            <PrimaryLink href="/app/tarot">{t("home.startReading")}</PrimaryLink>
             <SecondaryLink href="/ask">
               <MessageCircle size={15} />
               {t("home.talkFirst")}

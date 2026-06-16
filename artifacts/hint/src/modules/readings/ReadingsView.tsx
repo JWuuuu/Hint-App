@@ -537,7 +537,7 @@ export function ReadingsView() {
 
       <div className="mb-7">
         <Link
-          href="/tarot"
+          href="/app/tarot"
           className="inline-flex h-11 items-center justify-center rounded-[999px] px-5 font-sans text-[14px] font-medium"
           style={{
             color: "#08070B",
