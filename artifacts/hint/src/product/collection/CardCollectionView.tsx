@@ -130,7 +130,7 @@ export function CardCollectionView() {
       <RareCardUnlock
         key={`${selectedRareCard.cardId}-${rareCardClickKey}`}
         card={selectedRareCardId === rewardCardId ? rewardCard : selectedRareCard}
-        autoUnlockKey={selectedRareCardId === rewardCardId ? rareCardClickKey : 0}
+        autoUnlockKey={rareCardClickKey}
         onUnlock={unlockRareCard}
         rewardOpened={selectedRareCardId === rewardCardId ? rewardOpened : selectedRareCard.unlocked}
         lockedMessage={
