@@ -32,7 +32,7 @@ import type { BirthProfile } from "./types/astrology";
 
 /** Immersive room routes own the full screen (their own back link + pinned
  *  inputs), so the global bottom nav is hidden there. */
-const IMMERSIVE_ROUTES = ["/app/tarot", "/app/ask"];
+const IMMERSIVE_ROUTES = ["/tarot", "/ask", "/app/tarot", "/app/ask"];
 
 /**
  * AppShell — the persistent room. Atmosphere is mounted once at the app
@@ -45,12 +45,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [reduceMotion, setReduceMotion] = useState(
     () => getHintPreferences().reduceMotion,
   );
-  const isProductRoute = location === "/app" || location.startsWith("/app/");
+  const isProductRoute = !["/privacy", "/terms", "/disclaimer", "/contact", "/about"].includes(location);
   const showNav = isProductRoute && !IMMERSIVE_ROUTES.some(
     (r) => location === r || location.startsWith(r + "/"),
   );
   const showImmersiveLanguage = !(
-    location === "/app/tarot" || location.startsWith("/app/tarot/")
+    location === "/tarot" ||
+    location.startsWith("/tarot/") ||
+    location === "/app/tarot" ||
+    location.startsWith("/app/tarot/")
   );
 
   useEffect(() => {
@@ -104,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <PointerProvider>
       <div
         data-hint-theme={theme}
-        className="fixed inset-0 overflow-hidden"
+        className="hint-app-shell-root fixed inset-0 overflow-hidden"
       >
         {/* Atmosphere stack — back to front */}
         <CelestialBackdrop theme={theme} />
@@ -151,21 +154,25 @@ function WebsiteHomeNav({
     typeof window === "undefined" ? "#today" : window.location.hash || "#today",
   );
   const homeNavItems = [
-    { href: "/app#today", label: t("nav.today"), section: true },
-    { href: "/app/daily", label: t("nav.daily"), section: false },
-    { href: "/app/tarot", label: t("nav.openTarot"), section: false },
-    { href: "/app/sky-deck", label: "Sky Deck", section: false },
-    { href: "/app/collection", label: "Collection", section: false },
-    { href: "/app/astrology", label: t("nav.astrology"), section: false },
-    { href: "/app/readings", label: t("nav.history"), section: false },
+    { href: "/#today", label: t("nav.today"), section: true },
+    { href: "/daily", label: t("nav.daily"), section: false },
+    { href: "/tarot", label: t("nav.openTarot"), section: false },
+    { href: "/sky-deck", label: "Sky Deck", section: false },
+    { href: "/collection", label: "Collection", section: false },
+    { href: "/astrology", label: t("nav.astrology"), section: false },
+    { href: "/readings", label: t("nav.history"), section: false },
   ];
   const profileActive =
+    location === "/profile" ||
+    location.startsWith("/profile/") ||
+    location === "/me" ||
+    location.startsWith("/me/") ||
     location === "/app/profile" ||
     location.startsWith("/app/profile/") ||
     location === "/app/me" ||
     location.startsWith("/app/me/");
   const isActiveNavItem = (href: string, section: boolean) => {
-    if (section) return location === "/app" && activeHash === "#today";
+    if (section) return (location === "/" || location === "/app") && activeHash === "#today";
     return location === href || location.startsWith(`${href}/`);
   };
 
@@ -180,7 +187,7 @@ function WebsiteHomeNav({
   }, []);
 
   return (
-    <div className="pointer-events-none fixed left-0 right-0 top-0 z-50 px-2 py-1.5 xl:px-5 xl:py-3">
+    <div className="pointer-events-none fixed left-0 right-0 top-0 z-50 px-2 pb-1.5 pt-[calc(var(--hint-safe-top)+0.375rem)] xl:px-5 xl:pb-3 xl:pt-[calc(var(--hint-safe-top)+0.75rem)]">
       <nav
         aria-label="Primary"
         className="pointer-events-auto relative mx-auto grid w-full max-w-[min(96vw,86rem)] grid-cols-[auto_1fr_auto] items-center gap-2 rounded-[18px] border px-2 py-1.5 xl:flex xl:gap-4 xl:rounded-full xl:px-4 xl:py-2"
@@ -199,9 +206,9 @@ function WebsiteHomeNav({
         }}
       >
         <Link
-          href="/app"
-          aria-current={location === "/app" ? "page" : undefined}
-          data-active={location === "/app" ? "true" : "false"}
+          href="/"
+          aria-current={location === "/" ? "page" : undefined}
+          data-active={location === "/" ? "true" : "false"}
           className="row-start-1 inline-flex w-fit min-w-0 shrink-0 justify-self-start items-center gap-2 rounded-[14px] border py-1 pl-1 pr-2.5 font-serif text-[18px] leading-none xl:gap-3 xl:rounded-full xl:py-1.5 xl:pl-1.5 xl:pr-4 xl:text-[24px]"
           style={{
             color: "var(--hint-text)",
@@ -265,7 +272,7 @@ function WebsiteHomeNav({
           </button>
           <AccountMenu profileActive={profileActive} isDark={isDark} />
           <Link
-            href="/app/ask"
+            href="/ask"
             className="hidden h-11 items-center justify-center gap-2 rounded-full px-5 font-sans text-[13px] font-semibold xl:inline-flex"
             style={{
               color: "#fffaf2",
@@ -439,10 +446,10 @@ function AccountMenu({ profileActive, isDark }: { profileActive: boolean; isDark
           </div>
 
           <div className="mt-3 grid gap-2">
-            <AccountMenuLink href="/app/profile" onNavigate={() => setOpen(false)} icon={<Settings className="size-4" />}>
+            <AccountMenuLink href="/profile" onNavigate={() => setOpen(false)} icon={<Settings className="size-4" />}>
               {t("account.viewProfile")}
             </AccountMenuLink>
-            <AccountMenuLink href="/app/astrology?tab=birth" onNavigate={() => setOpen(false)} icon={<Sparkles className="size-4" />}>
+            <AccountMenuLink href="/astrology?tab=birth" onNavigate={() => setOpen(false)} icon={<Sparkles className="size-4" />}>
               {t("account.editBirthProfile")}
             </AccountMenuLink>
 
@@ -461,10 +468,10 @@ function AccountMenu({ profileActive, isDark }: { profileActive: boolean; isDark
               </button>
             ) : (
               <div className="grid grid-cols-2 gap-2">
-                <AccountMenuLink href="/app/login?mode=login" onNavigate={() => setOpen(false)} icon={<LogIn className="size-4" />}>
+                <AccountMenuLink href="/login?mode=login" onNavigate={() => setOpen(false)} icon={<LogIn className="size-4" />}>
                   {t("account.login")}
                 </AccountMenuLink>
-                <AccountMenuLink href="/app/login?mode=signup" onNavigate={() => setOpen(false)} icon={<UserPlus className="size-4" />}>
+                <AccountMenuLink href="/login?mode=signup" onNavigate={() => setOpen(false)} icon={<UserPlus className="size-4" />}>
                   {t("account.signup")}
                 </AccountMenuLink>
               </div>

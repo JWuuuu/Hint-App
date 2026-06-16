@@ -304,7 +304,7 @@ function ResultView({ id }: { id: string }) {
   if (!result) {
     return (
       <PanelShell eyebrow="Together" title="Shared chart" subtitle={error || "Opening compatibility result..."}>
-        <Link className="inline-flex rounded-full border px-5 py-3 text-[13px] font-black" style={{ borderColor: "var(--hint-border)", color: "var(--hint-text)" }} href="/app/compatibility">
+        <Link className="inline-flex rounded-full border px-5 py-3 text-[13px] font-black" style={{ borderColor: "var(--hint-border)", color: "var(--hint-text)" }} href="/compatibility">
           Back to Together
         </Link>
       </PanelShell>
@@ -412,7 +412,7 @@ function InviteView({ token }: { token: string }) {
   if (error && !invite) {
     return (
       <PanelShell eyebrow="Together" title="Invite unavailable" subtitle={error}>
-        <Link className="inline-flex rounded-full border px-5 py-3 text-[13px] font-black" style={{ borderColor: "var(--hint-border)", color: "var(--hint-text)" }} href="/app/compatibility">
+        <Link className="inline-flex rounded-full border px-5 py-3 text-[13px] font-black" style={{ borderColor: "var(--hint-border)", color: "var(--hint-text)" }} href="/compatibility">
           Create a new invite
         </Link>
       </PanelShell>
@@ -462,7 +462,7 @@ function PanelShell({
             <h1 className="mt-2 font-serif text-[42px] leading-tight sm:text-[64px]" style={{ color: "var(--hint-text)" }}>{title}</h1>
             <p className="mt-3 max-w-3xl text-[16px] font-semibold leading-relaxed" style={{ color: "var(--hint-muted)" }}>{subtitle}</p>
           </div>
-          <Link href="/app/astrology" aria-label="Astrology" className="grid h-12 w-12 shrink-0 place-items-center rounded-full border" style={{ background: "var(--hint-surface-soft)", borderColor: "var(--hint-border)", color: "var(--hint-text)" }}>
+          <Link href="/astrology" aria-label="Astrology" className="grid h-12 w-12 shrink-0 place-items-center rounded-full border" style={{ background: "var(--hint-surface-soft)", borderColor: "var(--hint-border)", color: "var(--hint-text)" }}>
             <Sparkles size={20} />
           </Link>
         </div>
@@ -589,8 +589,8 @@ function DefaultCompatibilityView() {
 }
 
 export function CompatibilityView() {
-  const [isInvite, inviteParams] = useRoute("/app/compatibility/invite/:token");
-  const [isResult, resultParams] = useRoute("/app/compatibility/:id");
+  const [isInvite, inviteParams] = useRoute("/compatibility/invite/:token");
+  const [isResult, resultParams] = useRoute("/compatibility/:id");
 
   if (isInvite && inviteParams?.token) return <InviteView token={inviteParams.token} />;
   if (isResult && resultParams?.id) return <ResultView id={resultParams.id} />;

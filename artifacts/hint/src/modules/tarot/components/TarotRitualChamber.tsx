@@ -351,7 +351,7 @@ export function TarotRitualChamber({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),transparent_22%,rgba(255,255,255,0.028))] opacity-60" />
 
       <Link
-        href="/app"
+        href="/"
         aria-label="Go to home"
         className="absolute left-4 top-4 z-[80] inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e4c174]/28 bg-black/34 text-[#f7ead0]/82 shadow-[0_10px_24px_rgba(0,0,0,0.28)] transition duration-300 hover:border-[#e4c174]/55 hover:bg-[#e4c174]/10 hover:text-[#ffe8aa] active:scale-95 sm:left-5 sm:top-5"
       >

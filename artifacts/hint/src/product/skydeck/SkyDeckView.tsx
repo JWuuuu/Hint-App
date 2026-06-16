@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { Check, Moon } from "lucide-react";
 import { Link } from "wouter";
 import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
 import { SkyDeckCard } from "../../components/skydeck/SkyDeckCard";
 import { ACCENT, GLASS } from "../../modules/hold/atmosphere";
+import { getTarotCardImage } from "../../modules/tarot/logic/cardImageMap";
 import {
   generateDailySkyDeck,
   type DailySkyDeck,
@@ -11,6 +13,84 @@ import { getAnonId } from "../../lib/identity";
 import { readBirthProfile } from "../../lib/astro/userBirthProfile";
 
 const EMBER = "#f1a66b";
+const SCORE_COLORS: Record<string, string> = {
+  love: "#f3a7c5",
+  wealth: "#e6cb8e",
+  career: "#86d6c7",
+  study: "#9fb7ff",
+  people: "#cba6c4",
+};
+
+function ScoreRing({ label, score, color, large = false }: { label: string; score: number; color: string; large?: boolean }) {
+  const size = large ? 116 : 74;
+  const inner = large ? 90 : 58;
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div
+        className="grid rounded-full place-items-center"
+        style={{
+          width: size,
+          height: size,
+          background: `conic-gradient(${color} ${score * 3.6}deg, rgba(255,255,255,0.12) 0deg)`,
+          boxShadow: large ? `0 0 32px ${color}33` : undefined,
+        }}
+      >
+        <div className="grid rounded-full place-items-center" style={{ width: inner, height: inner, background: "rgba(5,7,14,0.94)" }}>
+          <span className={large ? "font-serif text-[38px] leading-none tabular-nums" : "font-serif text-[19px] leading-none tabular-nums"} style={{ color }}>
+            {score}
+          </span>
+        </div>
+      </div>
+      <span className="font-sans text-[10px] uppercase tracking-[0.12em]" style={{ color: GLASS.faint }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function EnergyTask({ deck }: { deck: DailySkyDeck }) {
+  const task = deck.scores.overall >= 78
+    ? "Send one clear message before the night gets louder"
+    : deck.scores.people < 68
+      ? "Step outside for three slow breaths before replying"
+      : "Drink a glass of water slowly and name one thing you can finish";
+
+  return (
+    <GlassPanel>
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div>
+          <SectionLabel>Energy task</SectionLabel>
+          <h3 className="font-serif text-[26px] leading-tight" style={{ color: GLASS.text }}>
+            Tonight's ritual
+          </h3>
+        </div>
+        <span className="grid size-10 place-items-center rounded-full border" style={{ color: ACCENT.gold, borderColor: "rgba(206,178,110,0.28)", background: "rgba(206,178,110,0.10)" }}>
+          <Moon size={18} />
+        </span>
+      </div>
+      <div className="grid gap-3">
+        <div className="flex items-center gap-3 rounded-[13px] border px-3 py-3" style={{ borderColor: "rgba(134,214,199,0.26)", background: "rgba(134,214,199,0.08)" }}>
+          <span className="grid size-5 shrink-0 place-items-center rounded-full" style={{ color: "#08221f", background: ACCENT.aqua }}>
+            <Check size={13} />
+          </span>
+          <span className="font-sans text-[13px]" style={{ color: GLASS.text }}>{task}</span>
+        </div>
+        <div className="flex items-center gap-3 rounded-[13px] border px-3 py-3" style={{ borderColor: GLASS.border }}>
+          <span className="size-5 shrink-0 rounded-full border" style={{ borderColor: GLASS.border }} />
+          <span className="font-sans text-[13px]" style={{ color: GLASS.muted }}>Write one sentence about what the card changed</span>
+        </div>
+      </div>
+      <div className="mt-5 flex items-center gap-3 border-t pt-4" style={{ borderColor: GLASS.border }}>
+        <span className="grid size-10 place-items-center overflow-hidden rounded-[12px] bg-[#f3ecdd]">
+          <img src="/lucky/flower/lavender.png" alt="" className="size-8 object-contain" />
+        </span>
+        <p className="font-sans text-[12px]" style={{ color: GLASS.muted }}>
+          Finish to earn <span className="font-serif text-[15px]" style={{ color: ACCENT.gold }}>+20 XP · ritual progress</span>
+        </p>
+      </div>
+    </GlassPanel>
+  );
+}
 
 export function SkyDeckView() {
   const [deck, setDeck] = useState<DailySkyDeck | null>(null);
@@ -18,8 +98,9 @@ export function SkyDeckView() {
 
   useEffect(() => {
     let mounted = true;
+    const userId = getAnonId();
     generateDailySkyDeck({
-      userId: getAnonId(),
+      userId,
       birthProfile: (() => {
         const profile = readBirthProfile();
         if (!profile?.birthDate) return null;
@@ -39,7 +120,13 @@ export function SkyDeckView() {
         if (mounted) setDeck(next);
       })
       .catch(() => {
-        if (mounted) setError(true);
+        generateDailySkyDeck({ userId, birthProfile: null })
+          .then((next) => {
+            if (mounted) setDeck(next);
+          })
+          .catch(() => {
+            if (mounted) setError(true);
+          });
       });
     return () => {
       mounted = false;
@@ -63,12 +150,31 @@ export function SkyDeckView() {
       <GlassPanel hero>
         {deck ? (
           <div className="grid gap-6 md:grid-cols-[0.95fr_1.05fr] md:items-start">
-            <SkyDeckCard deck={deck} revealed />
+            <div className="grid gap-5">
+              <div className="relative overflow-hidden rounded-[24px] border p-5" style={{ borderColor: "rgba(206,178,110,0.28)", background: "rgba(255,255,255,0.045)", boxShadow: "0 24px 70px rgba(0,0,0,0.28)" }}>
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(320px_240px_at_50%_16%,rgba(230,203,142,0.15),transparent_64%)]" />
+                <div className="relative grid justify-items-center gap-5">
+                  <SectionLabel>Overall tonight</SectionLabel>
+                  <ScoreRing label="Sky score" score={deck.scores.overall} color={ACCENT.gold} large />
+                  <div className="grid w-full grid-cols-2 gap-3 min-[420px]:grid-cols-3 sm:grid-cols-5">
+                    {deck.scoreBars.map((score) => (
+                      <ScoreRing key={score.key} label={score.label} score={score.score} color={SCORE_COLORS[score.key] ?? ACCENT.gold} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <SkyDeckCard deck={deck} revealed />
+            </div>
             <div>
               <SectionLabel>Reading</SectionLabel>
               <h2 className="mt-3 font-serif text-[34px] leading-none" style={{ color: GLASS.text }}>
                 {deck.dailyCard.cardName}
               </h2>
+              {getTarotCardImage(deck.dailyCard.cardId, "hint-card-2") ? (
+                <div className="mt-5 w-[min(170px,46vw)] overflow-hidden rounded-[12px] border" style={{ borderColor: "rgba(206,178,110,0.36)", boxShadow: "0 20px 56px rgba(0,0,0,0.32)" }}>
+                  <img src={getTarotCardImage(deck.dailyCard.cardId, "hint-card-2") ?? ""} alt={deck.dailyCard.cardName} className="h-full w-full object-cover" />
+                </div>
+              ) : null}
               <p className="mt-4 font-sans text-[15px] leading-relaxed" style={{ color: GLASS.muted }}>
                 {deck.reading.shortAnswer}
               </p>
@@ -79,7 +185,7 @@ export function SkyDeckView() {
                   </p>
                 ))}
               </div>
-              <Link href="/app/astrology" className="mt-6 inline-flex h-11 items-center rounded-full px-5 font-sans text-[13px] font-black" style={{ color: "#fffaf2", background: EMBER }}>
+              <Link href="/astrology" className="mt-6 inline-flex h-11 items-center rounded-full px-5 font-sans text-[13px] font-black" style={{ color: "#fffaf2", background: EMBER }}>
                 Open astrology
               </Link>
             </div>
@@ -93,6 +199,12 @@ export function SkyDeckView() {
           </div>
         )}
       </GlassPanel>
+
+      {deck ? (
+        <div className="mt-6">
+          <EnergyTask deck={deck} />
+        </div>
+      ) : null}
     </AppScreen>
   );
 }

@@ -65,6 +65,14 @@ export function getLocalDailyReading(id: string, anonId = getAnonId()): ReadingS
   return readAll().find((reading) => reading.anonId === anonId && reading.id === id) ?? null;
 }
 
+export function getLocalDailyReadingForDate(date = new Date(), anonId = getAnonId()): ReadingSummary | null {
+  return getLocalDailyReading(`daily-${getLocalDateString(date)}`, anonId);
+}
+
+export function getLocalDailyReadingForDateKey(dateKey: string, anonId = getAnonId()): ReadingSummary | null {
+  return getLocalDailyReading(`daily-${dateKey}`, anonId);
+}
+
 export function subscribeToLocalDailyReadings(onChange: () => void): () => void {
   window.addEventListener(UPDATED_EVENT, onChange);
   window.addEventListener("storage", onChange);

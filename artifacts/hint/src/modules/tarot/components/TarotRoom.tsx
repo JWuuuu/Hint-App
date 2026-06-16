@@ -120,7 +120,7 @@ export function TarotRoom() {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#010207] text-[#f7ead0]">
       <Link
-        href="/app"
+        href="/"
         className="absolute left-5 top-5 z-50 font-serif text-[11px] uppercase tracking-[0.32em] text-[#d8c7a6]/75 transition-opacity hover:opacity-80"
       >
         ← Home

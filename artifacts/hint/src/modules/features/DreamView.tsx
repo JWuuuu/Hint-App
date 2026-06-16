@@ -35,7 +35,7 @@ export function DreamView() {
         title={t("dream.title")}
         subtitle={t("dream.subtitle")}
         sigil={DreamSigil}
-        backHref="/app/rooms"
+        backHref="/rooms"
         backLabel={t("common.back")}
       />
 

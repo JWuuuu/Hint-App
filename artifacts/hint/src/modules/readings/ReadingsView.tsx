@@ -103,7 +103,7 @@ function ReadingCard({
 
   return (
     <Link
-      href={`/app/readings/${reading.id}`}
+      href={`/readings/${reading.id}`}
       className={`flex gap-4 rounded-[8px] ${featured ? "px-5 py-5" : "px-4 py-4"}`}
       style={{ background: GLASS.panel, border: `1px solid ${GLASS.border}` }}
     >
@@ -266,7 +266,7 @@ function QuestionCard({
         {item.focus}
       </p>
       <Link
-        href={`/app/readings/${item.readingId ?? item.id}`}
+        href={`/readings/${item.readingId ?? item.id}`}
         className="mt-4 inline-flex h-9 items-center justify-center rounded-[8px] px-3 font-sans text-[12px] font-semibold"
         style={{
           color: "#08070B",
@@ -303,35 +303,35 @@ function buildAstrologyArchive(profile: BirthProfile | null) {
       body: profile
         ? "Your account birth details are ready for charts, transits, together, and reports."
         : "Add birth date, time, and place once, then reuse it across Astrology.",
-      href: "/app/astrology?tab=birth",
+      href: "/astrology?tab=birth",
     },
     {
       id: "chart",
       title: "Chart graph",
       label: "Natal wheel",
       body: "Return to the visual chart and element balance whenever you need the map.",
-      href: "/app/astrology?tab=chart",
+      href: "/astrology?tab=chart",
     },
     {
       id: "transits",
       title: "Transit checks",
       label: "Date-based sky",
       body: "Look up a transit window for any date, not only today.",
-      href: "/app/astrology?tab=transits",
+      href: "/astrology?tab=transits",
     },
     {
       id: "together",
       title: "Together invites",
       label: "Synastry",
       body: "Open relationship maps and invite another person into the web flow.",
-      href: "/app/astrology?tab=together",
+      href: "/astrology?tab=together",
     },
     {
       id: "reports",
       title: "Astrology reports",
       label: "Long reads",
       body: "Keep birth, transit, and relationship report previews in one place.",
-      href: "/app/astrology?tab=reports",
+      href: "/astrology?tab=reports",
     },
   ];
 }
@@ -537,7 +537,7 @@ export function ReadingsView() {
 
       <div className="mb-7">
         <Link
-          href="/app/tarot"
+          href="/tarot"
           className="inline-flex h-11 items-center justify-center rounded-[999px] px-5 font-sans text-[14px] font-medium"
           style={{
             color: "#08070B",
@@ -683,7 +683,7 @@ export function ReadingsView() {
 
 export function ReadingDetailView() {
   const { t } = useLanguage();
-  const [, params] = useRoute("/app/readings/:id");
+  const [, params] = useRoute("/readings/:id");
   const id = params?.id ?? "";
   const anonId = getAnonId();
   const [chatOpen, setChatOpen] = useState(false);
@@ -733,7 +733,7 @@ export function ReadingDetailView() {
           eyebrow={t("readings.detail")}
           title={tarotReading.spreadLabel}
           subtitle={tarotReading.focusLabel ?? t("readings.savedTarot")}
-          backHref="/app/readings"
+          backHref="/readings"
           backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
@@ -823,7 +823,7 @@ export function ReadingDetailView() {
           eyebrow={t("readings.detail")}
           title={fallbackReading.cardName}
           subtitle={t("readings.savedReading")}
-          backHref="/app/readings"
+          backHref="/readings"
           backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
@@ -847,7 +847,7 @@ export function ReadingDetailView() {
           eyebrow={t("readings.questionDetail")}
           title={SPREAD_LABELS[question.spreadType] ?? question.spreadType}
           subtitle={question.focus}
-          backHref="/app/readings"
+          backHref="/readings"
           backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
@@ -870,7 +870,7 @@ export function ReadingDetailView() {
         eyebrow={t("nav.history")}
         title={t("readings.notFound")}
         subtitle={t("readings.notFoundBody")}
-        backHref="/app/readings"
+        backHref="/readings"
         backLabel={t("nav.history")}
       />
       <EmptyPanel>{t("readings.notFoundHint")}</EmptyPanel>

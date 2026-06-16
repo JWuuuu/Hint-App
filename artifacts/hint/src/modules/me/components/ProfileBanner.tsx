@@ -14,7 +14,7 @@ export function ProfileBanner() {
       viewport={{ once: true, amount: 0.3 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      <Link href="/app/readings" className="block">
+      <Link href="/readings" className="block">
         <div
           className="relative rounded-[8px] overflow-hidden p-5 flex items-center gap-4"
           style={{

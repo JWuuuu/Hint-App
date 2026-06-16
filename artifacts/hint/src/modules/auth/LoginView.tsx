@@ -171,7 +171,7 @@ export function LoginView() {
     }
     setError(null);
     setNotice(null);
-    navigate("/app/profile");
+    navigate("/profile");
   }
 
   async function handleUseTesterAccount() {
@@ -186,7 +186,7 @@ export function LoginView() {
     saveBirthProfile({ ...ASTROLOGY_TESTER_ACCOUNT.birthProfile });
     setError(null);
     setNotice(t("login.notice.testerLoaded"));
-    navigate("/app/astrology?tab=birth");
+    navigate("/astrology?tab=birth");
   }
 
   function handleSignOut() {
@@ -225,7 +225,7 @@ export function LoginView() {
         title={account ? t("login.accountSaved") : t("login.title")}
         subtitle={t("login.subtitle")}
         sigil={account ? ShieldCheck : LogIn}
-        backHref="/app/profile"
+        backHref="/profile"
         backLabel={t("nav.me")}
       />
 
@@ -496,7 +496,7 @@ export function LoginView() {
               ))}
             </div>
             <Link
-              href="/app/profile"
+              href="/profile"
               className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[8px] font-serif text-[12px] uppercase tracking-[0.2em]"
               style={{ background: "rgba(100,156,158,0.14)", border: "1px solid rgba(100,156,158,0.28)", color: ACCENT.aqua }}
             >

@@ -30,6 +30,11 @@
 
   --app-font-sans: 'Hanken Grotesk', system-ui, sans-serif;
   --app-font-serif: 'Fraunces', Georgia, serif;
+  --hint-safe-top: env(safe-area-inset-top, 0px);
+  --hint-safe-right: env(safe-area-inset-right, 0px);
+  --hint-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --hint-safe-left: env(safe-area-inset-left, 0px);
+  --hint-vh: 1vh;
 }
 
 /* HINT MODE (Dark) - default */
@@ -305,8 +310,42 @@
     @apply border-border;
   }
 
+  html {
+    min-height: 100%;
+    background: #080B14;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground transition-colors duration-1000;
+    min-height: calc(var(--hint-vh) * 100);
+    margin: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  #root {
+    min-height: calc(var(--hint-vh) * 100);
+  }
+
+  [data-hint-native="true"] body {
+    user-select: none;
+  }
+
+  [data-hint-native="true"] input,
+  [data-hint-native="true"] textarea,
+  [data-hint-native="true"] [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  .hint-app-shell-root {
+    padding-left: var(--hint-safe-left);
+    padding-right: var(--hint-safe-right);
   }
 }
 

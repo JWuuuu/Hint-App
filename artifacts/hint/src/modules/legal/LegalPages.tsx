@@ -74,7 +74,7 @@ export function PrivacyPolicyView() {
         title={t("me.privacyPolicy")}
         subtitle={t("legal.privacySubtitle")}
         sigil={ShieldCheck}
-        backHref="/app/profile"
+        backHref="/profile"
         backLabel={t("nav.me")}
       />
       <DisclaimerPanel />
@@ -107,7 +107,7 @@ export function AboutView() {
         title={t("legal.aboutTitle")}
         subtitle={t("legal.aboutSubtitle")}
         sigil={Info}
-        backHref="/app/profile"
+        backHref="/profile"
         backLabel={t("nav.me")}
       />
       <DisclaimerPanel />
@@ -140,7 +140,7 @@ export function TermsView() {
         title={t("me.terms")}
         subtitle={t("legal.termsSubtitle")}
         sigil={ScrollText}
-        backHref="/app/profile"
+        backHref="/profile"
         backLabel={t("nav.me")}
       />
       <DisclaimerPanel />
@@ -173,7 +173,7 @@ export function DisclaimerView() {
         title={t("legal.disclaimerTitle")}
         subtitle={t("legal.disclaimerSubtitle")}
         sigil={ShieldCheck}
-        backHref="/app/profile"
+        backHref="/profile"
         backLabel={t("nav.me")}
       />
       <DisclaimerPanel />
@@ -206,7 +206,7 @@ export function ContactView() {
         title={t("me.contact")}
         subtitle={t("legal.contactSubtitle")}
         sigil={Mail}
-        backHref="/app/profile"
+        backHref="/profile"
         backLabel={t("nav.me")}
       />
       <DisclaimerPanel />

@@ -15,7 +15,11 @@ import { CornerOrnaments, EtchedBorder, StarlitDivider } from "./CardChrome";
 import { useLanguage } from "../../../lib/i18n";
 import { getAnonId, getLocalDateString } from "../../../lib/identity";
 import { trackEvent } from "../../../lib/analytics";
-import { saveLocalDailyReading } from "../../readings/localDailyReadings";
+import {
+  getLocalDailyReadingForDateKey,
+  saveLocalDailyReading,
+  subscribeToLocalDailyReadings,
+} from "../../readings/localDailyReadings";
 
 /**
  * Tonight's Pull — a single major arcana card sitting beside the Emotional
@@ -41,6 +45,18 @@ export function DailyPullCard({ delay = 0, autoRevealKey = 0 }: Props = {}) {
   const chat = useAskHintChat();
   const inputRef = useRef<FollowUpInputHandle | null>(null);
   const localDate = useMemo(() => getLocalDateString(), []);
+  const alreadyOpenedToday = () => Boolean(getLocalDailyReadingForDateKey(localDate));
+
+  useEffect(() => {
+    const syncOpenedState = () => {
+      const opened = alreadyOpenedToday();
+      setFlipped(opened);
+      setSaved(opened);
+    };
+    syncOpenedState();
+    return subscribeToLocalDailyReadings(syncOpenedState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localDate]);
 
   function revealCard() {
     if (flipped) return;

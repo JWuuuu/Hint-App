@@ -1,3 +1,5 @@
+import { apiUrl } from "../api";
+
 export type NasaApodResponse = {
   source: "NASA APOD";
   mode: "live" | "fallback";
@@ -14,7 +16,7 @@ export type NasaApodResponse = {
 
 export async function getRealSkyToday(date?: string): Promise<NasaApodResponse> {
   const query = date ? `?date=${encodeURIComponent(date)}` : "";
-  const response = await fetch(`/api/visual/nasa/apod${query}`);
+  const response = await fetch(apiUrl(`/api/visual/nasa/apod${query}`));
   if (!response.ok) {
     return { source: "NASA APOD", mode: "fallback", imageUrl: null, title: "NASA visual unavailable" };
   }

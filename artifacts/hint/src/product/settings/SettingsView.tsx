@@ -24,10 +24,10 @@ export function SettingsView() {
           Use the profile page for the currently implemented settings and records. Membership and token actions should stay as clean placeholder states until payment logic is real.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/app/profile" className="inline-flex h-11 items-center rounded-full px-5 font-sans text-[13px] font-black" style={{ color: "#fffaf2", background: EMBER }}>
+          <Link href="/profile" className="inline-flex h-11 items-center rounded-full px-5 font-sans text-[13px] font-black" style={{ color: "#fffaf2", background: EMBER }}>
             Open profile
           </Link>
-          <Link href="/app/readings" className="inline-flex h-11 items-center rounded-full border px-5 font-sans text-[13px] font-black" style={{ color: GLASS.text, borderColor: GLASS.border }}>
+          <Link href="/readings" className="inline-flex h-11 items-center rounded-full border px-5 font-sans text-[13px] font-black" style={{ color: GLASS.text, borderColor: GLASS.border }}>
             Saved readings
           </Link>
         </div>

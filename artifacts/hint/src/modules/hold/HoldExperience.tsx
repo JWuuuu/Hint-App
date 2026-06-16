@@ -234,7 +234,7 @@ export function HoldExperience() {
       {(flow.step === "setup" ||
         flow.step === "territories") && (
         <Link
-          href="/app"
+          href="/"
           aria-label={t("tarot.homeLink")}
           className="absolute left-5 top-5 z-30 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#8f8170]/35 bg-white/42 text-[#4a4450] shadow-[0_10px_24px_rgba(58,48,38,0.12)] transition duration-300 hover:border-[#c79d51]/55 hover:bg-white/62 hover:text-[#27232d] active:scale-95 select-none"
         >

@@ -19,13 +19,13 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
   const bright = theme === "bright";
   const isDark = theme === "dark";
   const homeRelatedRoutes = new Set([
-    "/app",
-    "/app/rooms",
-    "/app/daily",
-    "/app/journal",
-    "/app/astrology",
-    "/app/compatibility",
-    "/app/dream",
+    "/",
+    "/rooms",
+    "/daily",
+    "/journal",
+    "/astrology",
+    "/compatibility",
+    "/dream",
     "/privacy",
     "/terms",
     "/disclaimer",
@@ -33,10 +33,10 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
   ]);
 
   const navItems = [
-    { href: "/app#today", label: t("nav.today"), section: true },
-    { href: "/app#rewards", label: t("nav.rewards"), section: true },
-    { href: "/app/readings", label: t("nav.history"), section: false },
-    { href: "/app/profile", label: t("nav.me"), section: false },
+    { href: "/#today", label: t("nav.today"), section: true },
+    { href: "/#rewards", label: t("nav.rewards"), section: true },
+    { href: "/readings", label: t("nav.history"), section: false },
+    { href: "/profile", label: t("nav.me"), section: false },
   ];
 
   return (
@@ -64,23 +64,23 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
         }}
       >
         <Link
-          href="/app"
-          aria-current={location === "/app" ? "page" : undefined}
-          data-active={location === "/app" ? "true" : "false"}
+          href="/"
+          aria-current={location === "/" ? "page" : undefined}
+          data-active={location === "/" ? "true" : "false"}
           className="row-start-1 inline-flex w-fit min-w-0 shrink-0 justify-self-start items-center gap-2 rounded-[14px] border py-1 pl-1 pr-2.5 font-serif text-[18px] leading-none lg:gap-3 lg:rounded-full lg:py-1.5 lg:pl-1.5 lg:pr-4 lg:text-[24px]"
           style={{
             color: "var(--hint-text)",
-            background: location === "/app"
+            background: location === "/"
               ? isDark
                 ? "rgba(241,166,107,0.12)"
                 : "rgba(255,255,255,0.88)"
               : "transparent",
-            borderColor: location === "/app"
+            borderColor: location === "/"
               ? isDark
                 ? "rgba(241,166,107,0.35)"
                 : "rgba(116,89,58,0.14)"
               : "transparent",
-            boxShadow: location === "/app"
+            boxShadow: location === "/"
               ? isDark
                 ? "inset 0 0 0 1px rgba(255,250,242,0.08)"
                 : "0 10px 22px rgba(80,54,42,0.08), inset 0 0 0 1px rgba(255,255,255,0.72)"
@@ -101,7 +101,7 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
         >
           {navItems.map((item) => {
             const active =
-              item.href === "/app#today"
+              item.href === "/#today"
                 ? homeRelatedRoutes.has(location)
                 : !item.section && (location === item.href || location.startsWith(`${item.href}/`));
 
@@ -130,7 +130,7 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
           </button>
           <HeaderControls bright={bright} onThemeToggle={onThemeToggle} />
           <Link
-            href="/app/tarot"
+            href="/tarot"
             className="hidden h-12 items-center justify-center gap-2 rounded-full px-6 font-sans text-[14px] font-semibold lg:inline-flex"
             style={{
               color: "#fffaf2",
@@ -153,7 +153,7 @@ export function BottomNav({ theme, onThemeToggle }: BottomNavProps) {
           >
             {navItems.map((item) => {
               const active =
-                item.href === "/app#today"
+                item.href === "/#today"
                   ? homeRelatedRoutes.has(location)
                   : !item.section && (location === item.href || location.startsWith(`${item.href}/`));
 

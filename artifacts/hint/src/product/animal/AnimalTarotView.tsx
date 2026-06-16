@@ -88,7 +88,7 @@ export function AnimalTarotView() {
               >
                 Draw animal card
               </button>
-              <Link href="/app/tarot" className="inline-flex h-11 items-center rounded-full border px-5 font-sans text-[13px] font-black" style={{ borderColor: GLASS.border, color: GLASS.text }}>
+              <Link href="/tarot" className="inline-flex h-11 items-center rounded-full border px-5 font-sans text-[13px] font-black" style={{ borderColor: GLASS.border, color: GLASS.text }}>
                 Enter Tarot Room
               </Link>
             </div>

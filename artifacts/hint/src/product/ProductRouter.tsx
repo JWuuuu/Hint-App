@@ -22,32 +22,32 @@ import { SkyDeckView } from "./skydeck/SkyDeckView";
 export function ProductRouter() {
   return (
     <Switch>
-      <Route path="/app" component={HomeDashboard} />
-      <Route path="/app/daily" component={DailyPullView} />
-      <Route path="/app/daily-pull">
-        <RedirectTo to="/app/daily" />
+      <Route path="/" component={HomeDashboard} />
+      <Route path="/daily" component={DailyPullView} />
+      <Route path="/daily-pull">
+        <RedirectTo to="/daily" />
       </Route>
-      <Route path="/app/tarot" component={TarotRoom} />
-      <Route path="/app/animal-tarot" component={AnimalTarotView} />
-      <Route path="/app/sky-deck" component={SkyDeckView} />
-      <Route path="/app/astrology" component={AstrologyView} />
-      <Route path="/app/collection" component={CardCollectionView} />
-      <Route path="/app/profile" component={MeView} />
-      <Route path="/app/me">
-        <RedirectTo to="/app/profile" />
+      <Route path="/tarot" component={TarotRoom} />
+      <Route path="/animal-tarot" component={AnimalTarotView} />
+      <Route path="/sky-deck" component={SkyDeckView} />
+      <Route path="/astrology" component={AstrologyView} />
+      <Route path="/collection" component={CardCollectionView} />
+      <Route path="/profile" component={MeView} />
+      <Route path="/me">
+        <RedirectTo to="/profile" />
       </Route>
-      <Route path="/app/settings" component={SettingsView} />
-      <Route path="/app/ask" component={AskHint} />
-      <Route path="/app/rooms" component={RoomsLibrary} />
-      <Route path="/app/readings/:id" component={ReadingDetailView} />
-      <Route path="/app/readings" component={ReadingsView} />
-      <Route path="/app/login" component={LoginView} />
-      <Route path="/app/compatibility/invite/:token" component={CompatibilityView} />
-      <Route path="/app/compatibility/:id" component={CompatibilityView} />
-      <Route path="/app/compatibility" component={CompatibilityView} />
-      <Route path="/app/dream" component={DreamView} />
-      <Route path="/app/journal" component={JournalView} />
-      <Route path="/app/*">
+      <Route path="/settings" component={SettingsView} />
+      <Route path="/ask" component={AskHint} />
+      <Route path="/rooms" component={RoomsLibrary} />
+      <Route path="/readings/:id" component={ReadingDetailView} />
+      <Route path="/readings" component={ReadingsView} />
+      <Route path="/login" component={LoginView} />
+      <Route path="/compatibility/invite/:token" component={CompatibilityView} />
+      <Route path="/compatibility/:id" component={CompatibilityView} />
+      <Route path="/compatibility" component={CompatibilityView} />
+      <Route path="/dream" component={DreamView} />
+      <Route path="/journal" component={JournalView} />
+      <Route path="*">
         <div className="min-h-full flex items-center justify-center font-serif text-white/20 text-sm">
           -
         </div>

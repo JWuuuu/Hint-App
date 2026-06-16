@@ -38,7 +38,7 @@ export function FeatureFooter({ note }: { note: string }) {
         {note}
       </p>
       <Link
-        href="/app/ask"
+        href="/ask"
         className="inline-flex items-center justify-center w-full h-11 rounded-[8px] font-serif text-[12px] uppercase tracking-[0.24em]"
         style={{
           background: "rgba(100, 156, 158, 0.16)",

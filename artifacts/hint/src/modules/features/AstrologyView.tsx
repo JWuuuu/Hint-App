@@ -12,6 +12,7 @@ import { buildMockRelationshipAstrology } from "../../lib/astro/mockSynastry";
 import { normalizeClientNatal } from "../../lib/astro/normalizeClientAstro";
 import { SAMPLE_CHART, SAMPLE_RELATIONSHIP, SAMPLE_TRANSITS } from "../../lib/astro/sampleAstroData";
 import { readBirthProfile, saveBirthProfile, saveBirthProfileFromAccountProfile } from "../../lib/astro/userBirthProfile";
+import { apiUrl } from "../../lib/api";
 import { useLocalAccount, type LocalAccount } from "../../lib/auth";
 import { useLanguage, type HintLanguage } from "../../lib/i18n";
 import { useProfile } from "../../lib/useProfile";
@@ -1195,7 +1196,7 @@ function useAstroBackendStatus() {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/astro/status")
+    fetch(apiUrl("/api/astro/status"))
       .then((response) => (response.ok ? response.json() : null))
       .then((next) => {
         if (alive) setStatus(next);
@@ -1397,10 +1398,10 @@ function AstrologyAccessGate({
           <div className="mt-5 flex flex-wrap gap-3">
             {needsLogin ? (
               <>
-                <Link href="/app/login?mode=login" className="inline-flex h-11 items-center justify-center rounded-[8px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)]" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
+                <Link href="/login?mode=login" className="inline-flex h-11 items-center justify-center rounded-[8px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)]" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
                   Log in
                 </Link>
-                <Link href="/app/login?mode=signup" className="inline-flex h-11 items-center justify-center rounded-[8px] border px-5 text-[13px] font-black" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
+                <Link href="/login?mode=signup" className="inline-flex h-11 items-center justify-center rounded-[8px] border px-5 text-[13px] font-black" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
                   Sign up
                 </Link>
               </>
@@ -2757,7 +2758,7 @@ function TogetherSection({ relationship, previewMode, profile }: { relationship:
     setInviteError("");
     setCopiedInvite(false);
     try {
-      const response = await fetch("/api/compatibility/invite", {
+      const response = await fetch(apiUrl("/api/compatibility/invite"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hint</string>
+    <string name="title_activity_main">Hint</string>
+    <string name="package_name">com.mydailyhint.app</string>
+    <string name="custom_url_scheme">com.mydailyhint.app</string>
+</resources>

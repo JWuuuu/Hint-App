@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { getAnonId } from "../../lib/identity";
 import {
   getCardCollectionSummary,
+  subscribeToDailyCollectionReward,
+  subscribeToLocalCollectionUnlocks,
   type CardCollectionSummary,
 } from "../tarot/cardCollection";
 import { subscribeToLocalDailyReadings } from "../../modules/readings/localDailyReadings";
@@ -14,10 +16,14 @@ export function useCardCollection(anonId = getAnonId()): CardCollectionSummary {
     const sync = () => setSummary(getCardCollectionSummary(anonId));
     const unsubscribeDaily = subscribeToLocalDailyReadings(sync);
     const unsubscribeTarot = subscribeToLocalTarotReadings(sync);
+    const unsubscribeUnlocks = subscribeToLocalCollectionUnlocks(sync);
+    const unsubscribeDailyReward = subscribeToDailyCollectionReward(sync);
     window.addEventListener("storage", sync);
     return () => {
       unsubscribeDaily();
       unsubscribeTarot();
+      unsubscribeUnlocks();
+      unsubscribeDailyReward();
       window.removeEventListener("storage", sync);
     };
   }, [anonId]);

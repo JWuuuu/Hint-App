@@ -715,7 +715,7 @@ export function DailyPullView() {
             {t("dailyPull.sitBody")}
           </p>
           <Link
-            href="/app/tarot"
+            href="/tarot"
             className="inline-flex items-center justify-center w-full h-11 rounded-[8px] mt-4 font-serif text-[12px] uppercase tracking-[0.24em]"
             style={{
               background: "rgba(206,178,110,0.12)",
