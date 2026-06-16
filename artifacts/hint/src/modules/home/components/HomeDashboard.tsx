@@ -401,7 +401,7 @@ function CompactSignalPanel({
       </div>
       {revealed && !birthPersonalized && (
         <Link
-          href="/me"
+          href="/app/profile"
           className="relative mt-3 inline-flex w-full items-center justify-center rounded-full border px-4 py-2.5 font-sans text-[12px] font-semibold"
           style={{
             color: "var(--hint-text)",
@@ -838,7 +838,7 @@ function DailyHintSection({
             </button>
             {!birthPersonalized && (
               <Link
-                href="/me"
+                href="/app/profile"
                 className="mt-3 inline-flex w-full max-w-[16rem] items-center justify-center rounded-full border px-4 py-2.5 font-sans text-[12px] font-semibold"
                 style={{
                   color: "var(--hint-text)",
@@ -965,7 +965,7 @@ function DailyHintSection({
                 <DetailItem label="Astrology" value={report.astrologyNote} />
               </div>
               <Link
-                href="/ask"
+                href="/app/ask"
                 className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full font-sans text-[12px] font-semibold sm:w-auto sm:px-5"
                 style={{
                   color: "#231d2a",
@@ -1080,7 +1080,7 @@ function RitualStreakPanel({
           </p>
         </div>
         <Link
-          href="/me"
+          href="/app/profile"
           className="font-sans text-[12px] font-semibold uppercase tracking-[0.22em]"
           style={{ color: "var(--hint-faint)" }}
         >
@@ -1309,8 +1309,8 @@ function DailyHintHero({ report }: { report: DailyReport }) {
           </p>
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <PrimaryLink href="/tarot">{t("home.startReading")}</PrimaryLink>
-            <SecondaryLink href="/ask">
+            <PrimaryLink href="/app/tarot">{t("home.startReading")}</PrimaryLink>
+            <SecondaryLink href="/app/ask">
               <MessageCircle size={15} />
               {t("home.talkFirst")}
             </SecondaryLink>
@@ -1366,7 +1366,7 @@ function DailyHintHero({ report }: { report: DailyReport }) {
             style={{ background: "radial-gradient(circle, rgba(122,226,214,0.20), rgba(243,212,144,0.12) 48%, transparent 72%)" }}
           />
           <Link
-            href="/daily-pull"
+            href="/app/daily"
             className="group relative mx-auto block aspect-[46/71] w-[148px] overflow-hidden rounded-[14px] border sm:w-[172px] lg:w-[188px]"
             style={{
               background: "var(--hint-deck-card-bg)",
@@ -1631,7 +1631,7 @@ export function HomeDashboard() {
       title: t("home.card.tarot.title"),
       label: t("home.card.tarot.label"),
       body: t("home.card.tarot.body"),
-      href: "/tarot",
+      href: "/app/tarot",
       icon: Sparkles,
       color: ACCENT.gold,
     },
@@ -1639,7 +1639,7 @@ export function HomeDashboard() {
       title: t("home.card.ask.title"),
       label: t("home.card.ask.label"),
       body: t("home.card.ask.body"),
-      href: "/ask",
+      href: "/app/ask",
       icon: MessageCircle,
       color: ACCENT.aqua,
     },
@@ -1647,7 +1647,7 @@ export function HomeDashboard() {
       title: t("home.card.daily.title"),
       label: t("home.card.daily.label"),
       body: t("home.card.daily.body"),
-      href: "/daily-pull",
+      href: "/app/daily",
       icon: Moon,
       color: ACCENT.lavender,
     },
@@ -1708,7 +1708,7 @@ export function HomeDashboard() {
         </section>
 
         <section className="mb-8">
-          <SectionHeader title={t("home.chooseRoom")} action={{ href: "/rooms", label: t("home.allRooms") }} />
+          <SectionHeader title={t("home.chooseRoom")} action={{ href: "/app/rooms", label: t("home.allRooms") }} />
           <ModuleGrid delay={0.05} />
         </section>
 

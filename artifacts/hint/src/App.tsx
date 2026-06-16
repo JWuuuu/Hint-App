@@ -3,48 +3,47 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppShell } from "./AppShell";
 import { OnboardingGate } from "./components/app/OnboardingGate";
 import { LanguageProvider } from "./lib/i18n";
-import { HomeDashboard } from "./modules/home";
-import { TarotRoom } from "./modules/tarot";
-import { AskHint } from "./modules/ask";
-import { LoginView } from "./modules/auth";
-import { RoomsLibrary } from "./modules/rooms";
-import { ReadingDetailView, ReadingsView } from "./modules/readings";
-import { MeView } from "./modules/me";
 import { AboutView, ContactView, DisclaimerView, PrivacyPolicyView, TermsView } from "./modules/legal";
-import {
-  AstrologyView,
-  CompatibilityView,
-  DreamView,
-  JournalView,
-  DailyPullView,
-} from "./modules/features";
+import { ProductRouter } from "./product/ProductRouter";
+import { LandingPage } from "./site/LandingPage";
+import { RedirectTo } from "./shared/navigation/RedirectTo";
+import { toAppPath } from "./shared/navigation/appPaths";
 
 const queryClient = new QueryClient();
 
-function Router() {
+const LEGACY_PRODUCT_ROUTES = [
+  "/tarot",
+  "/ask",
+  "/rooms",
+  "/readings",
+  "/login",
+  "/me",
+  "/astrology",
+  "/compatibility",
+  "/dream",
+  "/journal",
+  "/daily-pull",
+  "/daily",
+  "/animal-tarot",
+  "/sky-deck",
+  "/collection",
+  "/settings",
+];
+
+function LegacyProductRedirect() {
+  const nextPath =
+    typeof window === "undefined"
+      ? "/app"
+      : toAppPath(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+
+  return <RedirectTo to={nextPath} />;
+}
+
+function ProductRouteBoundary() {
   return (
-    <Switch>
-      <Route path="/" component={HomeDashboard} />
-      <Route path="/tarot" component={TarotRoom} />
-      <Route path="/ask" component={AskHint} />
-      <Route path="/rooms" component={RoomsLibrary} />
-      <Route path="/readings/:id" component={ReadingDetailView} />
-      <Route path="/readings" component={ReadingsView} />
-      <Route path="/login" component={LoginView} />
-      <Route path="/me" component={MeView} />
-      <Route path="/astrology" component={AstrologyView} />
-      <Route path="/compatibility/invite/:token" component={CompatibilityView} />
-      <Route path="/compatibility/:id" component={CompatibilityView} />
-      <Route path="/compatibility" component={CompatibilityView} />
-      <Route path="/dream" component={DreamView} />
-      <Route path="/journal" component={JournalView} />
-      <Route path="/daily-pull" component={DailyPullView} />
-      <Route path="*">
-        <div className="min-h-full flex items-center justify-center font-serif text-white/20 text-sm">
-          -
-        </div>
-      </Route>
-    </Switch>
+    <OnboardingGate>
+      <ProductRouter />
+    </OnboardingGate>
   );
 }
 
@@ -55,15 +54,22 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AppShell>
             <Switch>
+              <Route path="/" component={LandingPage} />
+              <Route path="/app" component={ProductRouteBoundary} />
+              <Route path="/app/:rest*" component={ProductRouteBoundary} />
               <Route path="/privacy" component={PrivacyPolicyView} />
               <Route path="/terms" component={TermsView} />
               <Route path="/disclaimer" component={DisclaimerView} />
               <Route path="/contact" component={ContactView} />
               <Route path="/about" component={AboutView} />
+              {LEGACY_PRODUCT_ROUTES.map((route) => (
+                <Route key={route} path={route} component={LegacyProductRedirect} />
+              ))}
+              {LEGACY_PRODUCT_ROUTES.map((route) => (
+                <Route key={`${route}/*`} path={`${route}/:rest*`} component={LegacyProductRedirect} />
+              ))}
               <Route path="*">
-                <OnboardingGate>
-                  <Router />
-                </OnboardingGate>
+                <RedirectTo to="/" />
               </Route>
             </Switch>
           </AppShell>

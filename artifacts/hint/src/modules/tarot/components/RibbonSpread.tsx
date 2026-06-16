@@ -4,6 +4,7 @@ import type { RitualCard } from "../logic/createHiddenDeck";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { TarotCardVisual } from "./TarotCardVisual";
 import type { TarotCardBackStyle } from "./TarotCardVisual";
+import { getSpreadPositionLabel } from "../logic/spreadLabels";
 
 type RibbonSpreadProps = {
   finalDeckOrder: RitualCard[];
@@ -17,15 +18,15 @@ type RibbonSpreadProps = {
 
 function getFanLayout(index: number, total: number) {
   const progress = total <= 1 ? 0.5 : index / (total - 1);
-  const angle = -70 + progress * 140;
+  const angle = -66 + progress * 132;
   const radians = (angle * Math.PI) / 180;
   const edge = Math.abs(progress - 0.5) * 2;
 
   return {
-    x: 50 + Math.sin(radians) * 50,
+    x: 50 + Math.sin(radians) * 39.5,
     y: 72 - Math.cos(radians) * 37 + Math.pow(edge, 1.6) * 3,
     rotate: angle * 0.62,
-    centerOffsetX: -Math.sin(radians) * 390,
+    centerOffsetX: -Math.sin(radians) * 350,
     centerOffsetY: 124 + Math.cos(radians) * 34,
     spreadDelay: Math.abs(progress - 0.5) * 0.1 + Math.min(index * 0.00055, 0.04),
     zIndex: Math.round(1200 - edge * 130 + index * 0.02),
@@ -39,10 +40,10 @@ function slotSizeClass(cardCount: number) {
 }
 
 function slotFieldClass(cardCount: number) {
-  if (cardCount === 1) return "top-[49%] h-[24%] sm:top-[48%] sm:h-[25%]";
-  if (cardCount === 3) return "top-[46%] h-[31%] sm:top-[45%] sm:h-[32%]";
-  if (cardCount <= 5) return "top-[41%] h-[39%] sm:top-[40%] sm:h-[40%]";
-  return "top-[38%] h-[43%] sm:top-[37%] sm:h-[44%]";
+  if (cardCount === 1) return "top-[55%] h-[24%] sm:top-[54%] sm:h-[25%]";
+  if (cardCount === 3) return "top-[51%] h-[30%] sm:top-[50%] sm:h-[31%]";
+  if (cardCount <= 5) return "top-[47%] h-[36%] sm:top-[46%] sm:h-[37%]";
+  return "top-[45%] h-[40%] sm:top-[44%] sm:h-[41%]";
 }
 
 function fanCardSizeClass() {
@@ -71,6 +72,11 @@ function getSlotPoint(
     x: Math.min(88, Math.max(12, point.x)),
     y: Math.min(88, Math.max(12, point.y)),
   };
+}
+
+function getSelectedPositionLabel(spread: SpreadChoice, index: number, cardCount: number) {
+  if (cardCount === 1) return "The Message";
+  return getSpreadPositionLabel(spread, index);
 }
 
 function SelectedSpreadCard({
@@ -113,8 +119,8 @@ export function RibbonSpread({
   const hoverFrameRef = useRef<number | null>(null);
   const hoverPointerRef = useRef<{ clientX: number; clientY: number } | null>(null);
   const hoveredVisualIdRef = useRef<string | null>(null);
+  const previewSettleTimerRef = useRef<number | null>(null);
   const [hoveredVisualId, setHoveredVisualId] = useState<string | null>(null);
-  const [previewVisualId, setPreviewVisualId] = useState<string | null>(null);
   const selectedIds = new Set(selectedCards.map((card) => card.visualId));
   const slots = Array.from({ length: maxCards }, (_, index) => index);
   const cardSizeClass = slotSizeClass(maxCards);
@@ -137,10 +143,23 @@ export function RibbonSpread({
       if (hoverFrameRef.current !== null) {
         window.cancelAnimationFrame(hoverFrameRef.current);
       }
+      if (previewSettleTimerRef.current !== null) {
+        window.clearTimeout(previewSettleTimerRef.current);
+      }
     };
   }, []);
 
-  function findNearestCard(clientX: number, clientY: number) {
+  function schedulePreviewSettle() {
+    if (previewSettleTimerRef.current !== null) {
+      window.clearTimeout(previewSettleTimerRef.current);
+    }
+    previewSettleTimerRef.current = window.setTimeout(() => {
+      setHoveredCard(null);
+      previewSettleTimerRef.current = null;
+    }, 180);
+  }
+
+  function findNearestCard(clientX: number, clientY: number, intent: "preview" | "select" = "select") {
     const rect = fanRef.current?.getBoundingClientRect();
     if (!rect) return null;
     const x = clientX - rect.left;
@@ -160,7 +179,9 @@ export function RibbonSpread({
       }
     }
 
-    const hitRadius = rect.width < 500 ? 116 : 164;
+    const hitRadius = intent === "preview"
+      ? rect.width < 500 ? 42 : 58
+      : rect.width < 500 ? 108 : 148;
     if (!nearestCard || nearestDistance > hitRadius) return null;
     return nearestCard;
   }
@@ -185,7 +206,8 @@ export function RibbonSpread({
       hoverFrameRef.current = null;
       const pointer = hoverPointerRef.current;
       if (!pointer) return;
-      setHoveredCard(findNearestCard(pointer.clientX, pointer.clientY)?.visualId ?? null);
+      setHoveredCard(findNearestCard(pointer.clientX, pointer.clientY, "preview")?.visualId ?? null);
+      schedulePreviewSettle();
     });
   }
 
@@ -193,30 +215,32 @@ export function RibbonSpread({
     hoverPointerRef.current = null;
     cancelHoverFrame();
     setHoveredCard(null);
+    if (previewSettleTimerRef.current !== null) {
+      window.clearTimeout(previewSettleTimerRef.current);
+      previewSettleTimerRef.current = null;
+    }
   }
 
   function handleFanPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (selectedCards.length >= maxCards) return;
-    const nearestCard = findNearestCard(event.clientX, event.clientY);
+    const nearestCard = findNearestCard(event.clientX, event.clientY, "select");
     if (!nearestCard) return;
 
-    const needsPreviewFirst = event.pointerType !== "mouse";
-    if (needsPreviewFirst && previewVisualId !== nearestCard.visualId) {
-      setPreviewVisualId(nearestCard.visualId);
-      return;
+    if (previewSettleTimerRef.current !== null) {
+      window.clearTimeout(previewSettleTimerRef.current);
+      previewSettleTimerRef.current = null;
     }
-
-    if (nearestCard) {
-      setPreviewVisualId(null);
-      setHoveredCard(null);
-      onSelect(nearestCard.visualId);
-    }
+    setHoveredCard(null);
+    onSelect(nearestCard.visualId);
   }
 
-  const activePreviewVisualId = previewVisualId ?? hoveredVisualId;
-  const activePreviewIndex = activePreviewVisualId
-    ? finalDeckOrder.findIndex((card) => card.visualId === activePreviewVisualId)
-    : -1;
+  const activePreviewVisualId = hoveredVisualId;
+  const selectedSectionLabel = maxCards === 1 ? "Selected Card" : "Selected Cards";
+  const instruction = allSelected
+    ? maxCards === 1
+      ? "Your card has been chosen. Reveal the message when you're ready."
+      : "Your cards have been chosen. Reveal the message when you're ready."
+    : `Choose ${maxCards} face-down ${maxCards === 1 ? "card" : "cards"} from the arc.`;
 
   return (
     <section className="relative h-full w-full overflow-hidden px-4 py-5 text-center sm:px-6">
@@ -230,21 +254,15 @@ export function RibbonSpread({
           <span>{spread.label} spread</span>
           <span className="h-1 w-1 rounded-full bg-[#e4c174]/45" />
           <span>{selectedCards.length} / {maxCards} selected</span>
-          {activePreviewIndex >= 0 && (
-            <>
-              <span className="h-1 w-1 rounded-full bg-[#e4c174]/35" />
-              <span>card {activePreviewIndex + 1} / {finalDeckOrder.length}</span>
-            </>
-          )}
         </div>
         <p className="mt-2 font-sans text-sm text-[#d8c7a6]/68">
-          Choose {maxCards} face-down {maxCards === 1 ? "card" : "cards"} from the lower arc.
+          {instruction}
         </p>
       </div>
 
       <div className={`pointer-events-none absolute inset-x-4 ${slotField} z-20 mx-auto max-w-6xl sm:inset-x-8`}>
         <p className="absolute left-1/2 top-0 z-50 -translate-x-1/2 font-sans text-[10px] uppercase tracking-[0.22em] text-[#e4c174]/58">
-          Selected Hints
+          {selectedSectionLabel}
         </p>
 
         {slots.map((slotIndex) => {
@@ -252,17 +270,17 @@ export function RibbonSpread({
           const selectedCard = selectedCards[index];
           const point = spread.layout[index] ?? { n: index + 1, x: 50, y: 50 };
           const slotPoint = getSlotPoint(point, maxCards);
-          const label = `Hint ${index + 1}`;
-          const showOuterLabel = maxCards <= 3;
+          const label = getSelectedPositionLabel(spread, index, maxCards);
+          const showOuterLabel = Boolean(selectedCard) || maxCards <= 3;
           return (
             <div
               key={`${spread.id}-hint-${index + 1}`}
               className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
               style={{ left: `${slotPoint.x}%`, top: `${slotPoint.y}%` }}
             >
-              <div className="relative">
+              <div className={`relative grid place-items-center ${cardSizeClass}`}>
                 <div
-                  className={`relative ${cardSizeClass} rounded-[10px] border border-dashed border-[#e4c174]/48 bg-[#e4c174]/[0.045] shadow-[inset_0_0_22px_rgba(228,193,116,0.08)]`}
+                  className="absolute inset-0 rounded-[10px] border border-dashed border-[#e4c174]/48 bg-[#e4c174]/[0.045] shadow-[inset_0_0_22px_rgba(228,193,116,0.08)]"
                 >
                   <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-sans text-[9px] uppercase tracking-[0.16em] text-[#e4c174]/64">
                     {label}
@@ -283,7 +301,7 @@ export function RibbonSpread({
                     transition={reduceMotion
                       ? { duration: 0.22, ease: "easeOut" }
                       : { type: "spring", stiffness: 132, damping: 24, mass: 0.82 }}
-                    className="absolute left-0 top-0 z-30 will-change-transform"
+                    className="absolute inset-0 z-30 grid place-items-center will-change-transform"
                   >
                     {!reduceMotion && (
                       <motion.div
@@ -318,9 +336,9 @@ export function RibbonSpread({
         onPointerMove={handleFanPointerMove}
         onPointerLeave={handleFanPointerLeave}
         onPointerDown={handleFanPointerDown}
-        className="absolute inset-x-0 bottom-[-9%] z-10 h-[42vh] min-h-[294px] w-full cursor-pointer touch-none overflow-visible sm:bottom-[-8%] sm:h-[45vh] sm:min-h-[332px] lg:bottom-[-7%]"
+        className="absolute inset-x-0 top-[16%] z-10 h-[32vh] min-h-[240px] w-full cursor-pointer touch-none overflow-visible sm:top-[15%] sm:h-[35vh] sm:min-h-[280px] lg:top-[15%]"
       >
-        <div className="absolute inset-x-0 top-0 mx-auto h-full max-w-[96rem]">
+        <div className="absolute inset-x-3 top-0 mx-auto h-full max-w-[88rem] sm:inset-x-6">
           <div className="pointer-events-none absolute left-1/2 top-[76%] h-[30px] w-[72%] -translate-x-1/2 rounded-full bg-black/18 blur-xl" />
           {finalDeckOrder.map((card, index) => {
             const selectedInFan = selectedIds.has(card.visualId);
@@ -333,7 +351,7 @@ export function RibbonSpread({
                 style={{
                   left: `${layout.x}%`,
                   top: `${layout.y}%`,
-                  zIndex: activePreview ? layout.zIndex + 80 : layout.zIndex,
+                  zIndex: activePreview ? layout.zIndex + 18 : layout.zIndex,
                   transform: "translate(-50%, -50%)",
                 }}
               >
@@ -349,9 +367,9 @@ export function RibbonSpread({
                   animate={{
                     opacity: selectedInFan ? 0 : 1,
                     x: 0,
-                    y: activePreview ? -14 : 0,
-                    rotate: activePreview ? layout.rotate * 0.96 : layout.rotate,
-                    scale: activePreview ? 1.035 : 1,
+                    y: activePreview ? -4 : 0,
+                    rotate: layout.rotate,
+                    scale: 1,
                   }}
                   transition={
                     activePreview
@@ -365,6 +383,7 @@ export function RibbonSpread({
                           mass: 0.9,
                         }
                   }
+                  className="relative"
                   style={{
                     pointerEvents: "none",
                     transformOrigin: "50% 104%",
@@ -376,10 +395,12 @@ export function RibbonSpread({
                       aria-hidden="true"
                       initial={{ opacity: 0, y: 2 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: reduceMotion ? 0.08 : 0.12, ease: "easeOut" }}
-                      className="pointer-events-none absolute left-1/2 top-[-20px] z-20 -translate-x-1/2 rounded-full border border-[#e4c174]/35 bg-black/42 px-2 py-0.5 font-sans text-[8px] uppercase tracking-[0.14em] text-[#f7ead0]/80 shadow-[0_6px_14px_rgba(0,0,0,0.24)] backdrop-blur-sm"
+                      transition={{ duration: reduceMotion ? 0.06 : 0.1, ease: "easeOut" }}
+                      className="pointer-events-none absolute left-1/2 top-[-34px] z-[70] flex min-w-[44px] -translate-x-1/2 items-center justify-center rounded-full border border-[#e4c174]/42 bg-black/50 px-2 py-1 font-sans text-[9px] uppercase tracking-[0.08em] text-[#f7ead0]/88 shadow-[0_6px_14px_rgba(0,0,0,0.22)] backdrop-blur-sm"
                     >
-                      {index + 1} / {finalDeckOrder.length}
+                      <span>{index + 1}</span>
+                      <span className="mx-1 text-[#d8c7a6]/50">/</span>
+                      <span className="text-[#d8c7a6]/68">{finalDeckOrder.length}</span>
                     </motion.div>
                   )}
                   <div className="pointer-events-none">
@@ -388,7 +409,7 @@ export function RibbonSpread({
                       compact
                       subtleBack
                       backStyle={backStyle}
-                      className={`${fanCardClass} ${activePreview ? "drop-shadow-[0_9px_12px_rgba(0,0,0,0.26)]" : "drop-shadow-[0_7px_12px_rgba(0,0,0,0.22)]"}`}
+                      className={`${fanCardClass} drop-shadow-[0_7px_12px_rgba(0,0,0,0.22)]`}
                     />
                   </div>
                 </motion.div>
@@ -405,9 +426,9 @@ export function RibbonSpread({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
           onClick={onContinue}
-                  className="absolute bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-[#e4c174]/58 bg-[#e4c174]/12 px-6 py-3 font-sans text-[11px] uppercase tracking-[0.2em] text-[#ffe8aa] shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-[#e4c174]/18"
+          className="absolute bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-[#e4c174]/58 bg-[#e4c174]/12 px-6 py-3 font-sans text-[11px] uppercase tracking-[0.2em] text-[#ffe8aa] shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-[#e4c174]/18"
         >
-          Reveal the Hints
+          Reveal the Reading
         </motion.button>
       )}
     </section>

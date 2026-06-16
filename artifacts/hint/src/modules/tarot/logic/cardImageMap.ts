@@ -1,12 +1,13 @@
-export type TarotCardArtId = "original" | "hint-classic";
+export type TarotCardArtId = "original" | "hint-classic" | "hint-card-2";
 
 const CARD_IMAGE_BASE_PATHS: Record<TarotCardArtId, string> = {
   original: "/brand/tarot/cards",
   "hint-classic": "/brand/tarot/decks/hint-classic/cards",
+  "hint-card-2": "/brand/tarot/decks/hint-card-2/cards",
 };
 
 export function isTarotCardArtId(value: unknown): value is TarotCardArtId {
-  return value === "original" || value === "hint-classic";
+  return value === "original" || value === "hint-classic" || value === "hint-card-2";
 }
 
 const MAJOR_CARD_IMAGES: Record<string, string> = {

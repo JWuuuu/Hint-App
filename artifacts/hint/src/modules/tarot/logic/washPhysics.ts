@@ -336,19 +336,21 @@ export function gatherDeckToCenter(ritualCards: readonly RitualCard[]): RitualCa
 
   return ritualCards.map((card, index) => {
     const distance = distances[index] ?? 0;
-    const outerFirst = 1 - distance / maxDistance;
-    const rotation = (Math.random() - 0.5) * 18;
+    const outsideFirstDelay = 1 - distance / maxDistance;
+    const row = index % 13;
+    const stack = Math.floor(index / 13);
+    const rotation = (row - 6) * 0.9 + Math.sin(index * 1.47) * 1.4;
     return {
       ...card,
-      x: 50 + (Math.random() - 0.5) * 11,
-      y: 52 + (Math.random() - 0.5) * 7,
+      x: 50 + (row - 6) * 0.16 + Math.sin(index * 1.31) * 1.05,
+      y: 52 - stack * 0.12 + Math.cos(index * 1.17) * 0.62,
       rotate: rotation,
       rotation,
       velocityX: 0,
       velocityY: 0,
       velocityRotate: 0,
       lift: 0,
-      gatherDelay: outerFirst * 0.28 + Math.random() * 0.12,
+      gatherDelay: outsideFirstDelay * 0.24 + (index % 6) * 0.014,
       zIndex: index,
     };
   });
@@ -356,45 +358,98 @@ export function gatherDeckToCenter(ritualCards: readonly RitualCard[]): RitualCa
 
 export function squareDeckAtCenter(ritualCards: readonly RitualCard[]): RitualCard[] {
   return ritualCards.map((card, index) => {
-    const rotation = (index % 9 - 4) * 0.34;
+    const rotation = (index % 9 - 4) * 0.24;
     return {
       ...card,
-      x: 50 + (index % 12 - 6) * 0.075,
-      y: 52 - (index % 22) * 0.058,
+      x: 50 + (index % 11 - 5) * 0.048,
+      y: 52 - (index % 22) * 0.046,
       rotate: rotation,
       rotation,
       velocityX: 0,
       velocityY: 0,
       velocityRotate: 0,
       lift: 0,
-      gatherDelay: (index % 7) * 0.014,
+      gatherDelay: (index % 7) * 0.012,
       zIndex: index,
     };
   });
 }
 
-export function quickCutDeckAtCenter(ritualCards: readonly RitualCard[]): RitualCard[] {
+export function cutDeckIntoPackets(
+  ritualCards: readonly RitualCard[],
+  direction: 1 | -1 = 1,
+): RitualCard[] {
   const midpoint = Math.floor(ritualCards.length / 2);
 
   return ritualCards.map((card, index) => {
     const isTopPacket = index >= midpoint;
     const packetIndex = isTopPacket ? index - midpoint : index;
-    const side = isTopPacket ? 1 : -1;
-    const row = packetIndex % 18;
+    const side = isTopPacket ? direction : -direction;
+    const row = packetIndex % 14;
     const stack = Math.floor(packetIndex / 18);
-    const rotation = side * (1.05 + (row % 5) * 0.08);
+    const rotation = side * (1.15 + (row % 5) * 0.06);
 
     return {
       ...card,
-      x: 50 + side * 4.6 + (row - 8.5) * 0.045,
-      y: 52 + side * 0.34 - stack * 0.18 - (row % 4) * 0.025,
+      x: 50 + side * 7.2 + (row - 6.5) * 0.075,
+      y: 52 + (isTopPacket ? -1.05 : 1.05) - stack * 0.16 - (row % 4) * 0.028,
       rotate: rotation,
       rotation,
       velocityX: 0,
       velocityY: 0,
       velocityRotate: 0,
       lift: 0,
-      gatherDelay: (packetIndex % 9) * 0.012,
+      gatherDelay: (packetIndex % 9) * 0.014,
+      zIndex: isTopPacket ? 120 + packetIndex : packetIndex,
+    };
+  });
+}
+
+export function transferCutPacket(
+  ritualCards: readonly RitualCard[],
+  direction: 1 | -1 = 1,
+): RitualCard[] {
+  const midpoint = Math.floor(ritualCards.length / 2);
+
+  return ritualCards.map((card, index) => {
+    const isTopPacket = index >= midpoint;
+    const packetIndex = isTopPacket ? index - midpoint : index;
+    const row = packetIndex % 14;
+    const stack = Math.floor(packetIndex / 18);
+    const movingSide = isTopPacket ? -direction : direction;
+    const rotation = movingSide * (0.82 + (row % 5) * 0.045);
+
+    return {
+      ...card,
+      x: 50 + movingSide * (isTopPacket ? 3.2 : 2.4) + (row - 6.5) * 0.055,
+      y: 52 + (isTopPacket ? 1.55 : -0.65) - stack * 0.15 - (row % 4) * 0.026,
+      rotate: rotation,
+      rotation,
+      velocityX: 0,
+      velocityY: 0,
+      velocityRotate: 0,
+      lift: 0,
+      gatherDelay: (packetIndex % 8) * 0.012,
+      zIndex: isTopPacket ? 180 + packetIndex : packetIndex,
+    };
+  });
+}
+
+export function mergeCutDeckAtCenter(ritualCards: readonly RitualCard[]): RitualCard[] {
+  return ritualCards.map((card, index) => {
+    const rotation = (index % 7 - 3) * 0.18;
+
+    return {
+      ...card,
+      x: 50 + (index % 10 - 5) * 0.04,
+      y: 52 - (index % 24) * 0.042,
+      rotate: rotation,
+      rotation,
+      velocityX: 0,
+      velocityY: 0,
+      velocityRotate: 0,
+      lift: 0,
+      gatherDelay: (index % 6) * 0.01,
       zIndex: index,
     };
   });

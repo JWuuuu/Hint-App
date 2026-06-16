@@ -7,6 +7,10 @@ import { Router } from "express";
 import * as z from "zod";
 import { drawCards, type DrawnCard } from "../modules/tarot/logic/drawCards.js";
 import { generateTarotReading } from "../modules/tarot/ai/tarotReader.js";
+import {
+  buildLocalStructuredTarotReading,
+  generateStructuredTarotReading,
+} from "../modules/tarot/ai/structuredTarotReader.js";
 import { generateTarotChatReply } from "../modules/tarot/chat/chatReader.js";
 import { deck as TAROT_DECK } from "../modules/tarot/data/deck.js";
 import { logger } from "../lib/logger.js";
@@ -164,6 +168,96 @@ router.post("/tarot/reading", async (req, res) => {
   };
 
   res.json(reading);
+});
+
+/* ─── POST /tarot/structured-reading ───────────────────────────── */
+
+const structuredReadingCardInputSchema = z.object({
+  cardId: z.string().min(1).max(80),
+  name: z.string().min(1).max(80),
+  orientation: z.enum(["upright", "reversed"]),
+  position: z.string().min(1).max(80),
+  keywords: z.array(z.string()).optional(),
+  upright: z.string().optional(),
+  reversed: z.string().optional(),
+  arcana: z.enum(["major", "minor"]).optional(),
+  suit: z.string().nullable().optional(),
+});
+
+const structuredReadingInputSchema = z.object({
+  question: z.string().min(1).max(1000),
+  spreadType: z.enum([
+    "single",
+    "three",
+    "relationship",
+    "futureLover",
+    "peachBlossom",
+    "reconciliation",
+    "trueHeart",
+    "loveTree",
+    "xRelationship",
+  ]),
+  emotionalContext: z.string().max(2000).nullish(),
+  focusLabel: z.string().max(200).nullish(),
+  requiredCardCount: z.number().int().min(1).max(10),
+  cards: z.array(structuredReadingCardInputSchema).min(1).max(10),
+});
+
+function rehydrateStructuredCards(cards: z.infer<typeof structuredReadingCardInputSchema>[]): DrawnCard[] {
+  return cards.map((card) => {
+    const canonical = TAROT_DECK.find((deckCard) => deckCard.id === card.cardId);
+    return {
+      card: canonical ?? {
+        id: card.cardId,
+        name: card.name,
+        arcana: card.arcana ?? (/^\d+-/.test(card.cardId) ? "major" : "minor"),
+        suit: card.suit ?? null,
+        keywords: card.keywords ?? [],
+        upright: card.upright ?? `${card.name} asks you to read the clearest signal in this position.`,
+        reversed: card.reversed ?? `${card.name} reversed asks where this signal is blocked or delayed.`,
+      },
+      isReversed: card.orientation === "reversed",
+      position: card.position,
+    };
+  });
+}
+
+router.post("/tarot/structured-reading", async (req, res) => {
+  const parsed = structuredReadingInputSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+
+  const data = parsed.data;
+  if (data.cards.length !== data.requiredCardCount) {
+    res.status(400).json({ error: "Selected card count does not match the spread." });
+    return;
+  }
+
+  if (!consumeAiBudget(req, res, { feature: "tarot_structured_reading", dailyLimit: 10 })) {
+    return;
+  }
+
+  const drawnCards = rehydrateStructuredCards(data.cards);
+
+  try {
+    const reading = await generateStructuredTarotReading({
+      question: data.question,
+      emotionalContext: data.emotionalContext,
+      drawnCards,
+      spreadType: data.spreadType,
+    });
+    res.json(reading);
+  } catch (err) {
+    logger.error({ err }, "Failed to generate structured tarot reading");
+    res.json(buildLocalStructuredTarotReading({
+      question: data.question,
+      emotionalContext: data.emotionalContext,
+      drawnCards,
+      spreadType: data.spreadType,
+    }));
+  }
 });
 
 /* ─── POST /tarot/chat ─────────────────────────────────────────── */

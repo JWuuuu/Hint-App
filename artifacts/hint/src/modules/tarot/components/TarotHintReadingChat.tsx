@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { motion } from "framer-motion";
 import { SendHorizontal } from "lucide-react";
 import { useSendTarotChatMessage, type TarotCardDraw } from "@workspace/api-client-react";
+import { apiUrl } from "../../../lib/api";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { getCardKeywords, type RitualCard } from "../logic/createHiddenDeck";
 import type { TarotCardArtId } from "../logic/cardImageMap";
@@ -10,6 +11,7 @@ import { TarotCardVisual } from "./TarotCardVisual";
 import { saveLocalTarotReading } from "../../readings/localTarotReadings";
 import { saveLocalQuestionHistory } from "../../readings/localQuestionHistory";
 import { recordRitualCompletion } from "../../home/data/localRitualProgress";
+import { getSpreadPositionLabel } from "../logic/spreadLabels";
 
 type LocalChatMessage = {
   id: string;
@@ -26,6 +28,23 @@ type TarotHintReadingChatProps = {
   story?: string;
   focusLabel?: string;
   archiveOnOpen?: boolean;
+};
+
+type StructuredSignalType = "clear_signal" | "mixed_signal" | "opening" | "blocked" | "soft_yes" | "soft_no";
+
+type StructuredCardMeaning = {
+  position: string;
+  card_name: string;
+  orientation: "upright" | "reversed";
+  meaning: string;
+};
+
+type StructuredTarotReading = {
+  signal_type: StructuredSignalType;
+  overall_summary: string;
+  cards: StructuredCardMeaning[];
+  final_action_advice: string;
+  follow_up_invitation: string;
 };
 
 const FOLLOW_UPS = [

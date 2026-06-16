@@ -109,11 +109,11 @@ export const SPREAD_CHOICES: readonly SpreadChoice[] = [
   {
     id: "single",
     label: "One card",
-    description: "The core hint",
+    description: "The message",
     positions: "A single mirror for the heart of the question",
     cardCount: 1,
     bestFor: "Quick clarity, daily pulls, or one direct question.",
-    positionLabels: ["Core hint"],
+    positionLabels: ["The Message"],
     layout: [{ n: 1, x: 50, y: 50 }],
   },
   {
@@ -339,6 +339,12 @@ export const DECK_STYLES: readonly VisualChoice<DeckStyleId>[] = [
 ] as const;
 
 export const CARD_FACE_STYLES: readonly CardFaceChoice[] = [
+  {
+    id: "hint-card-2",
+    label: "Hint Card 2",
+    description: "Your updated full 78-card illustrated deck for room previews and readings.",
+    previewCards: ["0-fool", "6-lovers", "19-sun"],
+  },
   {
     id: "hint-classic",
     label: "Hint Classic",

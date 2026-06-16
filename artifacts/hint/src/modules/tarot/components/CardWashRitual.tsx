@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type PointerEvent } from "react";
 import { motion } from "framer-motion";
 import type { RitualCard } from "../logic/createHiddenDeck";
 import type { WashPointer } from "../logic/washPhysics";
@@ -17,19 +17,13 @@ export type WashRitualTheme = {
 };
 
 type CardWashRitualProps = {
-  stage: "placed" | "washing" | "gathering" | "cutting" | "rested";
+  stage: "placed" | "washing" | "gathering" | "cutting";
   ritualCards: RitualCard[];
-  activeVisualIds: readonly string[];
-  canRest: boolean;
   washProgress?: number;
-  isAutoWashing?: boolean;
   theme?: WashRitualTheme;
   onBeginWash: () => void;
   onWash: (pointer: WashPointer) => void;
-  onRest: () => void;
-  onWashAgain?: () => void;
-  onSelectCards?: () => void;
-  onFallbackWash?: () => void;
+  onWashRelease: () => void;
   showControls?: boolean;
 };
 
@@ -51,16 +45,11 @@ const DEFAULT_THEME: WashRitualTheme = {
 export function CardWashRitual({
   stage,
   ritualCards,
-  canRest,
   washProgress = 0,
-  isAutoWashing = false,
   theme = DEFAULT_THEME,
   onBeginWash,
   onWash,
-  onRest,
-  onWashAgain,
-  onSelectCards,
-  onFallbackWash,
+  onWashRelease,
   showControls = true,
 }: CardWashRitualProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
@@ -70,26 +59,29 @@ export function CardWashRitual({
 
   const progress = Math.max(0, Math.min(1, washProgress));
   const washCopy = progress > 0.82
-    ? ["When it feels right, let them rest."]
+    ? ["Release to cut the deck."]
     : progress > 0.58
       ? ["Let the deck loosen."]
       : progress > 0.28
         ? ["Move them in circles.", "The order was set before the wash."]
         : ["The cards have already been placed.", "Their hidden order is already set.", "Move them in circles."];
   const copy =
-    isAutoWashing
-      ? ["Hint is washing the deck.", "The order was set before the wash.", "When the room settles, they will rest."]
-    : stage === "placed"
+    stage === "placed"
       ? ["The cards have already been placed.", "Their hidden order is already set.", "Move them in circles."]
       : stage === "gathering"
-        ? ["Let the deck settle.", "The cards are coming back together."]
+        ? ["Gathering the cards.", "They are becoming one deck."]
         : stage === "cutting"
-          ? ["Cutting the deck.", "One clean cut before choosing."]
-      : stage === "rested"
-        ? ["The deck is quiet now.", "The cards are finding their center."]
-        : washCopy;
+          ? ["Cutting the deck.", "The order is being set."]
+          : washCopy;
+  const isDeckStackStage = stage === "gathering" || stage === "cutting";
+  const cardTransitionMs = stage === "gathering" ? 760 : stage === "cutting" ? 540 : 70;
+  const cardTransitionEase = stage === "gathering"
+    ? "cubic-bezier(0.18, 0.82, 0.18, 1)"
+    : stage === "cutting"
+      ? "cubic-bezier(0.24, 0.72, 0.22, 1)"
+      : "linear";
 
-  function move(event: React.PointerEvent<HTMLDivElement>) {
+  function move(event: PointerEvent<HTMLDivElement>) {
     if (!washing.current || !tableRef.current) return;
     const rect = tableRef.current.getBoundingClientRect();
     const x = event.clientX - rect.left;
@@ -115,6 +107,16 @@ export function CardWashRitual({
       height: rect.height,
       spinDirection: spinDirection.current,
     });
+  }
+
+  function finishPointerWash(event: PointerEvent<HTMLDivElement>) {
+    if (!washing.current) return;
+    washing.current = false;
+    lastPoint.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    onWashRelease();
   }
 
   return (
@@ -147,7 +149,7 @@ export function CardWashRitual({
             "0 22px 58px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}
         onPointerDown={(event) => {
-          if (stage === "gathering" || stage === "cutting" || stage === "rested") return;
+          if (stage === "gathering" || stage === "cutting") return;
           washing.current = true;
           lastPoint.current = null;
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -155,13 +157,10 @@ export function CardWashRitual({
           move(event);
         }}
         onPointerMove={move}
-        onPointerUp={() => {
-          washing.current = false;
-          lastPoint.current = null;
-        }}
-        onPointerCancel={() => {
-          washing.current = false;
-          lastPoint.current = null;
+        onPointerUp={finishPointerWash}
+        onPointerCancel={finishPointerWash}
+        onLostPointerCapture={(event) => {
+          if (stage === "washing") finishPointerWash(event);
         }}
       >
         <div
@@ -191,8 +190,8 @@ export function CardWashRitual({
               zIndex: card.zIndex,
               transform: `translate3d(${card.x}%, ${card.y}%, 0)`,
               transition:
-                stage === "gathering" || stage === "cutting" || stage === "rested"
-                  ? `transform ${stage === "gathering" ? 500 : stage === "cutting" ? 360 : 360}ms cubic-bezier(0.22, 0.72, 0.21, 1) ${card.gatherDelay ?? 0}s`
+                isDeckStackStage
+                  ? `transform ${cardTransitionMs}ms ${cardTransitionEase} ${card.gatherDelay ?? 0}s`
                   : "transform 70ms linear",
             }}
           >
@@ -201,8 +200,8 @@ export function CardWashRitual({
               style={{
                 transform: `translate3d(-50%, -50%, 0) rotate(${card.rotate}deg)`,
                 transition:
-                  stage === "gathering" || stage === "cutting" || stage === "rested"
-                    ? `transform ${stage === "gathering" ? 500 : stage === "cutting" ? 360 : 360}ms cubic-bezier(0.22, 0.72, 0.21, 1) ${card.gatherDelay ?? 0}s`
+                  isDeckStackStage
+                    ? `transform ${cardTransitionMs}ms ${cardTransitionEase} ${card.gatherDelay ?? 0}s`
                     : "transform 70ms linear",
               }}
             >
@@ -211,40 +210,17 @@ export function CardWashRitual({
                 compact
                 active={false}
                 backStyle={theme.cardBackStyle}
-                className={stage === "gathering" || stage === "rested" ? "h-[90px] w-[60px] sm:h-[116px] sm:w-[78px] md:h-[132px] md:w-[88px]" : ""}
+                className={isDeckStackStage ? "h-[90px] w-[60px] sm:h-[116px] sm:w-[78px] md:h-[132px] md:w-[88px]" : ""}
               />
             </div>
           </div>
         ))}
         </div>
-        {stage === "rested" && (
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.6 }}
-            className="absolute bottom-[10%] left-1/2 z-[220] flex -translate-x-1/2 flex-wrap items-center justify-center gap-3 rounded-full border border-[#e4c174]/22 bg-black/34 px-4 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.30)]"
-          >
-            <button
-              type="button"
-              onClick={onSelectCards}
-              className="rounded-full border border-[#f0ce7f]/62 bg-[#f0ce7f]/12 px-6 py-3 font-serif text-[15px] text-[#ffe8aa] transition hover:bg-[#f0ce7f]/20"
-            >
-              Choose cards
-            </button>
-            <button
-              type="button"
-              onClick={onWashAgain ?? onBeginWash}
-              className="rounded-full border border-[#d8c7a6]/30 bg-black/18 px-6 py-3 font-serif text-[15px] text-[#eadbbd] transition hover:bg-white/[0.04]"
-            >
-              Wash again
-            </button>
-          </motion.div>
-        )}
       </div>
 
-      {showControls && stage !== "rested" && (
+      {showControls && (
         <div className="relative z-20 mt-5 flex flex-wrap items-center justify-center gap-3">
-          {stage === "placed" && !isAutoWashing && (
+          {stage === "placed" && (
             <button
               type="button"
               onClick={onBeginWash}
@@ -253,33 +229,10 @@ export function CardWashRitual({
               Begin washing
             </button>
           )}
-          {stage === "washing" && !isAutoWashing && (
-            <button
-              type="button"
-              onClick={onRest}
-              disabled={!canRest}
-              className="rounded-full border border-[#e4c174]/48 bg-[#e4c174]/10 px-6 py-3 font-serif text-[15px] text-[#f7ead0] shadow-[0_10px_24px_rgba(0,0,0,0.26)] transition hover:bg-[#e4c174]/16 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Let them rest
-            </button>
-          )}
-          {isAutoWashing && (
-            <button
-              type="button"
-              disabled
-              className="rounded-full border border-[#d8c7a6]/30 bg-black/28 px-6 py-3 font-serif text-[15px] text-[#d8c7a6]/76 shadow-[0_8px_20px_rgba(0,0,0,0.22)]"
-            >
-              Washing...
-            </button>
-          )}
-          {onFallbackWash && (stage === "placed" || stage === "washing") && !isAutoWashing && (
-            <button
-              type="button"
-              onClick={onFallbackWash}
-              className="rounded-full border border-[#d8c7a6]/28 bg-black/24 px-6 py-3 font-serif text-[15px] text-[#d8c7a6]/88 shadow-[0_8px_20px_rgba(0,0,0,0.22)] transition hover:border-[#d8c7a6]/44 hover:bg-white/[0.04]"
-            >
-              Auto wash
-            </button>
+          {stage === "washing" && (
+            <p className="rounded-full border border-[#e4c174]/28 bg-black/20 px-5 py-3 font-serif text-[15px] text-[#eadbbd]/86 shadow-[0_8px_20px_rgba(0,0,0,0.22)]">
+              Release to cut the deck
+            </p>
           )}
         </div>
       )}

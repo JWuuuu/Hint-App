@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { SPREAD_CHOICES } from "../../hold/useHoldFlow";
 import type { CutPile, CutPileId } from "../logic/cutDeck";
@@ -24,6 +24,8 @@ type RitualStage =
   | "reveal";
 
 const MAX_SELECTED_CARDS = 3;
+const DEFAULT_TAROT_ROOM_SPREAD =
+  SPREAD_CHOICES.find((spread) => spread.id === "three") ?? SPREAD_CHOICES[0]!;
 
 export function TarotRoom() {
   const [placedDeck, setPlacedDeck] = useState<RitualCard[]>(() => createHiddenDeck());
@@ -34,20 +36,11 @@ export function TarotRoom() {
   const [finalDeckOrder, setFinalDeckOrder] = useState<RitualCard[]>([]);
 
   const [stage, setStage] = useState<RitualStage>("placed");
-  const [activeVisualIds, setActiveVisualIds] = useState<string[]>([]);
-  const [washScore, setWashScore] = useState(0);
-  const [restAvailable, setRestAvailable] = useState(false);
+  const [, setWashScore] = useState(0);
   const [stackOrder, setStackOrder] = useState<CutPileId[]>([]);
   const [revealedIds, setRevealedIds] = useState<string[]>([]);
 
-  const canRest = restAvailable || washScore > 28;
   const visibleDeckCount = useMemo(() => placedDeck.length, [placedDeck.length]);
-
-  useEffect(() => {
-    if (stage !== "washing") return;
-    const timer = window.setTimeout(() => setRestAvailable(true), 3200);
-    return () => window.clearTimeout(timer);
-  }, [stage]);
 
   function resetRitual() {
     const nextDeck = createHiddenDeck();
@@ -58,9 +51,7 @@ export function TarotRoom() {
     setCutPiles([]);
     setFinalDeckOrder([]);
     setStage("placed");
-    setActiveVisualIds([]);
     setWashScore(0);
-    setRestAvailable(false);
     setStackOrder([]);
     setRevealedIds([]);
   }
@@ -72,7 +63,6 @@ export function TarotRoom() {
   function wash(pointer: WashPointer) {
     const result = applyWashForce(ritualCards, pointer);
     setRitualCards(result.cards);
-    setActiveVisualIds(result.activeVisualIds);
     setWashScore((score) => score + result.movementScore);
   }
 
@@ -83,7 +73,6 @@ export function TarotRoom() {
       setRitualCards((cards) => squareDeckAtCenter(cards));
     }, 760);
     window.setTimeout(() => {
-      setActiveVisualIds([]);
       setStage("cutting");
     }, 1750);
   }
@@ -111,7 +100,6 @@ export function TarotRoom() {
     setSelectedCards([]);
     setRevealedIds([]);
     setWashScore(0);
-    setRestAvailable(false);
     setStage("washing");
   }
 
@@ -132,7 +120,7 @@ export function TarotRoom() {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#010207] text-[#f7ead0]">
       <Link
-        href="/"
+        href="/app"
         className="absolute left-5 top-5 z-50 font-serif text-[11px] uppercase tracking-[0.32em] text-[#d8c7a6]/75 transition-opacity hover:opacity-80"
       >
         ← Home
@@ -145,11 +133,9 @@ export function TarotRoom() {
         <CardWashRitual
           stage={stage}
           ritualCards={ritualCards}
-          activeVisualIds={activeVisualIds}
-          canRest={canRest}
           onBeginWash={beginWash}
           onWash={wash}
-          onRest={restDeck}
+          onWashRelease={restDeck}
         />
       )}
 
@@ -176,7 +162,7 @@ export function TarotRoom() {
           finalDeckOrder={finalDeckOrder}
           selectedCards={selectedCards}
           maxCards={MAX_SELECTED_CARDS}
-          spread={SPREAD_CHOICES.find((spread) => spread.id === "three") ?? SPREAD_CHOICES[0]!}
+          spread={DEFAULT_TAROT_ROOM_SPREAD}
           onSelect={selectFromRibbon}
           onContinue={() => setStage("reveal")}
         />
@@ -186,6 +172,7 @@ export function TarotRoom() {
         <ReadingReveal
           selectedCards={selectedCards}
           revealedIds={revealedIds}
+          spread={DEFAULT_TAROT_ROOM_SPREAD}
           onReveal={revealCard}
           onRestart={resetRitual}
         />

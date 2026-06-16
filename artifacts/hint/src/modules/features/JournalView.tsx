@@ -88,7 +88,7 @@ export function JournalView() {
         title={t("journal.title")}
         subtitle={t("journal.subtitle")}
         sigil={JournalSigil}
-        backHref="/rooms"
+        backHref="/app/rooms"
         backLabel={t("common.back")}
       />
 

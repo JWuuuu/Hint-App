@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import type { RitualCard } from "../logic/createHiddenDeck";
 import type { TarotCardArtId } from "../logic/cardImageMap";
+import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { TarotCardVisual } from "./TarotCardVisual";
 import type { TarotCardBackStyle } from "./TarotCardVisual";
+import { getSpreadPositionLabel } from "../logic/spreadLabels";
 
 type ReadingRevealProps = {
   selectedCards: RitualCard[];
   revealedIds: readonly string[];
+  spread: SpreadChoice;
   backStyle?: TarotCardBackStyle;
   cardArtId?: TarotCardArtId;
   autoReveal?: boolean;
@@ -32,9 +35,18 @@ function revealCardSizeClass(count: number) {
   return "!h-[126px] !w-[78px] sm:!h-[188px] sm:!w-[116px] md:!h-[224px] md:!w-[136px]";
 }
 
+function revealCardShellClass(count: number) {
+  if (count === 1) return "h-[218px] w-[132px] sm:h-[264px] sm:w-[160px] md:h-[294px] md:w-[178px]";
+  if (count === 2) return "h-[202px] w-[124px] sm:h-[256px] sm:w-[156px] md:h-[288px] md:w-[176px]";
+  if (count === 3) return "h-[164px] w-[100px] sm:h-[236px] sm:w-[144px] md:h-[276px] md:w-[168px]";
+  if (count <= 5) return "h-[146px] w-[90px] sm:h-[216px] sm:w-[132px] md:h-[250px] md:w-[152px]";
+  return "h-[126px] w-[78px] sm:h-[188px] sm:w-[116px] md:h-[224px] md:w-[136px]";
+}
+
 export function ReadingReveal({
   selectedCards,
   revealedIds,
+  spread,
   backStyle = "nocturne",
   cardArtId = "original",
   autoReveal = false,
@@ -44,14 +56,15 @@ export function ReadingReveal({
   const [readyToReveal, setReadyToReveal] = useState(false);
   const allRevealed = selectedCards.every((card) => revealedIds.includes(card.visualId));
   const oneCard = selectedCards.length === 1;
-  const title = allRevealed ? "The Hints are open." : "These are the cards that came through.";
+  const title = allRevealed ? "The cards are open." : "These are the cards that came through.";
   const subtitle = allRevealed
     ? "Read what they are pointing toward."
     : oneCard
-      ? "Turn Hint 1 when you are ready."
-      : "Turn each Hint when you are ready.";
+      ? `Turn ${getSpreadPositionLabel(spread, 0)} when you are ready.`
+      : "Turn each card when you are ready.";
   const gridClass = revealGridClass(selectedCards.length);
   const cardSizeClass = revealCardSizeClass(selectedCards.length);
+  const cardShellClass = revealCardShellClass(selectedCards.length);
 
   useEffect(() => {
     setReadyToReveal(false);
@@ -82,7 +95,7 @@ export function ReadingReveal({
       <div className={`relative z-10 mx-auto grid w-full ${gridClass} place-items-center gap-3 sm:gap-7`}>
         {selectedCards.map((card, index) => {
           const revealed = revealedIds.includes(card.visualId);
-          const label = `Hint ${index + 1}`;
+          const label = getSpreadPositionLabel(spread, index);
           const canReveal = !autoReveal && !revealed && readyToReveal;
           return (
             <motion.div
@@ -91,7 +104,7 @@ export function ReadingReveal({
               initial={{ opacity: 0, y: 18, scale: 0.94 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: index * 0.08, type: "spring", stiffness: 165, damping: 23 }}
-              className={`relative flex flex-col items-center gap-4 ${canReveal ? "cursor-pointer" : ""}`}
+              className={`relative grid justify-items-center gap-4 text-center ${canReveal ? "cursor-pointer" : ""}`}
               onClick={canReveal ? () => onReveal(card.visualId) : undefined}
             >
               <motion.div
@@ -100,7 +113,7 @@ export function ReadingReveal({
                   scale: revealed ? [1, 1.035, 1] : 1,
                 }}
                 transition={{ duration: 0.92, ease: [0.2, 0.74, 0.18, 1] }}
-                className="relative"
+                className={`relative grid place-items-center ${cardShellClass}`}
               >
                 <motion.div
                   className="pointer-events-none absolute -inset-5 rounded-[20px] bg-[#e4c174]/18 blur-2xl"
@@ -118,7 +131,6 @@ export function ReadingReveal({
                   ariaLabel={revealed ? undefined : `${label}, face-down`}
                   showFrontCaption={false}
                   className={cardSizeClass}
-                  onClick={canReveal ? () => onReveal(card.visualId) : undefined}
                 />
               </motion.div>
               <p className="max-w-[11rem] truncate font-sans text-[10px] uppercase tracking-[0.18em] text-[#d8c7a6]/78 sm:text-[11px] sm:tracking-[0.22em]">

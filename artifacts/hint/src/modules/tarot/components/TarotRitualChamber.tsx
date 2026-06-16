@@ -3,15 +3,16 @@ import { motion } from "framer-motion";
 import { Home } from "lucide-react";
 import { Link } from "wouter";
 import type { RitualCard } from "../types/ritual.types";
-import { createHiddenDeck, scatterDeck } from "../logic/createHiddenDeck";
+import { createHiddenDeck } from "../logic/createHiddenDeck";
 import {
-  applyAutoWashWave,
   applyTableCurrent,
+  cutDeckIntoPackets,
   gatherDeckToCenter,
   loosenDeckForWash,
-  quickCutDeckAtCenter,
+  mergeCutDeckAtCenter,
   settleWashedDeck,
   squareDeckAtCenter,
+  transferCutPacket,
 } from "../logic/washPhysics";
 import { applyWashForce } from "../logic/washPhysics";
 import type { WashPointer } from "../logic/washPhysics";
@@ -24,7 +25,7 @@ import { TarotHintReadingChat } from "./TarotHintReadingChat";
 import { SPREAD_CHOICES } from "../../hold/useHoldFlow";
 import type { TarotRoomSetup } from "../../hold/useHoldFlow";
 
-type RitualStage = "placed" | "washing" | "gathering" | "cutting" | "rested" | "selecting" | "reveal" | "reading";
+type RitualStage = "placed" | "washing" | "gathering" | "cutting" | "selecting" | "reveal" | "reading";
 
 type ChamberDeckState = {
   hiddenDeckOrder: RitualCard[];
@@ -87,6 +88,56 @@ function getTheme(setup?: TarotRoomSetup | null): WashRitualTheme {
   };
 }
 
+type HiddenCardIdentity = Pick<RitualCard, "cardId" | "name" | "orientation">;
+
+function getHiddenIdentities(deck: readonly RitualCard[]): HiddenCardIdentity[] {
+  return deck.map((card) => ({
+    cardId: card.cardId,
+    name: card.name,
+    orientation: card.orientation,
+  }));
+}
+
+function applyHiddenIdentitiesToFixedVisuals(
+  visualDeck: readonly RitualCard[],
+  identities: readonly HiddenCardIdentity[],
+): RitualCard[] {
+  return visualDeck.map((visualCard, index) => {
+    const identity = identities[index] ?? identities[0];
+    return {
+      ...visualCard,
+      cardId: identity?.cardId ?? visualCard.cardId,
+      name: identity?.name ?? visualCard.name,
+      orientation: identity?.orientation ?? visualCard.orientation,
+      selected: false,
+      revealed: false,
+    };
+  });
+}
+
+function washHiddenOrder(deck: readonly RitualCard[]): RitualCard[] {
+  const identities = getHiddenIdentities(deck);
+  const half = Math.ceil(identities.length / 2);
+  const left = identities.slice(0, half);
+  const right = identities.slice(half);
+  const mixed: HiddenCardIdentity[] = [];
+  const max = Math.max(left.length, right.length);
+
+  for (let index = 0; index < max; index += 1) {
+    if (right[index]) mixed.push(right[index]!);
+    if (left[index]) mixed.push(left[index]!);
+  }
+
+  return applyHiddenIdentitiesToFixedVisuals(deck, mixed);
+}
+
+function cutHiddenOrder(deck: readonly RitualCard[], ratio = 0.37): RitualCard[] {
+  const identities = getHiddenIdentities(deck);
+  const cutIndex = Math.max(1, Math.min(identities.length - 1, Math.floor(identities.length * ratio)));
+  const cut = [...identities.slice(cutIndex), ...identities.slice(0, cutIndex)];
+  return applyHiddenIdentitiesToFixedVisuals(deck, cut);
+}
+
 export function TarotRitualChamber({
   setup,
 }: {
@@ -107,13 +158,10 @@ export function TarotRitualChamber({
   const [stage, setStage] = useState<RitualStage>("placed");
   const [activeVisualIds, setActiveVisualIds] = useState<string[]>([]);
   const [washScore, setWashScore] = useState(0);
-  const [restAvailable, setRestAvailable] = useState(false);
-  const [autoWashing, setAutoWashing] = useState(false);
   const [washDirection, setWashDirection] = useState<1 | -1>(1);
   const [selectedCards, setSelectedCards] = useState<RitualCard[]>([]);
   const [revealedIds, setRevealedIds] = useState<string[]>([]);
   const gatherTimers = useRef<number[]>([]);
-  const autoWashStartedAt = useRef(0);
 
   const washProgress = Math.min(1, washScore / 56);
 
@@ -125,27 +173,15 @@ export function TarotRitualChamber({
 
   useEffect(() => {
     if (stage !== "washing") return;
-    const restTimer = window.setTimeout(() => setRestAvailable(true), 3200);
     const progressTimer = window.setInterval(() => {
       setWashScore((score) => {
-        const nextScore = score + 0.45;
-        if (nextScore > 42) setRestAvailable(true);
-        return nextScore;
+        return Math.min(56, score + 0.45);
       });
     }, 420);
     return () => {
-      window.clearTimeout(restTimer);
       window.clearInterval(progressTimer);
     };
   }, [stage]);
-
-  useEffect(() => {
-    if (!autoWashing) return;
-    const timer = window.setTimeout(() => {
-      finishAutoWash();
-    }, 1000);
-    return () => window.clearTimeout(timer);
-  }, [autoWashing]);
 
   useEffect(() => {
     if (stage !== "placed" && stage !== "washing") return;
@@ -154,19 +190,6 @@ export function TarotRitualChamber({
     const tick = (now: number) => {
       if (now - last > 32) {
         last = now;
-        if (autoWashing) {
-          const elapsed = now - autoWashStartedAt.current;
-          setDeckState((current) => ({
-            ...current,
-            ritualCards: applyAutoWashWave(current.ritualCards, elapsed),
-          }));
-          setWashScore(Math.min(56, 30 + elapsed / 14));
-          if (elapsed >= 980) {
-            finishAutoWash();
-          }
-          frame = window.requestAnimationFrame(tick);
-          return;
-        }
         setDeckState((current) => ({
           ...current,
           ritualCards: applyTableCurrent(
@@ -181,7 +204,7 @@ export function TarotRitualChamber({
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [autoWashing, stage, washDirection]);
+  }, [stage, washDirection]);
 
   useEffect(() => {
     return () => {
@@ -196,130 +219,97 @@ export function TarotRitualChamber({
 
   function enterSelectCards() {
     setActiveVisualIds([]);
-    setAutoWashing(false);
     setStage("selecting");
   }
 
-  function finishAutoWash() {
-    setAutoWashing(false);
-    setRestAvailable(true);
+  function completeWashAndCut() {
+    if (stage !== "placed" && stage !== "washing") return;
     setWashScore(56);
     setActiveVisualIds([]);
     setStage("gathering");
     setDeckState((current) => ({
       ...current,
+      hiddenDeckOrder: washHiddenOrder(current.hiddenDeckOrder),
       ritualCards: gatherDeckToCenter(current.ritualCards),
     }));
     clearGatherTimers();
     gatherTimers.current = [
       window.setTimeout(() => {
-        setStage("cutting");
-        setDeckState((current) => ({
-          ...current,
-          ritualCards: quickCutDeckAtCenter(current.ritualCards),
-        }));
-      }, 360),
-      window.setTimeout(() => {
         setDeckState((current) => ({
           ...current,
           ritualCards: squareDeckAtCenter(current.ritualCards),
         }));
-      }, 690),
+      }, 780),
+      window.setTimeout(() => {
+        setStage("cutting");
+        setDeckState((current) => ({
+          ...current,
+          hiddenDeckOrder: cutHiddenOrder(current.hiddenDeckOrder, 0.37),
+          ritualCards: cutDeckIntoPackets(current.ritualCards, 1),
+        }));
+      }, 1240),
+      window.setTimeout(() => {
+        setDeckState((current) => ({
+          ...current,
+          ritualCards: transferCutPacket(current.ritualCards, 1),
+        }));
+      }, 1700),
+      window.setTimeout(() => {
+        setDeckState((current) => ({
+          ...current,
+          ritualCards: mergeCutDeckAtCenter(current.ritualCards),
+        }));
+      }, 2160),
+      window.setTimeout(() => {
+        setDeckState((current) => ({
+          ...current,
+          hiddenDeckOrder: cutHiddenOrder(current.hiddenDeckOrder, 0.62),
+          ritualCards: cutDeckIntoPackets(current.ritualCards, -1),
+        }));
+      }, 2580),
+      window.setTimeout(() => {
+        setDeckState((current) => ({
+          ...current,
+          ritualCards: transferCutPacket(current.ritualCards, -1),
+        }));
+      }, 3020),
+      window.setTimeout(() => {
+        setDeckState((current) => ({
+          ...current,
+          ritualCards: mergeCutDeckAtCenter(current.ritualCards),
+        }));
+      }, 3460),
       window.setTimeout(() => {
         enterSelectCards();
-      }, 1080),
+      }, 3920),
     ];
   }
 
   function beginWash() {
-    setStage((current) => current === "placed" ? "washing" : current);
-    setDeckState((current) => {
-      if (stage !== "placed") return current;
-      return {
-        ...current,
-        ritualCards: loosenDeckForWash(current.ritualCards),
-      };
-    });
+    if (stage !== "placed") return;
+    setStage("washing");
+    setDeckState((current) => ({
+      ...current,
+      ritualCards: loosenDeckForWash(current.ritualCards),
+    }));
     setWashScore((score) => Math.max(score, 10));
   }
 
   function wash(pointer: WashPointer) {
+    if (stage !== "placed" && stage !== "washing") return;
     setStage((current) => current === "placed" ? "washing" : current);
-    if (autoWashing) setAutoWashing(false);
     setWashDirection(pointer.spinDirection);
     setDeckState((current) => {
       const result = applyWashForce(current.ritualCards, pointer);
       setActiveVisualIds(result.activeVisualIds);
       setWashScore((score) => {
-        const nextScore = score + result.movementScore + 0.35;
-        if (nextScore > 42) setRestAvailable(true);
-        return nextScore;
+        return Math.min(56, score + result.movementScore + 0.35);
       });
       return {
         ...current,
         ritualCards: result.cards,
       };
     });
-  }
-
-  function restDeck() {
-    setStage("gathering");
-    setAutoWashing(false);
-    setRestAvailable(true);
-    setActiveVisualIds([]);
-    setDeckState((current) => ({
-      ...current,
-      ritualCards: gatherDeckToCenter(current.ritualCards),
-    }));
-    gatherTimers.current.forEach((timer) => window.clearTimeout(timer));
-    gatherTimers.current = [
-      window.setTimeout(() => {
-        setStage("cutting");
-        setDeckState((current) => ({
-          ...current,
-          ritualCards: quickCutDeckAtCenter(current.ritualCards),
-        }));
-      }, 880),
-      window.setTimeout(() => {
-        setDeckState((current) => ({
-          ...current,
-          ritualCards: squareDeckAtCenter(current.ritualCards),
-        }));
-      }, 1360),
-      window.setTimeout(() => {
-        setStage("rested");
-      }, 2050),
-    ];
-  }
-
-  function autoWashDeck() {
-    setStage("washing");
-    setAutoWashing(true);
-    autoWashStartedAt.current = performance.now();
-    setRestAvailable(false);
-    setSelectedCards([]);
-    setRevealedIds([]);
-    setWashScore((score) => Math.max(score, 14));
-    setDeckState((current) => ({
-      ...current,
-      ritualCards: loosenDeckForWash(current.ritualCards),
-    }));
-  }
-
-  function washAgain() {
-    gatherTimers.current.forEach((timer) => window.clearTimeout(timer));
-    gatherTimers.current = [];
-    setStage("washing");
-    setAutoWashing(false);
-    setWashScore(18);
-    setRestAvailable(false);
-    setActiveVisualIds([]);
-    setSelectedCards([]);
-    setRevealedIds([]);
-    setDeckState((current) => ({
-      ...current,
-      ritualCards: loosenDeckForWash(scatterDeck(current.hiddenDeckOrder)),
-    }));
   }
 
   function selectFromSpread(visualId: string) {
@@ -341,8 +331,6 @@ export function TarotRitualChamber({
     setStage("placed");
     setActiveVisualIds([]);
     setWashScore(0);
-    setRestAvailable(false);
-    setAutoWashing(false);
     setWashDirection(1);
     setSelectedCards([]);
     setRevealedIds([]);
@@ -363,28 +351,22 @@ export function TarotRitualChamber({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),transparent_22%,rgba(255,255,255,0.028))] opacity-60" />
 
       <Link
-        href="/"
+        href="/app"
         aria-label="Go to home"
         className="absolute left-4 top-4 z-[80] inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e4c174]/28 bg-black/34 text-[#f7ead0]/82 shadow-[0_10px_24px_rgba(0,0,0,0.28)] transition duration-300 hover:border-[#e4c174]/55 hover:bg-[#e4c174]/10 hover:text-[#ffe8aa] active:scale-95 sm:left-5 sm:top-5"
       >
         <Home size={17} strokeWidth={1.8} aria-hidden="true" />
       </Link>
 
-      {(stage === "placed" || stage === "washing" || stage === "gathering" || stage === "cutting" || stage === "rested") && (
+      {(stage === "placed" || stage === "washing" || stage === "gathering" || stage === "cutting") && (
         <CardWashRitual
           stage={stage}
           ritualCards={deckState.ritualCards}
-          activeVisualIds={activeVisualIds}
-          canRest={restAvailable || washScore > 36}
           washProgress={washProgress}
-          isAutoWashing={autoWashing}
           theme={theme}
           onBeginWash={beginWash}
           onWash={wash}
-          onRest={restDeck}
-          onWashAgain={washAgain}
-          onSelectCards={enterSelectCards}
-          onFallbackWash={autoWashDeck}
+          onWashRelease={completeWashAndCut}
           showControls
         />
       )}
@@ -405,6 +387,7 @@ export function TarotRitualChamber({
         <ReadingReveal
           selectedCards={selectedCards}
           revealedIds={revealedIds}
+          spread={selectedSpread}
           autoReveal
           onContinue={() => setStage("reading")}
           onReveal={revealCard}

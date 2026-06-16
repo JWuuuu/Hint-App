@@ -18,7 +18,7 @@ interface Props {
   onSubmit: (intake: TarotIntake) => void;
 }
 
-type IntakePanel = "context" | "question" | "spread";
+type IntakePanel = "context" | "spread";
 type DictationField = "context" | "question";
 
 interface GuidedSpreadChoice {
@@ -60,7 +60,7 @@ interface SpeechRecognitionLike {
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const SELECT_BLOOM_MS = 650;
-const STEP_ORDER: IntakePanel[] = ["context", "question", "spread"];
+const STEP_ORDER: IntakePanel[] = ["context", "spread"];
 const QUICK_SPREAD_IDS: readonly SpreadType[] = ["single", "three", "relationship"];
 const MAX_VISIBLE_LONG_POSITION_CHIPS = 4;
 
@@ -507,6 +507,8 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+const DEFAULT_TAROT_QUESTION = "What do I need to see clearly right now?";
+
 export function StepTerritories({ roomSetup, onSubmit }: Props) {
   const initialFocus = TERRITORIES[TERRITORIES.length - 1]!;
   const { language, t } = useLanguage();
@@ -515,11 +517,10 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
   const [panel, setPanel] = useState<IntakePanel>("context");
   const [focus, setFocus] = useState<Territory>(initialFocus);
   const [context, setContext] = useState("");
-  const [question, setQuestion] = useState(() => t(`territory.${initialFocus.id}.seed`));
+  const [question, setQuestion] = useState(DEFAULT_TAROT_QUESTION);
   const [spreadType, setSpreadType] = useState<SpreadType>(
     roomSetup?.spreadType ?? initialFocus.spreadType
   );
-  const [questionTouched, setQuestionTouched] = useState(false);
   const [spreadTouched, setSpreadTouched] = useState(false);
   const [listeningField, setListeningField] = useState<DictationField | null>(null);
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
@@ -527,7 +528,6 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
   const [showAllPositions, setShowAllPositions] = useState(false);
   const [showAdvancedSpreads, setShowAdvancedSpreads] = useState(false);
 
-  const suggestions = [1, 2, 3].map((i) => t(`question.${focus.id}.${i}`));
   const localizedSpreads = useMemo(
     () => SPREAD_CHOICES.map((choice) => translateSpreadChoice(choice, t)),
     [t]
@@ -580,10 +580,6 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
   }, [panel]);
 
   useEffect(() => {
-    if (!questionTouched) setQuestion(t(`territory.${focus.id}.seed`));
-  }, [focus.id, questionTouched, t]);
-
-  useEffect(() => {
     setShowAllPositions(false);
   }, [spreadType]);
 
@@ -597,7 +593,6 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
 
   const updateFocus = (next: Territory) => {
     setFocus(next);
-    if (!questionTouched) setQuestion(t(`territory.${next.id}.seed`));
     if (!spreadTouched) setSpreadType(next.spreadType);
   };
 
@@ -606,7 +601,6 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
       setContext((current) => appendText(current, spoken));
       return;
     }
-    setQuestionTouched(true);
     setQuestion((current) => appendText(current, spoken));
   };
 
@@ -757,81 +751,20 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
                   transition={{ duration: 0.45, ease: "easeOut" }}
-                  className="space-y-6"
+                  className="space-y-5"
                 >
                   <div className="space-y-3">
-                    <FieldLabel>{t("tarot.intake.story")}</FieldLabel>
-                    <div className="relative">
-                      <textarea
-                        value={context}
-                        onChange={(event) => setContext(event.target.value)}
-                        maxLength={1600}
-                        rows={5}
-                        placeholder={t("tarot.intake.storyPlaceholder")}
-                        className="hint-ritual-input w-full resize-none rounded-[8px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none"
-                        style={{
-                          color: IVORY.strong,
-                          borderColor: "var(--hint-border)",
-                          background: "var(--hint-input-bg)",
-                          textShadow: TEXT_HALO.soft,
-                        }}
-                      />
-                      <VoiceButton
-                        active={listeningField === "context"}
-                        onClick={() => toggleDictation("context")}
-                        label={
-                          listeningField === "context"
-                            ? t("tarot.voice.stop")
-                            : t("tarot.voice.start")
-                        }
-                      />
-                    </div>
-                    {voiceNotice && (
-                      <p className="font-sans text-[12px] leading-relaxed" style={{ color: IVORY.mute }}>
-                        {voiceNotice}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-3">
-                    <FieldLabel>{t("tarot.intake.focus")}</FieldLabel>
-                    <div className="grid grid-cols-2 gap-2">
-                      {TERRITORIES.map((item) => (
-                        <Chip
-                          key={item.id}
-                          selected={focus.id === item.id}
-                          onClick={() => updateFocus(item)}
-                        >
-                          {t(`territory.${item.id}.label`)}
-                        </Chip>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {panel === "question" && (
-                <motion.div
-                  key="question"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{ duration: 0.45, ease: "easeOut" }}
-                  className="space-y-6"
-                >
-                  <div className="space-y-3">
-                    <FieldLabel>{t("tarot.intake.question")}</FieldLabel>
+                    <FieldLabel>What do you want the cards to look into?</FieldLabel>
                     <div className="relative">
                       <textarea
                         value={question}
                         onChange={(event) => {
-                          setQuestionTouched(true);
                           setQuestion(event.target.value);
                         }}
                         maxLength={1000}
-                        rows={5}
-                        placeholder={t("tarot.intake.questionPlaceholder")}
-                        className="hint-ritual-input w-full resize-none rounded-[8px] border bg-transparent px-4 py-3 pr-14 font-sans text-[16px] leading-7 outline-none"
+                        rows={4}
+                        placeholder="Ask about a person, a decision, a feeling, or something you can't stop thinking about."
+                        className="hint-ritual-input w-full resize-none rounded-[8px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none"
                         style={{
                           color: IVORY.strong,
                           borderColor: question.trim()
@@ -859,20 +792,73 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                   </div>
 
                   <div className="space-y-3">
-                    <FieldLabel>{t("tarot.intake.suggestions")}</FieldLabel>
-                    <div className="flex flex-col gap-2">
-                      {suggestions.map((item) => (
+                    <FieldLabel>Where should we focus?</FieldLabel>
+                    <div className="grid grid-cols-2 gap-2">
+                      {TERRITORIES.map((item) => (
                         <Chip
-                          key={item}
-                          selected={question.trim() === item}
-                          onClick={() => {
-                            setQuestionTouched(true);
-                            setQuestion(item);
-                          }}
+                          key={item.id}
+                          selected={focus.id === item.id}
+                          onClick={() => updateFocus(item)}
                         >
-                          {item}
+                          {t(`territory.${item.id}.label`)}
                         </Chip>
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <FieldLabel>The question we'll read</FieldLabel>
+                    <p className="font-sans text-[12px] leading-relaxed" style={{ color: IVORY.mute }}>
+                      I'll keep the reading centered on this. You can edit it before we draw.
+                    </p>
+                    <div className="relative">
+                      <textarea
+                        value={question}
+                        onChange={(event) => {
+                          setQuestion(event.target.value);
+                        }}
+                        maxLength={1000}
+                        rows={3}
+                        placeholder={t("tarot.intake.questionPlaceholder")}
+                        className="hint-ritual-input w-full resize-none rounded-[8px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none"
+                        style={{
+                          color: IVORY.strong,
+                          borderColor: question.trim()
+                            ? "rgba(228,198,138,0.34)"
+                            : "var(--hint-border)",
+                          background: "var(--hint-input-bg)",
+                          textShadow: TEXT_HALO.soft,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <FieldLabel>Add context if it matters</FieldLabel>
+                    <div className="relative">
+                      <textarea
+                        value={context}
+                        onChange={(event) => setContext(event.target.value)}
+                        maxLength={1600}
+                        rows={3}
+                        placeholder="One or two details are enough. You can also leave this blank and tell me after the cards reveal."
+                        className="hint-ritual-input w-full resize-none rounded-[8px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none"
+                        style={{
+                          color: IVORY.strong,
+                          borderColor: "var(--hint-border)",
+                          background: "var(--hint-input-bg)",
+                          textShadow: TEXT_HALO.soft,
+                        }}
+                      />
+                      <VoiceButton
+                        active={listeningField === "context"}
+                        onClick={() => toggleDictation("context")}
+                        label={
+                          listeningField === "context"
+                            ? t("tarot.voice.stop")
+                            : t("tarot.voice.start")
+                        }
+                      />
                     </div>
                   </div>
                 </motion.div>
@@ -1276,9 +1262,9 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
             ) : (
               <PrimaryButton
                 onClick={goNext}
-                disabled={(panel === "question" && !question.trim()) || submitted}
+                disabled={!question.trim() || submitted}
               >
-                {t("common.next")}
+                Begin the reading
                 <ChevronRight size={14} />
               </PrimaryButton>
             )}

@@ -75,7 +75,7 @@ function MiniDailyCard({ card }: { card: DailyPull }) {
   const { t } = useLanguage();
 
   return (
-    <Link href="/daily-pull" className="group block">
+    <Link href="/app/daily" className="group block">
       <div
         className="relative grid grid-cols-[74px_1fr] items-center gap-3 rounded-[12px] border p-3 sm:grid-cols-[72px_1fr_auto] sm:gap-4"
         style={{
@@ -302,7 +302,7 @@ export function DailyReportCard({
             </h2>
           </div>
           <Link
-            href="/daily-pull"
+            href="/app/daily"
             className="hidden h-9 shrink-0 items-center gap-1 rounded-full border px-3 font-sans text-[10px] uppercase tracking-[0.16em] lg:inline-flex"
             style={{
               color: "var(--hint-muted)",
