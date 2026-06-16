@@ -62,6 +62,8 @@ function App() {
               <Route path="/" component={ProductRouteBoundary} />
               <Route path="/app/tarot" component={ProductRouteBoundary} />
               <Route path="/app/tarot/:rest*" component={ProductRouteBoundary} />
+              <Route path="/app/animal-tarot" component={ProductRouteBoundary} />
+              <Route path="/app/animal-tarot/:rest*" component={ProductRouteBoundary} />
               <Route path="/app" component={AppAliasRedirect} />
               <Route path="/app/:rest*" component={AppAliasRedirect} />
               <Route path="/privacy" component={PrivacyPolicyView} />

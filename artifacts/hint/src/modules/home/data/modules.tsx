@@ -128,7 +128,7 @@ export const HOME_MODULES: ModuleDefinition[] = [
     id: "animal-tarot",
     title: "Animal Tarot",
     hint: "A gentler pull through instinct and symbols.",
-    href: "/animal-tarot",
+    href: "/app/animal-tarot",
     sigil: DailyPullSigil,
     section: "tarot",
   },

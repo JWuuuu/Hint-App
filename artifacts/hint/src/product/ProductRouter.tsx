@@ -13,7 +13,7 @@ import {
   JournalView,
 } from "../modules/features";
 import { RedirectTo } from "../shared/navigation/RedirectTo";
-import { AnimalTarotView } from "./animal/AnimalTarotView";
+import { AnimalTarotView } from "./animal-tarot/AnimalTarotView";
 import { CardCollectionView } from "./collection/CardCollectionView";
 import { SettingsView } from "./settings/SettingsView";
 import { SkyDeckView } from "./skydeck/SkyDeckView";
@@ -28,6 +28,15 @@ function LegacyTarotRedirect() {
   return <RedirectTo to={legacyTarotTarget()} />;
 }
 
+function legacyAnimalTarotTarget() {
+  if (typeof window === "undefined") return "/app/animal-tarot";
+  return `/app/animal-tarot${window.location.search}${window.location.hash}`;
+}
+
+function LegacyAnimalTarotRedirect() {
+  return <RedirectTo to={legacyAnimalTarotTarget()} />;
+}
+
 export function ProductRouter() {
   return (
     <Switch>
@@ -40,7 +49,10 @@ export function ProductRouter() {
       <Route path="/app/tarot/:rest*" component={TarotRoomApp} />
       <Route path="/tarot" component={LegacyTarotRedirect} />
       <Route path="/tarot/:rest*" component={LegacyTarotRedirect} />
-      <Route path="/animal-tarot" component={AnimalTarotView} />
+      <Route path="/app/animal-tarot" component={AnimalTarotView} />
+      <Route path="/app/animal-tarot/:rest*" component={AnimalTarotView} />
+      <Route path="/animal-tarot" component={LegacyAnimalTarotRedirect} />
+      <Route path="/animal-tarot/:rest*" component={LegacyAnimalTarotRedirect} />
       <Route path="/sky-deck" component={SkyDeckView} />
       <Route path="/astrology" component={AstrologyView} />
       <Route path="/collection" component={CardCollectionView} />
