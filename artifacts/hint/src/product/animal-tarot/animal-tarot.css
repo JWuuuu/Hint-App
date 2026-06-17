@@ -1,14 +1,16 @@
 .animal-tarot-hero {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--hint-border, rgba(255, 255, 255, 0.12));
+  border: 1px solid var(--hint-liquid-border, rgba(255, 255, 255, 0.18));
   border-radius: 24px;
   padding: 22px;
   background:
-    radial-gradient(circle at 18% 20%, rgba(139, 222, 214, 0.16), transparent 28%),
-    radial-gradient(circle at 82% 12%, rgba(206, 178, 110, 0.18), transparent 24%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03));
-  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--hint-aqua, #9dded9) 18%, transparent), transparent 30%),
+    radial-gradient(circle at 82% 12%, color-mix(in srgb, var(--hint-rose, #f0b6cf) 18%, transparent), transparent 28%),
+    var(--hint-liquid-panel);
+  box-shadow: var(--hint-liquid-shadow);
+  backdrop-filter: blur(28px) saturate(1.22);
+  -webkit-backdrop-filter: blur(28px) saturate(1.22);
 }
 
 .animal-hero-orbit {
@@ -17,11 +19,11 @@
   top: -86px;
   width: 250px;
   height: 250px;
-  border: 1px solid rgba(206, 178, 110, 0.16);
+  border: 1px solid color-mix(in srgb, var(--hint-gold, #dcc383) 20%, transparent);
   border-radius: 999px;
   box-shadow:
-    0 0 42px rgba(139, 222, 214, 0.08),
-    inset 0 0 42px rgba(206, 178, 110, 0.06);
+    0 0 42px color-mix(in srgb, var(--hint-aqua, #9dded9) 12%, transparent),
+    inset 0 0 42px color-mix(in srgb, var(--hint-rose, #f0b6cf) 9%, transparent);
 }
 
 .animal-hero-orbit::before,
@@ -46,9 +48,9 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 26%, rgba(139, 222, 214, 0.16), transparent 24%),
-    radial-gradient(circle at 54% 50%, rgba(206, 178, 110, 0.12), transparent 36%),
-    linear-gradient(180deg, rgba(7, 11, 23, 0.08), rgba(5, 7, 14, 0.42));
+    radial-gradient(circle at 50% 26%, color-mix(in srgb, var(--hint-aqua, #9dded9) 16%, transparent), transparent 24%),
+    radial-gradient(circle at 54% 50%, color-mix(in srgb, var(--hint-rose, #f0b6cf) 13%, transparent), transparent 36%),
+    linear-gradient(180deg, color-mix(in srgb, var(--hint-surface-soft) 16%, transparent), color-mix(in srgb, var(--hint-plum, #271d38) 16%, transparent));
   pointer-events: none;
 }
 
@@ -149,11 +151,11 @@
 
 .animal-card-back {
   place-items: center;
-  color: rgba(232, 204, 150, 0.92);
+  color: var(--hint-gold, #dcc383);
   background:
-    radial-gradient(circle at 50% 36%, rgba(139, 222, 214, 0.14), transparent 22%),
-    radial-gradient(circle at 50% 50%, rgba(206, 178, 110, 0.12), transparent 42%),
-    linear-gradient(160deg, #0a1020, #050711 62%, #03040b);
+    radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--hint-aqua, #9dded9) 18%, transparent), transparent 24%),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--hint-rose, #f0b6cf) 13%, transparent), transparent 44%),
+    var(--hint-deck-card-bg);
 }
 
 .animal-card-back span {
@@ -189,7 +191,7 @@
 
 .animal-card-front {
   transform: rotateY(180deg);
-  background: #050711;
+  background: var(--hint-deck-card-bg);
 }
 
 .animal-spirit-card.is-revealed .animal-card-back {
@@ -228,8 +230,8 @@
   place-items: center;
   border: 1px solid;
   border-radius: 999px;
-  background: rgba(5, 7, 17, 0.62);
-  box-shadow: 0 0 28px rgba(0, 0, 0, 0.28), inset 0 0 18px rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--hint-surface-strong) 78%, transparent);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--hint-rose, #f0b6cf) 16%, transparent), inset 0 0 18px rgba(255, 255, 255, 0.08);
   transform: translate(-50%, -50%);
 }
 
@@ -281,11 +283,11 @@
 }
 
 .animal-primary-button {
-  border: 0;
+  border: 1px solid var(--hint-special-action-border);
   padding: 0 20px;
-  color: #fffaf2;
-  background: linear-gradient(135deg, #f1a66b, #d9bc73);
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24), 0 0 26px rgba(241, 166, 107, 0.16);
+  color: var(--hint-special-action-text);
+  background: var(--hint-special-action-bg);
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--hint-rose, #f0b6cf) 16%, transparent), inset 0 1px 0 rgba(255,255,255,0.48);
 }
 
 .animal-primary-button:not(:disabled):hover,
@@ -302,7 +304,7 @@
   border: 1px solid var(--hint-border, rgba(255, 255, 255, 0.12));
   padding: 0 18px;
   color: var(--hint-text, rgba(246, 248, 252, 0.95));
-  background: rgba(255, 255, 255, 0.045);
+  background: color-mix(in srgb, var(--hint-surface-soft) 78%, transparent);
 }
 
 .animal-action-card {
@@ -311,12 +313,14 @@
   border-radius: 18px;
   padding: 0 16px;
   color: var(--hint-text, rgba(246, 248, 252, 0.95));
-  background: rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: var(--hint-liquid-panel);
+  box-shadow: var(--hint-liquid-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .animal-action-card svg {
-  color: #c4a962;
+  color: var(--hint-gold, #dcc383);
 }
 
 @keyframes animal-card-idle {

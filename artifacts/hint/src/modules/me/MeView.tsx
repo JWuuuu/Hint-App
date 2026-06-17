@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Settings } from "lucide-react";
+import { BookOpen, CalendarDays, HelpCircle, Settings, Sparkles } from "lucide-react";
 import { ACCENT, GLASS } from "../hold/atmosphere";
 import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
 import { useGetUserStats } from "@workspace/api-client-react";
@@ -29,6 +29,86 @@ import {
   listLocalTarotReadings,
   subscribeToLocalTarotReadings,
 } from "../readings/localTarotReadings";
+
+function StatusPill({
+  icon: Icon,
+  value,
+  label,
+  tone,
+}: {
+  icon: typeof Sparkles;
+  value: string | number;
+  label: string;
+  tone: string;
+}) {
+  return (
+    <div
+      className="hint-card-lift min-w-0 rounded-[18px] border px-3 py-3"
+      style={{
+        background: "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)",
+        borderColor: "var(--hint-border)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className="grid size-8 shrink-0 place-items-center rounded-full border"
+          style={{
+            color: tone,
+            background: `color-mix(in srgb, ${tone} 12%, var(--hint-surface-soft))`,
+            borderColor: `color-mix(in srgb, ${tone} 28%, var(--hint-border))`,
+          }}
+        >
+          <Icon size={15} />
+        </span>
+        <div className="min-w-0">
+          <p className="font-serif text-[22px] leading-none tabular-nums" style={{ color: "var(--hint-text)" }}>
+            {value}
+          </p>
+          <p className="mt-1 truncate font-sans text-[10px] font-black uppercase tracking-[0.08em]" style={{ color: "var(--hint-muted)" }}>
+            {label}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileStatusPanel({
+  localReadingCount,
+  localPullCount,
+  localQuestionCount,
+  hasBirthDetails,
+}: {
+  localReadingCount: number;
+  localPullCount: number;
+  localQuestionCount: number;
+  hasBirthDetails: boolean;
+}) {
+  return (
+    <GlassPanel className="hint-shimmer-border">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <SectionLabel>Status</SectionLabel>
+          <h2 className="mt-2 font-serif text-[26px] leading-none" style={{ color: "var(--hint-text)" }}>
+            Your Hint memory
+          </h2>
+        </div>
+        <span
+          className="hint-status-pill rounded-full border px-3 py-1.5 font-sans text-[10px] font-black uppercase tracking-[0.12em]"
+          style={{ color: hasBirthDetails ? "var(--hint-gold)" : "var(--hint-muted)" }}
+        >
+          {hasBirthDetails ? "Personalized" : "Birth details needed"}
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <StatusPill icon={BookOpen} value={localReadingCount} label="Readings" tone="#d98aaa" />
+        <StatusPill icon={CalendarDays} value={localPullCount} label="Daily" tone="#cda866" />
+        <StatusPill icon={HelpCircle} value={localQuestionCount} label="Questions" tone="#9b98c9" />
+      </div>
+    </GlassPanel>
+  );
+}
 
 /**
  * MeView — the user's personal Hint account hub: profile, membership,
@@ -124,17 +204,23 @@ export function MeView() {
         </section>
       ) : (
         <div className="flex flex-col gap-8">
+          <ProfileStatusPanel
+            localReadingCount={localReadingCount}
+            localPullCount={localDailyCount}
+            localQuestionCount={localQuestionCount}
+            hasBirthDetails={Boolean(profile?.birthDate)}
+          />
           <ProfileCard profile={profile} stats={stats} onEdit={() => setEditing(true)} />
-          <TrustCard />
-          <MembershipCard />
-          <BalanceGrid />
-          <ProfileBanner />
           <RecordsGrid
             stats={stats}
             localReadingCount={localReadingCount}
             localPullCount={localDailyCount}
             localQuestionCount={localQuestionCount}
           />
+          <BalanceGrid />
+          <ProfileBanner />
+          <TrustCard />
+          <MembershipCard />
           <MoreGrid />
           <div id="me-settings" className="scroll-mt-6">
             <SettingsList />

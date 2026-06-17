@@ -46,7 +46,7 @@ type AnimalSpirit = {
 
 type DrawPhase = "loading" | "intro" | "revealing" | "revealed";
 
-const EMBER = "#f1a66b";
+const EMBER = "var(--hint-rose, #f0b6cf)";
 
 const ANIMAL_SPIRITS: AnimalSpirit[] = [
   {
@@ -212,7 +212,7 @@ function ReadingBlock({
   children: string;
 }) {
   return (
-    <div className="rounded-[16px] border px-4 py-3" style={{ borderColor: GLASS.border, background: "rgba(255,255,255,0.035)" }}>
+    <div className="hint-app-card rounded-[16px] border px-4 py-3" style={{ borderColor: GLASS.border }}>
       <p className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: GLASS.faint }}>
         {label}
       </p>
@@ -315,7 +315,7 @@ export function AnimalTarotView() {
               <span
                 key={item}
                 className="rounded-full border px-3 py-1.5 font-sans text-[10px] font-black uppercase tracking-[0.14em]"
-                style={{ color: GLASS.text, borderColor: GLASS.border, background: "rgba(255,255,255,0.04)" }}
+                style={{ color: GLASS.text, borderColor: GLASS.border, background: "color-mix(in srgb, var(--hint-surface-soft) 78%, transparent)" }}
               >
                 {item}
               </span>
@@ -326,7 +326,7 @@ export function AnimalTarotView() {
 
       <GlassPanel hero className="animal-tarot-stage" padded={false}>
         <div className="animal-stage-sky" aria-hidden />
-        <div className="relative z-10 grid gap-7 p-5 sm:p-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:p-7">
+        <div className="relative z-10 grid gap-6 p-5 sm:p-6">
           <div className="animal-card-stage">
             {(revealing || revealed) && <div className="animal-burst-rings" aria-hidden />}
             <SpiritCard animal={animal} cardImage={companion.image} revealed={revealed || revealing} />
@@ -369,7 +369,7 @@ export function AnimalTarotView() {
                     ["2", "Draw one animal"],
                     ["3", "Use the prompt today"],
                   ].map(([step, copy]) => (
-                    <div key={step} className="rounded-[16px] border px-3 py-3" style={{ borderColor: GLASS.border, background: "rgba(255,255,255,0.035)" }}>
+                    <div key={step} className="hint-card-lift rounded-[16px] border px-3 py-3" style={{ borderColor: GLASS.border, background: "color-mix(in srgb, var(--hint-surface-soft) 76%, transparent)" }}>
                       <span className="font-serif text-[22px]" style={{ color: ACCENT.gold }}>{step}</span>
                       <p className="mt-1 font-sans text-[11px] leading-snug" style={{ color: GLASS.muted }}>{copy}</p>
                     </div>
@@ -416,30 +416,30 @@ export function AnimalTarotView() {
 
             <div className="mt-6 flex flex-wrap gap-3">
               {!loading && !revealing && !revealed && (
-                <button type="button" onClick={drawAnimal} className="animal-primary-button" disabled={!receipt}>
+                <button type="button" onClick={drawAnimal} className="animal-primary-button hint-tap-sparkle" disabled={!receipt}>
                   <Sparkles size={16} />
                   Draw animal card
                 </button>
               )}
               {loading && (
-                <button type="button" className="animal-primary-button is-loading" disabled>
+                <button type="button" className="animal-primary-button hint-tap-sparkle is-loading" disabled>
                   <Moon size={16} />
                   Loading lock
                 </button>
               )}
               {revealing && (
-                <button type="button" className="animal-primary-button is-loading" disabled>
+                <button type="button" className="animal-primary-button hint-tap-sparkle is-loading" disabled>
                   <Moon size={16} />
                   Revealing
                 </button>
               )}
               {revealed && (
                 <>
-                  <button type="button" onClick={saveToCollection} className="animal-primary-button">
+                  <button type="button" onClick={saveToCollection} className="animal-primary-button hint-tap-sparkle">
                     {saved ? <Check size={16} /> : <Bookmark size={16} />}
                     {saved ? "Saved locally" : "Save to Collection"}
                   </button>
-                  <button type="button" onClick={canReplay ? replayReveal : drawAnimal} className="animal-secondary-button">
+                  <button type="button" onClick={canReplay ? replayReveal : drawAnimal} className="animal-secondary-button hint-tap-sparkle">
                     <RefreshCcw size={15} />
                     Replay reveal
                   </button>
@@ -450,20 +450,20 @@ export function AnimalTarotView() {
         </div>
       </GlassPanel>
 
-      <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Link href="/app/tarot" className="animal-action-card">
+      <section className="mt-6 grid gap-3 sm:grid-cols-2">
+        <Link href="/app/tarot" className="animal-action-card hint-tap-sparkle hint-card-lift">
           <Sparkles size={17} />
           <span>Draw in Tarot Room</span>
         </Link>
-        <Link href="/app/sky-deck" className="animal-action-card">
+        <Link href="/app/sky-deck" className="animal-action-card hint-tap-sparkle hint-card-lift">
           <Moon size={17} />
           <span>Open Sky Deck</span>
         </Link>
-        <Link href="/app/collection" className="animal-action-card">
+        <Link href="/app/collection" className="animal-action-card hint-tap-sparkle hint-card-lift">
           <Bookmark size={17} />
           <span>Open Collection</span>
         </Link>
-        <Link href="/app/ask" className="animal-action-card">
+        <Link href="/app/ask" className="animal-action-card hint-tap-sparkle hint-card-lift">
           <MessageCircle size={17} />
           <span>Ask Hint</span>
         </Link>

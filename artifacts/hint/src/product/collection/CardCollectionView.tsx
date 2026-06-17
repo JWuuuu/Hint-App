@@ -16,11 +16,84 @@ import {
 } from "../../shared/tarot/cardCollection";
 import { RareCardUnlock } from "./RareCardUnlock";
 
-const EMBER = "#f1a66b";
-
 function formatDate(iso?: string) {
   if (!iso) return "Locked";
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function CollectionCardTile({
+  card,
+  compact = false,
+  rewardPending = false,
+}: {
+  card: { image: string | null; name: string; unlocked: boolean; rare: boolean };
+  compact?: boolean;
+  rewardPending?: boolean;
+}) {
+  const showArtwork = Boolean(card.image);
+
+  return (
+    <div
+      className="hint-card-lift relative h-full w-full overflow-hidden rounded-[14px] border"
+      style={{
+        borderColor: card.unlocked
+          ? "color-mix(in srgb, var(--hint-gold, #cba866) 36%, var(--hint-border))"
+          : card.rare
+            ? "color-mix(in srgb, var(--hint-gold, #cba866) 24%, var(--hint-border))"
+            : GLASS.border,
+        background: card.unlocked
+          ? "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)"
+          : "var(--hint-deck-card-bg)",
+        boxShadow: card.unlocked || rewardPending
+          ? "0 14px 34px rgba(75,52,92,0.14), inset 0 1px 0 rgba(255,255,255,0.14)"
+          : "inset 0 0 28px color-mix(in srgb, var(--hint-gold, #cba866) 7%, transparent)",
+      }}
+    >
+      {showArtwork ? (
+        <SafeImage
+          src={card.image}
+          alt={card.name}
+          loading={compact ? "lazy" : "eager"}
+          className={[
+            "h-full w-full object-cover transition duration-500",
+            card.unlocked ? "opacity-100" : "scale-[1.04] opacity-[0.38] blur-[1.4px] saturate-[0.65]",
+          ].join(" ")}
+          fallbackClassName="h-full w-full rounded-[8px]"
+          fallbackLabel="Card"
+        />
+      ) : (
+        <div
+          className="h-full w-full"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 26%, color-mix(in srgb, var(--hint-gold, #cba866) 18%, transparent), transparent 34%), var(--hint-deck-card-bg)",
+          }}
+        />
+      )}
+
+      {!card.unlocked ? (
+        <div
+          className="absolute inset-0 grid place-items-center"
+          style={{
+            background:
+              "linear-gradient(180deg, color-mix(in srgb, var(--hint-surface) 8%, transparent), color-mix(in srgb, var(--hint-deck-card-bg) 58%, transparent)), radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--hint-gold, #cba866) 12%, transparent), transparent 58%)",
+          }}
+        >
+          <span
+            className="grid size-8 place-items-center rounded-full border backdrop-blur-md"
+            style={{
+              borderColor: card.rare ? "color-mix(in srgb, var(--hint-gold, #cba866) 46%, var(--hint-border))" : "var(--hint-border)",
+              color: card.rare ? ACCENT.gold : GLASS.faint,
+              background: "color-mix(in srgb, var(--hint-surface) 58%, transparent)",
+              boxShadow: card.rare ? "0 0 24px color-mix(in srgb, var(--hint-gold, #cba866) 16%, transparent)" : "none",
+            }}
+          >
+            <Lock size={compact ? 13 : 15} />
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function CardCollectionView() {
@@ -86,47 +159,12 @@ export function CardCollectionView() {
         </div>
         <Link
           href="/app/tarot"
-          className="inline-flex h-11 w-fit items-center justify-center rounded-full px-5 font-sans text-[13px] font-black"
-          style={{ color: "#fffaf2", background: EMBER }}
+          className="hint-soft-button hint-tap-sparkle inline-flex h-11 w-fit items-center justify-center rounded-full px-5 font-sans text-[13px] font-black"
+          style={{ color: "var(--hint-special-action-text)" }}
         >
           Draw in Tarot Room
         </Link>
       </header>
-
-      <GlassPanel className="mb-7">
-        <div className="grid gap-5 md:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <SectionLabel>Progress</SectionLabel>
-                <p className="mt-2 font-serif text-[42px] leading-none" style={{ color: GLASS.text }}>
-                  {collection.unlocked}
-                  <span className="text-[22px]" style={{ color: GLASS.faint }}> / {collection.total}</span>
-                </p>
-              </div>
-              <span className="rounded-full border px-3 py-1.5 font-sans text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: ACCENT.aqua, borderColor: "rgba(134,214,199,0.34)", background: "rgba(134,214,199,0.09)" }}>
-                {collection.rareUnlocked} rare
-              </span>
-            </div>
-            <div className="mt-5 h-2 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
-              <div className="h-full rounded-full" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${ACCENT.gold}, ${EMBER})` }} />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 md:grid-cols-3">
-            {(collection.recent.length ? collection.recent : collection.cards.slice(0, 6)).map((card) => (
-              <div key={card.cardId} className="relative aspect-[46/71] overflow-hidden rounded-[8px] border" style={{ borderColor: card.unlocked ? "rgba(206,178,110,0.32)" : GLASS.border, background: "rgba(255,255,255,0.04)" }}>
-                {card.unlocked && card.image ? (
-                  <SafeImage src={card.image} alt={card.name} className="h-full w-full object-cover" fallbackClassName="h-full w-full rounded-[8px]" fallbackLabel="Card" />
-                ) : (
-                  <div className="grid h-full place-items-center">
-                    <Lock size={16} color={GLASS.faint} />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </GlassPanel>
 
       <RareCardUnlock
         key={`${selectedRareCard.cardId}-${rareCardClickKey}`}
@@ -141,16 +179,45 @@ export function CardCollectionView() {
         }
       />
 
+      <GlassPanel className="mb-7 mt-8 hint-shimmer-border">
+        <div className="grid gap-5">
+          <div>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <SectionLabel>Progress</SectionLabel>
+                <p className="mt-2 font-serif text-[42px] leading-none" style={{ color: GLASS.text }}>
+                  {collection.unlocked}
+                  <span className="text-[22px]" style={{ color: GLASS.faint }}> / {collection.total}</span>
+                </p>
+              </div>
+              <span className="hint-status-pill rounded-full border px-3 py-1.5 font-sans text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: ACCENT.aqua }}>
+                {collection.rareUnlocked} rare
+              </span>
+            </div>
+            <div className="mt-5 h-2 overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--hint-border) 64%, transparent)" }}>
+              <div className="h-full rounded-full" style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${ACCENT.gold}, var(--hint-rose, #cba6c4), ${ACCENT.aqua})` }} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {(collection.recent.length ? collection.recent : collection.cards.slice(0, 6)).map((card) => (
+              <div key={card.cardId} className="relative aspect-[46/71]">
+                <CollectionCardTile card={card} compact rewardPending={card.cardId === rewardCardId && !rewardOpened} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </GlassPanel>
+
       <section className="mt-8">
         <SectionLabel>All cards</SectionLabel>
-        <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+        <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
           {collection.cards.map((card) => (
             <article key={card.cardId} className="min-w-0">
               <button
                 type="button"
                 disabled={!card.rare || (!card.unlocked && card.cardId !== rewardCardId)}
                 onClick={() => selectRareCard(card.cardId)}
-                className="block w-full text-left disabled:cursor-default disabled:opacity-70"
+                className="hint-tap-sparkle block w-full rounded-[14px] text-left disabled:cursor-default disabled:opacity-70"
                 aria-label={
                   card.rare
                     ? card.cardId === rewardCardId
@@ -161,26 +228,20 @@ export function CardCollectionView() {
                     : card.name
                 }
               >
-                <div className="relative aspect-[46/71] overflow-hidden rounded-[8px] border transition-transform enabled:hover:-translate-y-0.5" style={{ borderColor: card.unlocked ? "rgba(206,178,110,0.32)" : GLASS.border, background: card.unlocked ? "rgba(0,0,0,0.18)" : "rgba(255,255,255,0.035)" }}>
-                {card.unlocked && card.image ? (
-                  <SafeImage src={card.image} alt={card.name} className="h-full w-full object-cover" fallbackClassName="h-full w-full rounded-[8px]" fallbackLabel="Card" />
-                ) : (
-                  <div className="grid h-full place-items-center">
-                    <Lock size={15} color={GLASS.faint} />
-                  </div>
-                )}
+                <div className="relative aspect-[46/71] transition-transform enabled:hover:-translate-y-0.5">
+                <CollectionCardTile card={card} rewardPending={card.cardId === rewardCardId && !rewardOpened} />
                 {card.rare && card.unlocked ? (
-                  <span className="absolute left-1.5 top-1.5 grid size-6 place-items-center rounded-full" style={{ background: "rgba(230,203,142,0.92)", color: "#17110e" }}>
+                  <span className="absolute left-1.5 top-1.5 grid size-6 place-items-center rounded-full" style={{ background: "var(--hint-special-action-bg)", color: "var(--hint-special-action-text)" }}>
                     <Sparkles size={12} />
                   </span>
                 ) : null}
                 {card.rare && !card.unlocked ? (
-                  <span className="absolute left-1.5 top-1.5 grid size-6 place-items-center rounded-full border" style={{ borderColor: "rgba(230,203,142,0.45)", color: ACCENT.gold, background: "rgba(0,0,0,0.22)" }}>
+                  <span className="absolute left-1.5 top-1.5 grid size-6 place-items-center rounded-full border" style={{ borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 45%, var(--hint-border))", color: ACCENT.gold, background: "color-mix(in srgb, var(--hint-surface) 62%, transparent)" }}>
                     <Sparkles size={12} />
                   </span>
                 ) : null}
                 {card.cardId === rewardCardId && !rewardOpened ? (
-                  <span className="absolute bottom-1.5 left-1.5 right-1.5 truncate rounded-full px-1.5 py-1 text-center font-sans text-[8px] font-black uppercase tracking-[0.08em]" style={{ background: "rgba(230,203,142,0.92)", color: "#17110e" }}>
+                  <span className="absolute bottom-1.5 left-1.5 right-1.5 truncate rounded-full px-1.5 py-1 text-center font-sans text-[8px] font-black uppercase tracking-[0.08em]" style={{ background: "var(--hint-special-action-bg)", color: "var(--hint-special-action-text)" }}>
                     Today
                   </span>
                 ) : null}

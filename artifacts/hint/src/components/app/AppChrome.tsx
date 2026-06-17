@@ -14,10 +14,10 @@ import { useLanguage } from "../../lib/i18n";
 export function AppScreen({ children }: { children: ReactNode }) {
   return (
     <div
-      className="h-full w-full overflow-y-auto overscroll-none flex flex-col items-center pb-[calc(4rem+var(--hint-safe-bottom))]"
+      className="h-full w-full overflow-y-auto overscroll-none flex flex-col items-center pb-[calc(7.5rem+var(--hint-safe-bottom))] scroll-pt-[calc(8rem+var(--hint-safe-top))]"
       style={{ background: "transparent" }}
     >
-      <div className="w-full max-w-lg md:max-w-3xl lg:max-w-5xl px-4 pt-[calc(8rem+var(--hint-safe-top))] sm:px-6 md:pt-[calc(8rem+var(--hint-safe-top))] lg:pt-[calc(7rem+var(--hint-safe-top))]">
+      <div className="w-full max-w-[430px] px-4 pt-[calc(7.25rem+var(--hint-safe-top))] sm:px-4">
         {children}
       </div>
     </div>
@@ -25,7 +25,7 @@ export function AppScreen({ children }: { children: ReactNode }) {
 }
 
 export function BackLink({
-  href = "/",
+  href = "/app",
   label,
 }: {
   href?: string;
@@ -36,8 +36,8 @@ export function BackLink({
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1 font-sans text-[12px] font-medium transition-opacity opacity-80 hover:opacity-100"
-      style={{ color: ACCENT.aqua }}
+      className="hint-tap-sparkle inline-flex items-center gap-1 rounded-full px-2 py-1 font-sans text-[12px] font-bold transition-opacity opacity-80 hover:opacity-100"
+      style={{ color: ACCENT.aqua, background: "color-mix(in srgb, var(--hint-surface-soft) 56%, transparent)" }}
     >
       ← {label ?? t("common.home")}
     </Link>
@@ -64,20 +64,18 @@ export function ScreenHeader({
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: "easeOut" }}
-      className="mb-9"
+      className="mb-6"
     >
-      <div className="mb-6">
+      <div className="mb-4">
         <BackLink href={backHref} label={backLabel} />
       </div>
       <div className="flex items-center gap-4">
         {Sigil && (
           <div
-            className="w-12 h-12 rounded-[8px] flex items-center justify-center shrink-0"
+            className="hint-app-card hint-shimmer-border w-12 h-12 rounded-[18px] flex items-center justify-center shrink-0"
             style={{
-              background:
-                "linear-gradient(145deg, rgba(206,178,110,0.14), rgba(100,156,158,0.08))",
-              border: "1px solid var(--hint-border)",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+              background: "var(--hint-liquid-panel)",
+              border: "1px solid var(--hint-liquid-border)",
             }}
           >
             <div className="w-6 h-6">
@@ -88,14 +86,14 @@ export function ScreenHeader({
         <div className="min-w-0">
           {eyebrow && (
             <p
-              className="font-sans text-[11px] font-medium uppercase tracking-[0.14em] mb-1.5"
-              style={{ color: ACCENT.aqua }}
+            className="font-sans text-[10px] font-black uppercase tracking-[0.18em] mb-1.5"
+            style={{ color: ACCENT.aqua }}
             >
               {eyebrow}
             </p>
           )}
           <h1
-            className="font-serif text-[28px] leading-none font-normal"
+            className="font-serif text-[28px] leading-none font-normal hint-app-title"
             style={{ color: "var(--hint-text)" }}
           >
             {title}
@@ -104,7 +102,7 @@ export function ScreenHeader({
       </div>
       {subtitle && (
         <p
-          className="font-sans text-[13.5px] leading-relaxed mt-3 max-w-md"
+          className="font-sans text-[13px] leading-relaxed mt-3 max-w-md"
           style={{ color: "var(--hint-muted)" }}
         >
           {subtitle}
@@ -128,15 +126,15 @@ export function GlassPanel({
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-[24px] ${padded ? "p-5" : ""} ${className}`}
+      className={`hint-app-card hint-card-lift relative overflow-hidden rounded-[24px] ${padded ? "p-5" : ""} ${className}`}
       style={{
         background: hero
           ? "var(--hint-surface-strong)"
-          : "var(--hint-glass, rgba(255,255,255,0.045))",
+          : "var(--hint-liquid-panel)",
         backdropFilter: "blur(22px)",
         WebkitBackdropFilter: "blur(22px)",
-        border: "1px solid var(--hint-glass-line, rgba(255,255,255,0.10))",
-        boxShadow: "0 18px 52px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.08)",
+        border: "1px solid var(--hint-liquid-border)",
+        boxShadow: "var(--hint-liquid-shadow)",
       }}
     >
       <div
@@ -165,9 +163,9 @@ export function CardBack({
       className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-[12px] border ${compact ? "h-[66px] w-[46px]" : "h-[118px] w-[78px]"} ${className}`}
       style={{
         background: "var(--hint-deck-card-bg)",
-        borderColor: "rgba(203,168,102,0.28)",
+        borderColor: "color-mix(in srgb, var(--hint-gold, #dcc383) 34%, var(--hint-border))",
         boxShadow:
-          "0 10px 30px rgba(0,0,0,0.48), inset 0 0 24px rgba(203,168,102,0.07)",
+          "0 12px 32px rgba(31,22,40,0.22), inset 0 0 24px color-mix(in srgb, var(--hint-gold, #dcc383) 8%, transparent)",
       }}
     >
       <div
@@ -178,9 +176,9 @@ export function CardBack({
         className={`relative flex items-center justify-center rounded-full border ${compact ? "h-7 w-7" : "h-11 w-11"}`}
         style={{
           color: "var(--hint-gold)",
-          borderColor: "rgba(203,168,102,0.28)",
+          borderColor: "color-mix(in srgb, var(--hint-gold, #dcc383) 34%, var(--hint-border))",
           background:
-            "radial-gradient(circle, rgba(203,168,102,0.10), transparent 68%)",
+            "radial-gradient(circle, color-mix(in srgb, var(--hint-gold, #dcc383) 14%, transparent), transparent 68%)",
         }}
       >
         <span className="font-serif text-[18px] leading-none">✦</span>

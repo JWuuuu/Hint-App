@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Lock, Sparkles } from "lucide-react";
 import { ACCENT, GLASS } from "../../modules/hold/atmosphere";
 import type { CollectionCard } from "../../shared/tarot/cardCollection";
+import { SafeImage } from "../../shared/ui/SafeImage";
 import "./rare-card-unlock.css";
 
 const FALLBACK_IMAGE = "/brand/tarot/cards/19-TheSun.jpg";
@@ -28,7 +29,14 @@ function RareCardFront({
 }) {
   return (
     <div className={large ? "rare-card-front rare-card-front-large" : "rare-card-front"}>
-      <img src={image} alt={card.name} draggable={false} />
+      <SafeImage
+        src={image}
+        alt={card.name}
+        loading="eager"
+        className="h-full w-full object-cover"
+        fallbackClassName="h-full w-full rounded-[14px]"
+        fallbackLabel="Card"
+      />
       <span className="rare-badge">
         <Sparkles size={large ? 14 : 11} />
         Rare

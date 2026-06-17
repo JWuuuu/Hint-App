@@ -11,11 +11,11 @@ import type { HintLanguage } from "../../../lib/i18n";
 import { selectSkyGuidedTarot } from "../../../lib/tarot/skyGuidedTarot";
 
 const SCORE_BASE: Array<Omit<DailyScore, "score" | "label"> & { offset: number }> = [
-  { key: "love", tone: "#ef84bd", offset: 13 },
-  { key: "wealth", tone: "#e6bd63", offset: 29 },
-  { key: "career", tone: "#90a8ef", offset: 43 },
-  { key: "study", tone: "#60c8dc", offset: 61 },
-  { key: "people", tone: "#bf7de8", offset: 79 },
+  { key: "love", tone: "#d98aaa", offset: 13 },
+  { key: "wealth", tone: "#cda866", offset: 29 },
+  { key: "career", tone: "#9b98c9", offset: 43 },
+  { key: "study", tone: "#8ab9b2", offset: 61 },
+  { key: "people", tone: "#b48abf", offset: 79 },
 ];
 
 const SCORE_LABELS: Record<HintLanguage, Record<DailyScoreKey, string>> = {

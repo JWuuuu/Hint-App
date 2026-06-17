@@ -2,8 +2,6 @@ import { Link } from "wouter";
 import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
 import { ACCENT, GLASS } from "../../modules/hold/atmosphere";
 
-const EMBER = "#f1a66b";
-
 export function SettingsView() {
   return (
     <AppScreen>
@@ -18,16 +16,16 @@ export function SettingsView() {
           Profile, language, birth details, local records, membership, and token settings are grouped under the profile hub while dedicated payment systems are still placeholders.
         </p>
       </header>
-      <GlassPanel>
+      <GlassPanel className="hint-shimmer-border">
         <SectionLabel>Profile hub</SectionLabel>
         <p className="mt-3 max-w-lg font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>
           Use the profile page for the currently implemented settings and records. Membership and token actions should stay as clean placeholder states until payment logic is real.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/app/profile" className="inline-flex h-11 items-center rounded-full px-5 font-sans text-[13px] font-black" style={{ color: "#fffaf2", background: EMBER }}>
+          <Link href="/app/profile" className="hint-soft-button hint-tap-sparkle inline-flex h-11 items-center rounded-full px-5 font-sans text-[13px] font-black">
             Open profile
           </Link>
-          <Link href="/app/readings" className="inline-flex h-11 items-center rounded-full border px-5 font-sans text-[13px] font-black" style={{ color: GLASS.text, borderColor: GLASS.border }}>
+          <Link href="/app/readings" className="hint-ghost-button hint-tap-sparkle inline-flex h-11 items-center rounded-full border px-5 font-sans text-[13px] font-black">
             Saved readings
           </Link>
         </div>

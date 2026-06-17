@@ -125,10 +125,12 @@ function PresetButton({
     <button
       type="button"
       onClick={onClick}
-      className="min-h-[58px] rounded-[8px] border p-2 text-left transition-[border-color,background,box-shadow,filter,transform] duration-300"
+      className="min-h-[58px] rounded-[16px] border p-2 text-left transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
       style={{
         borderColor: selected ? GOLD.edge : "var(--hint-border)",
-        background: selected ? "rgba(228,198,138,0.13)" : "var(--hint-card-surface-muted)",
+        background: selected
+          ? "linear-gradient(135deg, color-mix(in srgb, var(--hint-gold, #cba866) 18%, transparent), color-mix(in srgb, var(--hint-aqua, #86d6c7) 8%, transparent))"
+          : "color-mix(in srgb, var(--hint-card-surface-muted) 86%, transparent)",
         boxShadow: selected ? "0 0 24px rgba(228,198,138,0.12)" : "none",
       }}
     >
@@ -167,15 +169,17 @@ function ChoiceButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[50px] items-center gap-2 rounded-[8px] border p-2 text-left transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:brightness-105 active:scale-[0.99]"
+      className="flex min-h-[50px] items-center gap-2 rounded-[16px] border p-2 text-left transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
       style={{
         borderColor: selected ? GOLD.edge : "var(--hint-border)",
-        background: selected ? "rgba(228,198,138,0.11)" : "var(--hint-card-surface-muted)",
+        background: selected
+          ? "linear-gradient(135deg, color-mix(in srgb, var(--hint-gold, #cba866) 16%, transparent), color-mix(in srgb, var(--hint-rose, #cba6c4) 8%, transparent))"
+          : "color-mix(in srgb, var(--hint-card-surface-muted) 86%, transparent)",
         boxShadow: selected ? "0 0 18px rgba(228,198,138,0.12)" : "none",
       }}
     >
       <span
-        className="h-7 w-7 shrink-0 rounded-[8px] border"
+        className="h-7 w-7 shrink-0 rounded-[10px] border"
         style={{
           background: preview,
           borderColor: selected ? "rgba(228,198,138,0.5)" : "var(--hint-border)",
@@ -218,11 +222,11 @@ function CardFaceButton({
     <button
       type="button"
       onClick={onClick}
-      className="grid min-h-[78px] grid-cols-[64px_1fr] gap-2.5 rounded-[8px] border p-2 text-left transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:brightness-105 active:scale-[0.99]"
+      className="grid min-h-[78px] grid-cols-[64px_1fr] gap-2.5 rounded-[18px] border p-2 text-left transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
       style={{
         borderColor: selected ? GOLD.edge : "var(--hint-border)",
         background: selected
-          ? "linear-gradient(135deg, rgba(228,198,138,0.14), rgba(255,255,255,0.05))"
+          ? "linear-gradient(135deg, color-mix(in srgb, var(--hint-gold, #cba866) 16%, transparent), color-mix(in srgb, var(--hint-aqua, #86d6c7) 8%, transparent))"
           : "var(--hint-card-surface-muted)",
         boxShadow: selected ? "0 0 22px rgba(228,198,138,0.14)" : "none",
       }}
@@ -231,11 +235,14 @@ function CardFaceButton({
         {images.map((image, index) => (
           <span
             key={image}
-            className="absolute top-0 block h-[60px] w-[38px] overflow-hidden rounded-[6px] border bg-black/30 shadow-[0_9px_18px_rgba(0,0,0,0.24)]"
+            className="absolute top-0 block h-[60px] w-[38px] overflow-hidden rounded-[9px] border shadow-[0_9px_18px_rgba(0,0,0,0.18)]"
             style={{
               left: `${index * 12}px`,
               transform: `rotate(${index === 0 ? -8 : index === 1 ? 0 : 8}deg)`,
-              borderColor: selected ? "rgba(228,198,138,0.58)" : "rgba(255,255,255,0.20)",
+              borderColor: selected
+                ? "color-mix(in srgb, var(--hint-gold, #cba866) 58%, var(--hint-liquid-border))"
+                : "color-mix(in srgb, var(--hint-liquid-border) 62%, transparent)",
+              background: "var(--hint-deck-card-bg)",
               zIndex: index + 1,
             }}
           >
@@ -281,11 +288,11 @@ function RoomLivePreview({
 }) {
   return (
     <aside
-      className="relative min-h-[230px] overflow-hidden rounded-[8px] border p-3 transition-[border-color,background,box-shadow] duration-300 sm:min-h-[258px] sm:p-3.5 min-[760px]:min-h-[282px]"
+      className="hint-liquid-panel relative min-h-[230px] overflow-hidden rounded-[24px] border p-3 transition-[border-color,background,box-shadow] duration-300 sm:min-h-[258px] sm:p-3.5"
       style={{
-        borderColor: "var(--hint-border-strong)",
-        background: "var(--hint-surface-strong)",
-        boxShadow: "var(--hint-elevated-shadow)",
+        borderColor: "var(--hint-liquid-border)",
+        background: "var(--hint-liquid-panel-strong)",
+        boxShadow: "var(--hint-liquid-shadow)",
       }}
     >
       <div
@@ -302,7 +309,7 @@ function RoomLivePreview({
           backdropFilter: "blur(10px)",
         }}
       />
-      <div className="relative z-10 flex h-full min-h-[204px] flex-col gap-3 sm:min-h-[230px] min-[760px]:min-h-[254px]">
+      <div className="relative z-10 flex h-full min-h-[204px] flex-col gap-3 sm:min-h-[230px]">
         <div className="min-w-0">
           <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: GOLD.ink }}>
             {previewLabel}
@@ -320,7 +327,7 @@ function RoomLivePreview({
         <div
           className="relative min-h-0 flex-1 rounded-[8px] border"
           style={{
-            borderColor: "var(--hint-border)",
+            borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 18%, var(--hint-border))",
             background:
               "radial-gradient(circle at 50% 58%, rgba(228,198,138,0.13), transparent 56%), var(--hint-card-inner)",
             boxShadow: "inset 0 0 0 1px var(--hint-border)",
@@ -330,11 +337,14 @@ function RoomLivePreview({
             ? cardPreviewImages.slice(0, 3).map((image, index) => (
                 <span
                   key={image}
-                  className="absolute bottom-2 left-1/2 block h-[126px] w-[78px] overflow-hidden rounded-[8px] border bg-black/20 shadow-[0_14px_24px_rgba(80,70,50,0.22)] transition-all duration-700 sm:h-[146px] sm:w-[90px] min-[760px]:h-[170px] min-[760px]:w-[106px]"
+                  className="absolute bottom-2 left-1/2 block h-[126px] w-[78px] overflow-hidden rounded-[14px] border shadow-[0_14px_24px_rgba(80,70,50,0.18)] transition-all duration-700 sm:h-[146px] sm:w-[90px]"
                   style={{
                     transform: `translateX(calc(-50% + ${(index - 1) * 72}px)) rotate(${index === 0 ? -9 : index === 1 ? 0 : 9}deg)`,
-                    borderColor: index === 0 ? "rgba(174,132,56,0.42)" : "rgba(255,255,255,0.68)",
+                    borderColor: index === 0
+                      ? "color-mix(in srgb, var(--hint-gold, #cba866) 42%, var(--hint-liquid-border))"
+                      : "color-mix(in srgb, var(--hint-liquid-border) 82%, transparent)",
                     zIndex: 4 - index,
+                    background: "var(--hint-deck-card-bg)",
                   }}
                 >
                   <img src={image} alt="" aria-hidden="true" className="h-full w-full object-cover" draggable={false} />
@@ -343,11 +353,13 @@ function RoomLivePreview({
             : [0, 1].map((index) => (
                 <span
                   key={index}
-                  className="absolute bottom-2 left-1/2 block h-[126px] w-[78px] rounded-[8px] border shadow-[0_14px_24px_rgba(80,70,50,0.22)] transition-all duration-700 sm:h-[146px] sm:w-[90px] min-[760px]:h-[170px] min-[760px]:w-[106px]"
+                  className="absolute bottom-2 left-1/2 block h-[126px] w-[78px] rounded-[14px] border shadow-[0_14px_24px_rgba(80,70,50,0.18)] transition-all duration-700 sm:h-[146px] sm:w-[90px]"
                   style={{
                     transform: `translateX(calc(-50% + ${(index - 0.5) * 76}px)) rotate(${index === 0 ? -7 : 7}deg)`,
                     background: deckPreview,
-                    borderColor: index === 0 ? "rgba(174,132,56,0.42)" : "rgba(255,255,255,0.68)",
+                    borderColor: index === 0
+                      ? "color-mix(in srgb, var(--hint-gold, #cba866) 42%, var(--hint-liquid-border))"
+                      : "color-mix(in srgb, var(--hint-liquid-border) 82%, transparent)",
                     zIndex: 3 - index,
                   }}
                 />
@@ -377,18 +389,18 @@ function ReadingShapeButton({
     <button
       type="button"
       onClick={onClick}
-      className="min-h-[78px] rounded-[8px] border p-2.5 text-left transition-all duration-500 hover:brightness-105 active:scale-[0.99]"
+      className="min-h-[78px] rounded-[18px] border p-2.5 text-left transition-all duration-500 hover:-translate-y-0.5 active:translate-y-0"
       style={{
         borderColor: selected ? "rgba(241, 205, 132, 0.78)" : "var(--hint-border)",
         background: selected
-          ? "linear-gradient(135deg, rgba(241,205,132,0.18), rgba(255,255,255,0.05))"
+          ? "linear-gradient(135deg, color-mix(in srgb, var(--hint-gold, #cba866) 18%, transparent), color-mix(in srgb, var(--hint-aqua, #86d6c7) 8%, transparent))"
           : "var(--hint-card-surface-muted)",
         boxShadow: selected ? "0 0 26px rgba(228,198,138,0.16)" : "none",
       }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-sans text-[12.5px] font-semibold leading-tight sm:text-[13.5px]" style={{ color: selected ? "#fff7df" : IVORY.strong }}>
+          <p className="font-sans text-[12.5px] font-semibold leading-tight sm:text-[13.5px]" style={{ color: selected ? IVORY.primary : IVORY.strong }}>
             {title}
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: GOLD.ink }}>
@@ -421,12 +433,11 @@ function SpreadDiagram({
 
   return (
     <div
-      className={`${compact ? "h-[78px]" : "h-[132px]"} relative overflow-hidden rounded-[8px]`}
+      className={`${compact ? "h-[78px]" : "h-[132px]"} relative overflow-hidden rounded-[16px]`}
       style={{
-        background:
-          "linear-gradient(180deg, rgba(8, 12, 22, 0.96), rgba(16, 22, 36, 0.96))",
+        background: "var(--hint-liquid-panel-strong)",
         boxShadow:
-          "inset 0 0 0 1px rgba(228,198,138,0.22), inset 0 0 32px rgba(228,198,138,0.08)",
+          "inset 0 0 0 1px color-mix(in srgb, var(--hint-gold, #cba866) 22%, var(--hint-border)), inset 0 0 32px color-mix(in srgb, var(--hint-gold, #cba866) 8%, transparent)",
       }}
     >
       <svg aria-hidden className="absolute inset-0 h-full w-full" viewBox="0 0 100 100">
@@ -450,11 +461,10 @@ function SpreadDiagram({
             top: `${point.y}%`,
             width: compact ? 18 : 22,
             height: compact ? 27 : 32,
-            color: "#f2d48d",
-            borderColor: "rgba(228,198,138,0.55)",
-            background:
-              "linear-gradient(160deg, rgba(5,9,16,0.96), rgba(14,20,33,0.96))",
-            boxShadow: "0 8px 18px rgba(0,0,0,0.28)",
+            color: "var(--hint-gold-bright, #f2d48d)",
+            borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 55%, var(--hint-border))",
+            background: "color-mix(in srgb, var(--hint-deck-card-bg) 72%, transparent)",
+            boxShadow: "0 8px 18px rgba(0,0,0,0.18)",
           }}
         >
           <span className="font-sans text-[11px] font-semibold">{point.n}</span>
@@ -504,21 +514,20 @@ function CompactSpreadPreview({
 
   return (
     <div
-      className="rounded-[8px] border p-3"
+      className="hint-liquid-panel rounded-[20px] border p-3"
       style={{
-        borderColor: "rgba(241, 205, 132, 0.42)",
-        background:
-          "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(228,198,138,0.08))",
-        boxShadow: "0 0 26px rgba(228,198,138,0.10)",
+        borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 42%, var(--hint-liquid-border))",
+        background: "var(--hint-liquid-panel)",
+        boxShadow: "0 0 26px color-mix(in srgb, var(--hint-gold, #cba866) 10%, transparent)",
       }}
     >
       <div className="min-w-0 space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: "#9d8452" }}>
+            <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: GOLD.ink }}>
               {t("tarot.spreadExplanation.selectedShape")}
             </p>
-            <p className="mt-1 font-sans text-[15px] font-semibold leading-tight" style={{ color: "#2f2a35" }}>
+            <p className="mt-1 font-sans text-[15px] font-semibold leading-tight" style={{ color: IVORY.strong }}>
               {selectedShapeTitle} · {selectedShapeCount}
             </p>
           </div>
@@ -526,13 +535,13 @@ function CompactSpreadPreview({
         </div>
 
         {emotionalLine !== `tarot.spreadEmotion.${spread.id}` && (
-          <p className="font-serif text-[13px] italic leading-snug" style={{ color: "#6f604c" }}>
+          <p className="font-serif text-[13px] italic leading-snug" style={{ color: IVORY.mute }}>
             {emotionalLine}
           </p>
         )}
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 font-sans text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: "#9d8452" }}>
+          <span className="mr-1 font-sans text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: GOLD.ink }}>
             {spread.cardCount === 1 ? t("tarot.spreadExplanation.position") : t("tarot.spreadExplanation.positions")}:
           </span>
           {visiblePositions.map((label, index) => (
@@ -540,9 +549,9 @@ function CompactSpreadPreview({
               key={`${spread.id}-${index}-${label}`}
               className="inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-1 font-sans text-[10px] leading-none"
               style={{
-                color: "#5c5661",
-                borderColor: "rgba(174,132,56,0.20)",
-                background: "rgba(255,255,255,0.34)",
+                color: IVORY.body,
+                borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 20%, var(--hint-border))",
+                background: "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)",
               }}
             >
               <span className="font-semibold" style={{ color: GOLD.ink }}>
@@ -572,8 +581,8 @@ function CompactSpreadPreview({
               className="rounded-full border px-2 py-1 font-sans text-[10px] leading-none transition-opacity hover:opacity-80"
               style={{
                 color: IVORY.dim,
-                borderColor: "rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.03)",
+                borderColor: "var(--hint-border)",
+                background: "color-mix(in srgb, var(--hint-card-surface-muted) 78%, transparent)",
               }}
             >
               {t("tarot.spreadExplanation.showLess")}
@@ -757,14 +766,14 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 1.2, ease: "easeOut" }}
-      className="flex h-full w-full max-w-[1020px] flex-col justify-center px-3 py-5 sm:px-4 sm:py-4"
+      className="flex h-full w-full max-w-[430px] flex-col justify-center px-3 py-5 sm:px-4 sm:py-4"
     >
       <div
-        className="relative flex max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[8px] border"
+        className="hint-liquid-panel relative flex max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[28px] border"
         style={{
-          background: "var(--hint-card-surface)",
-          borderColor: "var(--hint-border)",
-          boxShadow: "var(--hint-elevated-shadow)",
+          background: "var(--hint-liquid-panel)",
+          borderColor: "var(--hint-liquid-border)",
+          boxShadow: "var(--hint-liquid-shadow)",
         }}
       >
         <div
@@ -777,7 +786,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
         />
 
         <div ref={scrollRef} className="relative flex-1 space-y-2.5 overflow-y-auto p-3 pb-2.5 sm:p-3.5 sm:pb-3">
-          <header className="flex flex-col gap-2 min-[760px]:flex-row min-[760px]:items-end min-[760px]:justify-between">
+          <header className="flex flex-col gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Sparkles size={16} strokeWidth={1.7} style={{ color: GOLD.ink }} />
@@ -811,7 +820,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
           </header>
 
           <SetupSection icon={<Sparkles size={15} />} title={t("tarot.setup.presets")}>
-            <div className="grid gap-2 min-[520px]:grid-cols-3">
+            <div className="grid gap-2">
               {ROOM_PRESETS.map((preset) => (
                 <PresetButton
                   key={preset.id}
@@ -824,10 +833,10 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
             </div>
           </SetupSection>
 
-          <div className="grid gap-2.5 min-[760px]:grid-cols-[minmax(0,0.96fr)_minmax(0,1.04fr)]">
+          <div className="grid gap-2.5">
             <div className="min-w-0 space-y-2.5">
               <SetupSection icon={<Palette size={15} />} title={t("tarot.setup.deck")}>
-                <div className="grid gap-2 min-[520px]:grid-cols-3">
+                <div className="grid gap-2">
                   {DECK_STYLES.map((deck) => (
                     <ChoiceButton
                       key={deck.id}
@@ -842,7 +851,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
               </SetupSection>
 
               <SetupSection icon={<Image size={15} />} title={t("tarot.setup.background")}>
-                <div className="grid gap-2 min-[520px]:grid-cols-3">
+                <div className="grid gap-2">
                   {BACKGROUND_STYLES.map((background) => (
                     <ChoiceButton
                       key={background.id}
@@ -859,7 +868,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
 
             <div className="min-w-0 space-y-2.5">
               <SetupSection icon={<Layers size={15} />} title={t("tarot.setup.cardArt")}>
-                <div className="grid gap-2 min-[520px]:grid-cols-2">
+                <div className="grid gap-2">
                   {CARD_FACE_STYLES.map((cardFace) => (
                     <CardFaceButton
                       key={cardFace.id}
@@ -874,7 +883,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
                 </div>
               </SetupSection>
 
-              <section className="rounded-[8px] border px-3 py-3" style={{
+              <section className="rounded-[18px] border px-3 py-3" style={{
                 borderColor: "var(--hint-border)",
                 background: "var(--hint-card-surface-muted)",
               }}>
@@ -891,7 +900,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
                       className="flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5"
                       style={{
                         borderColor: "var(--hint-border)",
-                        background: "var(--hint-card-inner)",
+                        background: "color-mix(in srgb, var(--hint-card-inner) 80%, transparent)",
                         color: IVORY.body,
                       }}
                     >
@@ -928,7 +937,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
           style={{
             color: IVORY.mute,
             borderColor: "var(--hint-border)",
-            background: "var(--hint-surface)",
+            background: "color-mix(in srgb, var(--hint-surface) 78%, transparent)",
             backdropFilter: "blur(18px)",
           }}
         >
@@ -946,11 +955,11 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
         >
           <Link
             href="/app"
-            className="inline-flex h-10 items-center justify-center rounded-[8px] border px-4 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:border-[#8f806f]/40 hover:bg-white/65 active:scale-[0.98]"
+            className="inline-flex h-10 items-center justify-center rounded-[16px] border px-4 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
             style={{
               color: IVORY.body,
               borderColor: "var(--hint-border)",
-              background: "var(--hint-card-surface-muted)",
+              background: "color-mix(in srgb, var(--hint-card-surface-muted) 88%, transparent)",
               boxShadow: "none",
             }}
           >
@@ -959,14 +968,9 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
           <button
             type="button"
             onClick={() => onStart(setup)}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] border px-5 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#ae8438]/75 hover:shadow-[0_14px_34px_rgba(196,160,82,0.30)] active:translate-y-0 active:scale-[0.98]"
+            className="hint-prism-action inline-flex h-10 items-center justify-center gap-2 rounded-[16px] px-5 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
             style={{
-              color: "#2f2a24",
-              borderColor: "rgba(174,132,56,0.55)",
-              background:
-                "linear-gradient(135deg, #fff2c7, #e8c772)",
-              boxShadow:
-                "0 10px 26px rgba(196,160,82,0.22), inset 0 0 0 1px rgba(255,255,255,0.22)",
+              color: "var(--hint-special-action-text)",
             }}
           >
             {t("tarot.setup.continue")}

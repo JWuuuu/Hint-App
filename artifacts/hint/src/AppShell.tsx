@@ -1,7 +1,22 @@
 ﻿import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { LogIn, LogOut, Moon, Settings, Sparkles, Sun, UserPlus, UserRound } from "lucide-react";
+import {
+  CalendarDays,
+  Home,
+  Library,
+  LogIn,
+  LogOut,
+  MessageCircle,
+  Moon,
+  Orbit,
+  Settings,
+  Sparkles,
+  Sun,
+  UserPlus,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 import {
   PointerProvider,
   RoomLight,
@@ -12,6 +27,7 @@ import {
   Moonlight,
 } from "./modules/hold/atmosphere";
 import { LanguageToggle } from "./components/LanguageToggle";
+import { AppLaunchIntro } from "./components/app/AppLaunchIntro";
 import { CelestialBackdrop } from "./components/app/CelestialBackdrop";
 import { HintLogo } from "./components/app/HintLogo";
 import { trackEvent } from "./lib/analytics";
@@ -45,6 +61,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [reduceMotion, setReduceMotion] = useState(
     () => getHintPreferences().reduceMotion,
   );
+  const [showLaunchIntro, setShowLaunchIntro] = useState(true);
+  const [launchIntroLeaving, setLaunchIntroLeaving] = useState(false);
   const isProductRoute = !["/privacy", "/terms", "/disclaimer", "/contact", "/about"].includes(location);
   const showNav = isProductRoute && !IMMERSIVE_ROUTES.some(
     (r) => location === r || location.startsWith(r + "/"),
@@ -95,6 +113,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const leaveAfter = reduceMotion ? 360 : 2180;
+    const hideAfter = reduceMotion ? 520 : 2740;
+    const leaveTimer = window.setTimeout(() => setLaunchIntroLeaving(true), leaveAfter);
+    const hideTimer = window.setTimeout(() => setShowLaunchIntro(false), hideAfter);
+
+    return () => {
+      window.clearTimeout(leaveTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [reduceMotion]);
+
+  useEffect(() => {
     window.scrollTo({ top: 0, left: 0 });
     document.querySelectorAll(".overflow-y-auto").forEach((element) => {
       if (element instanceof HTMLElement) {
@@ -128,18 +158,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {showNav ? (
-          <WebsiteHomeNav location={location} theme={theme} onThemeSelect={setTheme} />
+          <AppNavigationChrome location={location} theme={theme} onThemeSelect={setTheme} />
         ) : showImmersiveLanguage ? (
           <div className="fixed right-5 top-5 z-50">
             <LanguageToggle menuPlacement="bottom" />
           </div>
+        ) : null}
+
+        {isProductRoute && showLaunchIntro ? (
+          <AppLaunchIntro theme={theme} leaving={launchIntroLeaving} />
         ) : null}
       </div>
     </PointerProvider>
   );
 }
 
-function WebsiteHomeNav({
+function AppNavigationChrome({
   location,
   theme,
   onThemeSelect,
@@ -150,17 +184,15 @@ function WebsiteHomeNav({
 }) {
   const isDark = theme === "dark";
   const { t } = useLanguage();
-  const [activeHash, setActiveHash] = useState(() =>
-    typeof window === "undefined" ? "#today" : window.location.hash || "#today",
-  );
-  const homeNavItems = [
-    { href: "/app#today", label: t("nav.today"), mobileLabel: t("nav.today"), section: true },
-    { href: "/app/daily", label: t("nav.daily"), mobileLabel: t("nav.daily"), section: false },
-    { href: "/app/tarot", label: t("nav.openTarot"), mobileLabel: "Tarot", section: false },
-    { href: "/app/sky-deck", label: "Sky Deck", mobileLabel: "Sky", section: false },
-    { href: "/app/collection", label: "Collection", mobileLabel: "Cards", section: false },
-    { href: "/app/astrology", label: t("nav.astrology"), mobileLabel: "Astro", section: false },
-    { href: "/app/readings", label: t("nav.history"), mobileLabel: t("nav.history"), section: false },
+  const section = getAppSection(location, t);
+  const appTabs: AppTabItem[] = [
+    { href: "/app", label: t("nav.today"), icon: Home, exact: true },
+    { href: "/app/daily", label: t("nav.daily"), icon: CalendarDays },
+    { href: "/app/tarot", label: "Tarot", icon: Sparkles },
+    { href: "/app/ask", label: "Ask Hint", icon: MessageCircle },
+    { href: "/app/sky-deck", label: "Sky", icon: Orbit },
+    { href: "/app/collection", label: "Cards", icon: Library },
+    { href: "/app/profile", label: "Me", icon: UserRound },
   ];
   const profileActive =
     location === "/profile" ||
@@ -171,141 +203,181 @@ function WebsiteHomeNav({
     location.startsWith("/app/profile/") ||
     location === "/app/me" ||
     location.startsWith("/app/me/");
-  const isActiveNavItem = (href: string, section: boolean) => {
-    if (section) return (location === "/" || location === "/app") && activeHash === "#today";
-    return location === href || location.startsWith(`${href}/`);
-  };
-
-  useEffect(() => {
-    const updateActiveHash = () => {
-      setActiveHash(window.location.hash || "#today");
-    };
-
-    updateActiveHash();
-    window.addEventListener("hashchange", updateActiveHash);
-    return () => window.removeEventListener("hashchange", updateActiveHash);
-  }, []);
-
   return (
-    <div className="pointer-events-none fixed left-0 right-0 top-0 z-50 px-2 pb-1.5 pt-[calc(var(--hint-safe-top)+0.375rem)] xl:px-5 xl:pb-3 xl:pt-[calc(var(--hint-safe-top)+0.75rem)]">
-      <nav
-        aria-label="Primary"
-        className="pointer-events-auto relative mx-auto grid w-full max-w-[min(96vw,86rem)] grid-cols-[auto_1fr_auto] items-center gap-2 rounded-[18px] border px-2 py-1.5 xl:flex xl:gap-4 xl:rounded-full xl:px-4 xl:py-2"
-        style={{
-          background: isDark
-            ? "rgba(12, 16, 28, 0.88)"
-            : "rgba(255, 249, 239, 0.90)",
-          borderColor: isDark
-            ? "rgba(229, 205, 149, 0.26)"
-            : "rgba(116, 89, 58, 0.14)",
-          backdropFilter: "blur(24px) saturate(1.22)",
-          WebkitBackdropFilter: "blur(24px) saturate(1.22)",
-          boxShadow: isDark
-            ? "0 16px 42px rgba(0, 0, 0, 0.24)"
-            : "0 18px 44px rgba(80, 54, 42, 0.12)",
-        }}
-      >
-        <Link
-          href="/app"
-          aria-current={location === "/app" ? "page" : undefined}
-          data-active={location === "/app" ? "true" : "false"}
-          className="row-start-1 inline-flex w-fit min-w-0 shrink-0 justify-self-start items-center gap-2 rounded-[14px] border py-1 pl-1 pr-2.5 font-serif text-[18px] leading-none xl:gap-3 xl:rounded-full xl:py-1.5 xl:pl-1.5 xl:pr-4 xl:text-[24px]"
+    <>
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-[calc(var(--hint-safe-top)+0.5rem)] sm:px-4">
+        <header
+          data-app-topbar
+          className="hint-pearl-panel hint-shimmer-border hint-app-topbar pointer-events-auto mx-auto flex h-[62px] w-full max-w-[430px] items-center justify-between gap-3 rounded-[26px] border px-3"
           style={{
-            color: "var(--hint-text)",
-            background: isDark ? "rgba(241,166,107,0.12)" : "rgba(255,255,255,0.88)",
-            borderColor: isDark ? "rgba(241,166,107,0.35)" : "rgba(116,89,58,0.14)",
-            boxShadow: isDark
-              ? "inset 0 0 0 1px rgba(255,250,242,0.08)"
-              : "0 10px 22px rgba(80,54,42,0.08), inset 0 0 0 1px rgba(255,255,255,0.72)",
-          }}
-          aria-label={t("nav.homeAria")}
-        >
-          <HintLogo className="size-8 rounded-[10px] border border-white/25 shadow-[0_10px_24px_rgba(0,0,0,0.2)] xl:size-10 xl:rounded-[13px]" />
-          Hint
-        </Link>
-
-        <div
-          className="hidden min-w-0 rounded-[14px] border p-1 xl:flex xl:w-auto xl:flex-1 xl:justify-center xl:gap-1.5 xl:rounded-full"
-          style={{
-            background: isDark ? "rgba(255,255,255,0.055)" : "rgba(255,255,255,0.72)",
-            borderColor: "var(--hint-border)",
+            background: "var(--hint-liquid-panel)",
+            borderColor: "var(--hint-liquid-border)",
+            boxShadow: "var(--hint-liquid-shadow)",
+            backdropFilter: "blur(30px) saturate(1.32)",
+            WebkitBackdropFilter: "blur(30px) saturate(1.32)",
           }}
         >
-          {homeNavItems.map((item) => (
-            <HomeNavLink
-              key={item.href}
-              href={item.href}
-              active={isActiveNavItem(item.href, item.section)}
-              isDark={isDark}
-            >
-              {item.label}
-            </HomeNavLink>
-          ))}
-        </div>
-
-        <div className="col-start-3 row-start-1 flex shrink-0 items-center justify-self-end gap-2 xl:static xl:col-auto xl:row-auto xl:ml-0">
-          <LanguageToggle compact menuPlacement="bottom" />
-          <button
-            type="button"
-            onClick={() => onThemeSelect(isDark ? "bright" : "dark")}
-            aria-pressed={isDark}
-            aria-label={isDark ? t("theme.switchToDayFromNight") : t("theme.switchToNightFromDay")}
-            className="hidden h-10 items-center gap-2 rounded-full border px-3 text-[12px] font-semibold xl:inline-flex"
-            style={{
-              background: isDark ? "rgba(241,166,107,0.14)" : "rgba(255,255,255,0.92)",
-              borderColor: isDark ? "rgba(241,166,107,0.34)" : "rgba(116,89,58,0.20)",
-              color: "var(--hint-text)",
-              boxShadow: isDark ? "inset 0 1px 0 rgba(255,255,255,0.10), 0 10px 22px rgba(241,166,107,0.10)" : "0 10px 24px rgba(65,45,20,0.10)",
-            }}
-          >
-            {isDark ? <Moon aria-hidden="true" className="size-4" /> : <Sun aria-hidden="true" className="size-4" />}
-            {isDark ? t("theme.nightActive") : t("theme.dayActive")}
-          </button>
-          <button
-            type="button"
-            onClick={() => onThemeSelect(isDark ? "bright" : "dark")}
-            aria-label={isDark ? t("theme.switchToDayFromNight") : t("theme.switchToNightFromDay")}
-            className="grid size-9 place-items-center rounded-full border xl:hidden"
-            style={{ borderColor: "var(--hint-border)", color: "var(--hint-text)", background: "var(--hint-surface-soft)" }}
-          >
-            {isDark ? <Moon className="size-4" /> : <Sun className="size-4" />}
-          </button>
-          <AccountMenu profileActive={profileActive} isDark={isDark} />
-          <Link
-            href="/app/ask"
-            className="hidden h-11 items-center justify-center gap-2 rounded-full px-5 font-sans text-[13px] font-semibold xl:inline-flex"
-            style={{
-              color: "#fffaf2",
-              background: isDark ? "#f1a66b" : "#292331",
-              boxShadow: isDark ? "0 14px 28px rgba(241,166,107,0.18)" : "0 14px 28px rgba(41,35,49,0.14)",
-            }}
-          >
-            {t("home.askHint")}
-            <ArrowMark />
+          <Link href="/app" aria-label={t("nav.homeAria")} className="hint-tap-sparkle flex min-w-0 items-center gap-2.5 rounded-[18px]">
+            <HintLogo className="size-10 shrink-0 rounded-[15px] border border-white/25 shadow-[0_14px_30px_rgba(55,39,66,0.18)]" />
+            <div className="min-w-0">
+              <p className="truncate font-sans text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: "var(--hint-gold)" }}>
+                {section.eyebrow}
+              </p>
+              <p className="truncate font-serif text-[19px] leading-none" style={{ color: "var(--hint-text)" }}>
+                {section.title}
+              </p>
+            </div>
           </Link>
-        </div>
 
+          <div className="flex shrink-0 items-center gap-1.5">
+            {location === "/" || location === "/app" ? (
+              <Link
+                href="/app/daily"
+                aria-label="Open Daily calendar"
+                className="hint-tap-sparkle grid size-10 place-items-center rounded-full border transition hover:-translate-y-0.5 active:translate-y-0"
+                style={{
+                  borderColor: "var(--hint-border)",
+                  color: "var(--hint-text)",
+                  background: "color-mix(in srgb, var(--hint-surface-soft) 88%, transparent)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.24), 0 10px 22px color-mix(in srgb, var(--hint-rose, #f0b6cf) 12%, transparent)",
+                }}
+              >
+                <CalendarDays className="size-4" aria-hidden />
+              </Link>
+            ) : null}
+            <LanguageToggle compact menuPlacement="bottom" />
+            <button
+              type="button"
+              onClick={() => onThemeSelect(isDark ? "bright" : "dark")}
+              aria-pressed={isDark}
+              aria-label={isDark ? t("theme.switchToDayFromNight") : t("theme.switchToNightFromDay")}
+              className="grid size-10 place-items-center rounded-full border transition hover:-translate-y-0.5 active:translate-y-0"
+              style={{
+                borderColor: "var(--hint-border)",
+                color: "var(--hint-text)",
+                background: "color-mix(in srgb, var(--hint-surface-soft) 88%, transparent)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.24), 0 10px 22px color-mix(in srgb, var(--hint-rose, #f0b6cf) 12%, transparent)",
+              }}
+            >
+              {isDark ? <Moon className="size-4" /> : <Sun className="size-4" />}
+            </button>
+            <AccountMenu profileActive={profileActive} isDark={isDark} />
+          </div>
+        </header>
+      </div>
+
+      <nav
+        aria-label="App"
+        data-app-tabbar
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-2 pb-[calc(var(--hint-safe-bottom)+0.625rem)] sm:px-4"
+      >
         <div
-          className="col-span-3 row-start-2 flex justify-start gap-1 overflow-x-auto rounded-[14px] border p-1 [scrollbar-width:none] sm:justify-center [&::-webkit-scrollbar]:hidden xl:hidden"
+          className="hint-pearl-panel hint-app-dock pointer-events-auto mx-auto grid h-[78px] w-full max-w-[430px] grid-cols-7 gap-1 rounded-[30px] border p-1.5"
           style={{
-            background: isDark ? "rgba(255,255,255,0.055)" : "rgba(255,255,255,0.72)",
-            borderColor: "var(--hint-border)",
+            background: "var(--hint-liquid-panel)",
+            borderColor: "var(--hint-liquid-border)",
+            boxShadow: "var(--hint-liquid-shadow)",
+            backdropFilter: "blur(30px) saturate(1.32)",
+            WebkitBackdropFilter: "blur(30px) saturate(1.32)",
           }}
         >
-          {homeNavItems.map((item) => (
-            <MobileHomeNavLink
-              key={item.href}
-              href={item.href}
-              active={isActiveNavItem(item.href, item.section)}
-              isDark={isDark}
-            >
-              {item.mobileLabel}
-            </MobileHomeNavLink>
+          {appTabs.map((tab) => (
+            <AppTab key={tab.href} item={tab} active={isActiveAppTab(location, tab)} isDark={isDark} />
           ))}
         </div>
       </nav>
-    </div>
+    </>
   );
+
+}
+
+type AppTabItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+};
+
+function AppTab({ item, active, isDark }: { item: AppTabItem; active: boolean; isDark: boolean }) {
+  const Icon = item.icon;
+  const featured = item.href === "/app/ask";
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      data-active={active ? "true" : "false"}
+      data-featured={featured ? "true" : "false"}
+      className={[
+        "hint-app-tab hint-tap-sparkle relative flex min-w-0 flex-col items-center justify-center text-center transition active:translate-y-0",
+        featured
+          ? "hint-prism-action -translate-y-2 gap-0.5 rounded-[22px] px-1 shadow-lg hover:-translate-y-2.5"
+          : "gap-1 rounded-[20px] px-1 hover:-translate-y-0.5",
+      ].join(" ")}
+      style={{
+        color: featured
+          ? "var(--hint-special-action-text)"
+          : active
+            ? (isDark ? "#fffaf2" : "#231b16")
+            : "var(--hint-muted)",
+        background: featured
+          ? "var(--hint-special-action-bg)"
+          : active
+            ? isDark
+              ? "linear-gradient(145deg, rgba(255,218,230,0.22), rgba(157,222,217,0.16))"
+              : "linear-gradient(145deg, rgba(255,255,255,0.68), rgba(255,202,222,0.42), rgba(176,235,229,0.28))"
+            : "transparent",
+        boxShadow: featured
+          ? "0 16px 38px color-mix(in srgb, var(--hint-gold, #cba866) 22%, transparent), inset 0 1px 0 rgba(255,255,255,0.48)"
+          : active
+            ? isDark
+              ? "0 10px 26px rgba(240,182,207,0.14), inset 0 0 0 1px rgba(255,250,242,0.20)"
+              : "0 10px 24px rgba(112,82,128,0.12), inset 0 0 0 1px rgba(255,255,255,0.62)"
+            : "none",
+      }}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-2 top-1 h-px rounded-full opacity-80"
+        style={{ background: active ? "linear-gradient(90deg, transparent, rgba(255,255,255,0.58), transparent)" : "transparent" }}
+      />
+      {featured ? (
+        <span
+          aria-hidden="true"
+          className="grid size-6 place-items-center rounded-full font-serif text-[15px] leading-none"
+          style={{
+            background: "rgba(255,255,255,0.32)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.60), 0 8px 18px rgba(0,0,0,0.10)",
+          }}
+        >
+          H
+        </span>
+      ) : (
+        <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2.35 : 1.9} />
+      )}
+      <span className="max-w-full truncate font-sans text-[9px] font-black leading-none sm:text-[10px]">
+        {item.label}
+      </span>
+    </Link>
+  );
+}
+
+function isActiveAppTab(location: string, tab: AppTabItem) {
+  if (tab.exact) return location === "/app" || location === "/";
+  return location === tab.href || location.startsWith(`${tab.href}/`);
+}
+
+function getAppSection(location: string, t: (key: string) => string) {
+  if (location.startsWith("/app/daily")) return { eyebrow: "Daily", title: t("nav.daily") };
+  if (location.startsWith("/app/tarot")) return { eyebrow: "Tarot Room", title: "Tarot" };
+  if (location.startsWith("/app/animal-tarot")) return { eyebrow: "Animal Tarot", title: "Animal Spirit" };
+  if (location.startsWith("/app/ask")) return { eyebrow: "Ask Hint", title: "Hint" };
+  if (location.startsWith("/app/sky-deck")) return { eyebrow: "Sky Deck", title: "Sky Draw" };
+  if (location.startsWith("/app/astrology")) return { eyebrow: "Astrology", title: t("nav.astrology") };
+  if (location.startsWith("/app/collection")) return { eyebrow: "Collection", title: "Cards" };
+  if (location.startsWith("/app/profile") || location.startsWith("/app/me")) return { eyebrow: "Profile", title: "Me" };
+  if (location.startsWith("/app/settings")) return { eyebrow: "Settings", title: "Settings" };
+  if (location.startsWith("/app/readings")) return { eyebrow: "History", title: t("nav.history") };
+  return { eyebrow: "Hint", title: t("nav.today") };
 }
 
 function AccountMenu({ profileActive, isDark }: { profileActive: boolean; isDark: boolean }) {
@@ -372,23 +444,23 @@ function AccountMenu({ profileActive, isDark }: { profileActive: boolean; isDark
         aria-expanded={open}
         aria-current={profileActive ? "page" : undefined}
         onClick={() => setOpen((value) => !value)}
-        className="grid size-9 place-items-center rounded-full border transition-[transform,opacity] duration-200 hover:-translate-y-0.5 xl:size-11"
+        className="hint-tap-sparkle grid size-10 place-items-center rounded-full border transition-[transform,opacity] duration-200 hover:-translate-y-0.5"
         style={{
           color: profileActive || open ? (isDark ? "#fffaf2" : "#241d18") : "var(--hint-text)",
           background: profileActive || open
             ? isDark
-              ? "linear-gradient(135deg, rgba(241,166,107,0.98), rgba(246,194,143,0.94))"
-              : "linear-gradient(135deg, rgba(239,162,96,0.96), rgba(246,194,143,0.92))"
+              ? "var(--hint-special-action-bg)"
+              : "var(--hint-special-action-bg)"
             : "var(--hint-surface-soft)",
           borderColor: profileActive || open
             ? isDark
-              ? "rgba(241,166,107,0.46)"
-              : "rgba(116,89,58,0.18)"
+              ? "var(--hint-special-action-border)"
+              : "var(--hint-special-action-border)"
             : "var(--hint-border)",
           boxShadow: profileActive || open
             ? isDark
-              ? "0 14px 28px rgba(241,166,107,0.16)"
-              : "0 14px 28px rgba(80,54,42,0.10)"
+              ? "0 14px 28px color-mix(in srgb, var(--hint-rose, #f0b6cf) 18%, transparent)"
+              : "0 14px 28px color-mix(in srgb, var(--hint-rose, #f0b6cf) 12%, transparent)"
             : "none",
         }}
       >
@@ -516,150 +588,4 @@ function initialsFromName(name: string, guestName: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (!parts.length || name === guestName) return "H";
   return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
-}
-
-function HomeNavLink({
-  href,
-  active,
-  isDark,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  isDark: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <HomeNavAnchor href={href} active={active} isDark={isDark}>
-      {children}
-    </HomeNavAnchor>
-  );
-}
-
-function MobileHomeNavLink({
-  href,
-  active,
-  isDark,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  isDark: boolean;
-  children: ReactNode;
-}) {
-  const className =
-    "flex h-9 shrink-0 items-center justify-center rounded-[11px] px-3.5 font-sans text-[12px] font-semibold";
-  const style = {
-    color: active ? (isDark ? "#fffaf2" : "#241d18") : "var(--hint-text)",
-    background: active
-      ? isDark
-        ? "linear-gradient(135deg, rgba(241,166,107,0.98), rgba(246,194,143,0.94))"
-        : "linear-gradient(135deg, rgba(239,162,96,0.96), rgba(246,194,143,0.92))"
-      : "transparent",
-  };
-
-  if (href.startsWith("/#")) {
-    return (
-      <a href={href} aria-current={active ? "page" : undefined} className={className} style={style}>
-        {children}
-      </a>
-    );
-  }
-
-  if (href.startsWith("/")) {
-    return (
-      <Link
-        href={href}
-        aria-current={active ? "page" : undefined}
-        data-active={active ? "true" : "false"}
-        className={className}
-        style={style}
-      >
-        {children}
-      </Link>
-    );
-  }
-
-  return (
-    <a href={href} aria-current={active ? "page" : undefined} className={className} style={style}>
-      {children}
-    </a>
-  );
-}
-
-function HomeNavAnchor({
-  href,
-  active,
-  isDark,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  isDark: boolean;
-  children: ReactNode;
-}) {
-  const className =
-    "flex h-9 min-w-[88px] shrink-0 items-center justify-center rounded-[10px] px-3 text-center font-sans text-[12px] font-semibold leading-tight transition hover:-translate-y-0.5 active:translate-y-0 sm:min-w-0 sm:px-1 sm:text-[11px] md:h-10 md:min-w-[82px] md:rounded-full md:px-3 md:text-[13px] xl:min-w-[88px]";
-  const style = {
-    color: active ? (isDark ? "#fffaf2" : "#241d18") : "var(--hint-text)",
-    background: active
-      ? isDark
-        ? "linear-gradient(135deg, rgba(241,166,107,0.98), rgba(246,194,143,0.94))"
-        : "linear-gradient(135deg, rgba(239,162,96,0.96), rgba(246,194,143,0.92))"
-      : "transparent",
-    boxShadow: active
-      ? isDark
-        ? "0 10px 22px rgba(241,166,107,0.18), inset 0 0 0 1px rgba(255,250,242,0.22)"
-        : "0 10px 22px rgba(224,146,80,0.22), inset 0 0 0 1px rgba(116,89,58,0.16)"
-      : "none",
-  };
-
-  if (href.startsWith("/#")) {
-    return (
-      <a
-        href={href}
-        aria-current={active ? "page" : undefined}
-        data-active={active ? "true" : "false"}
-        className={className}
-        style={style}
-      >
-        {children}
-      </a>
-    );
-  }
-
-  if (href.startsWith("/")) {
-    return (
-      <Link
-        href={href}
-        aria-current={active ? "page" : undefined}
-        data-active={active ? "true" : "false"}
-        className={className}
-        style={style}
-      >
-        {children}
-      </Link>
-    );
-  }
-
-  return (
-    <a
-      href={href}
-      aria-current={active ? "page" : undefined}
-      data-active={active ? "true" : "false"}
-      className={className}
-      style={style}
-    >
-      {children}
-    </a>
-  );
-}
-
-function ArrowMark() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M4 10h11" />
-      <path d="m11 5 5 5-5 5" />
-    </svg>
-  );
 }

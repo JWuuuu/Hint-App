@@ -244,33 +244,34 @@ export function RibbonSpread({
 
   return (
     <section className="relative h-full w-full overflow-hidden px-4 py-5 text-center sm:px-6">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(64,224,208,0.18),transparent_22%),radial-gradient(circle_at_50%_46%,rgba(54,105,126,0.34),transparent_22%),radial-gradient(circle_at_50%_58%,rgba(226,190,116,0.13),transparent_34%),linear-gradient(180deg,#050816,#010207_54%,#03040c)]" />
+      <div className="pointer-events-none absolute inset-0" style={{ background: "var(--hint-page-bg)" }} />
       <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.65)_0_1px,transparent_1px),radial-gradient(circle_at_74%_19%,rgba(239,205,139,0.55)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(255,255,255,0.34)_0_1px,transparent_1px)] [background-size:132px_148px]" />
       <div className="pointer-events-none absolute inset-x-[-10%] bottom-[-8%] h-[60%] bg-[radial-gradient(ellipse_at_50%_64%,rgba(78,117,145,0.28),rgba(8,18,34,0.24)_38%,transparent_70%)]" />
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[19%] h-[180px] w-[180px] -translate-x-1/2 rounded-full border border-[#e4c174]/14"
+        className="pointer-events-none absolute left-1/2 top-[19%] h-[180px] w-[180px] -translate-x-1/2 rounded-full border"
+        style={{ borderColor: "color-mix(in srgb, var(--hint-gold, #dcc383) 18%, transparent)" }}
         animate={{ opacity: [0.18, 0.48, 0.18], scale: [0.92, 1.12, 0.92] }}
         transition={{ duration: 5.8, repeat: Infinity, ease: "easeInOut" }}
       />
 
       <div className="relative z-30 mx-auto max-w-3xl">
-        <p className="font-serif text-[30px] leading-tight text-[#f7ead0] sm:text-4xl">Spread the deck.</p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 font-sans text-[10px] uppercase tracking-[0.16em] text-[#e4c174]/78">
-          <span className="rounded-full border border-[#e4c174]/18 bg-black/20 px-2.5 py-1">
+        <p className="font-serif text-[30px] leading-tight sm:text-4xl" style={{ color: "var(--hint-text)" }}>Spread the deck.</p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 font-sans text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--hint-gold)" }}>
+          <span className="hint-status-pill rounded-full border px-2.5 py-1">
             {spread.label} spread
           </span>
-          <span className="rounded-full border border-[#e4c174]/18 bg-[#e4c174]/8 px-2.5 py-1">
+          <span className="hint-status-pill rounded-full border px-2.5 py-1">
             {selectedCards.length} / {maxCards} selected
           </span>
         </div>
-        <p className="mt-2 font-sans text-sm text-[#d8c7a6]/68">
+        <p className="mt-2 font-sans text-sm" style={{ color: "var(--hint-muted)" }}>
           {instruction}
         </p>
       </div>
 
       <div className={`pointer-events-none absolute inset-x-4 ${slotField} z-20 mx-auto max-w-6xl sm:inset-x-8`}>
-        <p className="absolute left-1/2 top-0 z-50 -translate-x-1/2 font-sans text-[10px] uppercase tracking-[0.22em] text-[#e4c174]/58">
+        <p className="absolute left-1/2 top-0 z-50 -translate-x-1/2 font-sans text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--hint-gold)" }}>
           {selectedSectionLabel}
         </p>
 
@@ -288,11 +289,16 @@ export function RibbonSpread({
               style={{ left: `${slotPoint.x}%`, top: `${slotPoint.y}%` }}
             >
               <div className={`relative grid place-items-center ${cardSizeClass}`}>
-                <span className="pointer-events-none absolute -right-2 -top-2 z-40 grid h-5 w-5 place-items-center rounded-full border border-[#e4c174]/42 bg-[#080b13]/92 font-sans text-[9px] uppercase tracking-[0.04em] text-[#ffe6aa] shadow-[0_0_14px_rgba(228,193,116,0.18)]">
+                <span className="hint-status-pill pointer-events-none absolute -right-2 -top-2 z-40 grid h-5 w-5 place-items-center rounded-full border font-sans text-[9px] uppercase tracking-[0.04em]" style={{ color: "var(--hint-gold)" }}>
                   {index + 1}
                 </span>
                 <div
-                  className="absolute inset-0 rounded-[10px] border border-dashed border-[#e4c174]/42 bg-[radial-gradient(circle_at_50%_44%,rgba(228,193,116,0.10),rgba(64,224,208,0.035)_42%,rgba(0,0,0,0.08))] shadow-[inset_0_0_22px_rgba(228,193,116,0.08),0_0_18px_rgba(64,224,208,0.045)]"
+                  className="absolute inset-0 rounded-[10px] border border-dashed"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--hint-gold) 42%, var(--hint-border))",
+                    background: "radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--hint-gold) 11%, transparent), color-mix(in srgb, var(--hint-aqua) 5%, transparent) 42%, transparent)",
+                    boxShadow: "inset 0 0 22px color-mix(in srgb, var(--hint-gold) 8%, transparent), 0 0 18px color-mix(in srgb, var(--hint-aqua) 6%, transparent)",
+                  }}
                 />
                 {selectedCard && (
                   <motion.div
@@ -314,7 +320,8 @@ export function RibbonSpread({
                     {!reduceMotion && (
                       <motion.div
                         aria-hidden="true"
-                        className="pointer-events-none absolute -inset-3 rounded-[16px] bg-[#e4c174]/18"
+                        className="pointer-events-none absolute -inset-3 rounded-[16px]"
+                        style={{ background: "color-mix(in srgb, var(--hint-gold) 18%, transparent)" }}
                         initial={{ opacity: 0.7, scale: 0.84 }}
                         animate={{ opacity: 0, scale: 1.3 }}
                         transition={{ duration: 0.44, ease: "easeOut" }}
@@ -330,7 +337,7 @@ export function RibbonSpread({
                 )}
               </div>
               {showOuterLabel && (
-                <p className="max-w-[5.8rem] truncate font-sans text-[8px] uppercase tracking-[0.1em] text-[#d8c7a6]/72 sm:max-w-[7rem] sm:text-[9px] sm:tracking-[0.14em]">
+                <p className="max-w-[5.8rem] truncate font-sans text-[8px] uppercase tracking-[0.1em] sm:max-w-[7rem] sm:text-[9px] sm:tracking-[0.14em]" style={{ color: "var(--hint-muted)" }}>
                   {label}
                 </p>
               )}
@@ -347,7 +354,7 @@ export function RibbonSpread({
         className="absolute inset-x-0 top-[16%] z-10 h-[32vh] min-h-[240px] w-full cursor-pointer touch-none overflow-visible sm:top-[15%] sm:h-[35vh] sm:min-h-[280px] lg:top-[15%]"
       >
         <div className="absolute inset-x-3 top-0 mx-auto h-full max-w-[88rem] sm:inset-x-6">
-          <div className="pointer-events-none absolute left-1/2 top-[76%] h-[30px] w-[72%] -translate-x-1/2 rounded-full bg-black/18 blur-xl" />
+          <div className="pointer-events-none absolute left-1/2 top-[76%] h-[30px] w-[72%] -translate-x-1/2 rounded-full blur-xl" style={{ background: "color-mix(in srgb, var(--hint-plum, #271d38) 18%, transparent)" }} />
           {finalDeckOrder.map((card, index) => {
             const selectedInFan = selectedIds.has(card.visualId);
             const activePreview = activePreviewVisualId === card.visualId && !selectedInFan;
@@ -404,11 +411,11 @@ export function RibbonSpread({
                       initial={{ opacity: 0, y: 2 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: reduceMotion ? 0.06 : 0.1, ease: "easeOut" }}
-                      className="pointer-events-none absolute left-1/2 top-[-34px] z-[70] flex min-w-[44px] -translate-x-1/2 items-center justify-center rounded-full border border-[#e4c174]/42 bg-black/50 px-2 py-1 font-sans text-[9px] uppercase tracking-[0.08em] text-[#f7ead0]/88 shadow-[0_6px_14px_rgba(0,0,0,0.22)] backdrop-blur-sm"
+                      className="hint-status-pill pointer-events-none absolute left-1/2 top-[-34px] z-[70] flex min-w-[44px] -translate-x-1/2 items-center justify-center rounded-full border px-2 py-1 font-sans text-[9px] uppercase tracking-[0.08em] backdrop-blur-sm"
                     >
                       <span>{index + 1}</span>
-                      <span className="mx-1 text-[#d8c7a6]/50">/</span>
-                      <span className="text-[#d8c7a6]/68">{finalDeckOrder.length}</span>
+                      <span className="mx-1 opacity-55">/</span>
+                      <span className="opacity-75">{finalDeckOrder.length}</span>
                     </motion.div>
                   )}
                   <div className="pointer-events-none">
@@ -434,7 +441,7 @@ export function RibbonSpread({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
           onClick={onContinue}
-          className="absolute bottom-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[22rem] -translate-x-1/2 items-center justify-center gap-2 overflow-hidden rounded-full border border-[#e4c174]/64 bg-[linear-gradient(135deg,rgba(228,193,116,0.20),rgba(114,227,213,0.10))] px-5 py-3.5 font-sans text-[10px] uppercase tracking-[0.16em] text-[#ffe8aa] shadow-[0_14px_34px_rgba(0,0,0,0.38),0_0_26px_rgba(228,193,116,0.12)] backdrop-blur-md transition-[background,transform] hover:scale-[1.015] hover:bg-[#e4c174]/18 sm:bottom-5 sm:w-auto sm:max-w-none sm:px-6 sm:text-[11px] sm:tracking-[0.2em]"
+          className="hint-soft-button hint-tap-sparkle absolute bottom-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[22rem] -translate-x-1/2 items-center justify-center gap-2 overflow-hidden rounded-full px-5 py-3.5 font-sans text-[10px] uppercase tracking-[0.16em] backdrop-blur-md transition-[background,transform] hover:scale-[1.015] sm:bottom-5 sm:w-auto sm:max-w-none sm:px-6 sm:text-[11px] sm:tracking-[0.2em]"
         >
           <motion.span
             aria-hidden
@@ -442,7 +449,7 @@ export function RibbonSpread({
             animate={{ left: ["-35%", "118%"] }}
             transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
           />
-          <span className="relative h-1.5 w-1.5 rounded-full bg-[#72e3d5] shadow-[0_0_14px_rgba(114,227,213,0.8)]" />
+          <span className="relative h-1.5 w-1.5 rounded-full" style={{ background: "var(--hint-aqua)", boxShadow: "0 0 14px color-mix(in srgb, var(--hint-aqua) 70%, transparent)" }} />
           <span className="relative">Reveal the Reading</span>
         </motion.button>
       )}

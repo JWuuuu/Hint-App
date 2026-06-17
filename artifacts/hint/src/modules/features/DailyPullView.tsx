@@ -272,8 +272,8 @@ function PeriodSummaryCard({ summary }: { summary: PeriodSummary }) {
   const { t } = useLanguage();
 
   return (
-    <GlassPanel className="mb-5 lg:mb-6">
-      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+    <GlassPanel className="mb-5 hint-shimmer-border">
+      <div className="grid gap-5">
         <div>
           <p
             className="font-sans text-[10px] uppercase tracking-[0.22em]"
@@ -310,8 +310,8 @@ function PeriodSummaryCard({ summary }: { summary: PeriodSummary }) {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-[14px] border p-4" style={{ background: "var(--hint-input-bg)", borderColor: "var(--hint-border)" }}>
+      <div className="mt-6 grid gap-3">
+        <div className="hint-status-pill rounded-[14px] border p-4">
           <p className="font-sans text-[10px] uppercase tracking-[0.18em]" style={{ color: GLASS.faint }}>
             {t("dailyPull.strongest")}
           </p>
@@ -319,7 +319,7 @@ function PeriodSummaryCard({ summary }: { summary: PeriodSummary }) {
             {summary.strongest.label} · {summary.strongest.score}
           </p>
         </div>
-        <div className="rounded-[14px] border p-4" style={{ background: "var(--hint-input-bg)", borderColor: "var(--hint-border)" }}>
+        <div className="hint-status-pill rounded-[14px] border p-4">
           <p className="font-sans text-[10px] uppercase tracking-[0.18em]" style={{ color: GLASS.faint }}>
             {t("dailyPull.bestDay")}
           </p>
@@ -327,7 +327,7 @@ function PeriodSummaryCard({ summary }: { summary: PeriodSummary }) {
             {formatShortDate(new Date(`${summary.bestDay.date}T00:00:00`))} · {summary.bestDay.overallScore}
           </p>
         </div>
-        <div className="rounded-[14px] border p-4" style={{ background: "var(--hint-input-bg)", borderColor: "var(--hint-border)" }}>
+        <div className="hint-status-pill rounded-[14px] border p-4">
           <p className="font-sans text-[10px] uppercase tracking-[0.18em]" style={{ color: GLASS.faint }}>
             {t("dailyPull.daysRead")}
           </p>
@@ -337,7 +337,7 @@ function PeriodSummaryCard({ summary }: { summary: PeriodSummary }) {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-5 grid gap-3">
         <div>
           <p className="font-sans text-[10px] uppercase tracking-[0.2em]" style={{ color: GLASS.faint }}>
             {t("daily.suggest")}
@@ -491,14 +491,12 @@ export function DailyPullView() {
 
   return (
     <AppScreen>
-      <div className="hidden lg:block">
-        <ScreenHeader
-          eyebrow={t("dailyPull.eyebrow")}
-          title={t("dailyPull.title")}
-          subtitle={t("dailyPull.subtitle")}
-          sigil={DailyPullSigil}
-        />
-      </div>
+      <ScreenHeader
+        eyebrow={t("dailyPull.eyebrow")}
+        title={t("dailyPull.title")}
+        subtitle={t("dailyPull.subtitle")}
+        sigil={DailyPullSigil}
+      />
 
       <section className="mb-5 lg:mb-6">
         <div className="mb-3 flex items-end justify-between gap-4">
@@ -575,7 +573,7 @@ export function DailyPullView() {
           </button>
         </div>
         <div
-          className="overflow-x-auto rounded-[16px] border p-2"
+          className="rounded-[18px] border p-2"
           style={{
             background: "var(--hint-surface-strong)",
             borderColor: "var(--hint-border)",
@@ -583,7 +581,7 @@ export function DailyPullView() {
           }}
         >
           {period === "day" ? (
-            <div className="grid min-w-[520px] grid-cols-5 gap-2 sm:min-w-0">
+            <div className="grid grid-cols-5 gap-1.5">
               {dayOptions.map((option) => {
                 const selected = selectedOffset === option.offset;
                 return (
@@ -592,7 +590,7 @@ export function DailyPullView() {
                     type="button"
                     onClick={() => setSelectedOffset(option.offset)}
                     aria-pressed={selected}
-                    className="min-h-[76px] rounded-[12px] border px-3 py-3 text-left transition-[transform,opacity] duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                    className="hint-tap-sparkle min-h-[72px] rounded-[12px] border px-2 py-2.5 text-left transition-[transform,opacity] duration-200 hover:-translate-y-0.5 active:translate-y-0"
                     style={{
                       background: selected
                         ? "linear-gradient(145deg, rgba(243,212,144,0.34), rgba(122,226,214,0.16))"
@@ -617,7 +615,7 @@ export function DailyPullView() {
               })}
             </div>
           ) : (
-            <div className="grid min-w-[760px] grid-cols-5 gap-2 sm:min-w-0">
+            <div className="grid grid-cols-5 gap-1.5">
               {periodOptions.map((option) => (
                 <button
                   key={option.key}
@@ -629,7 +627,7 @@ export function DailyPullView() {
                     }))
                   }
                   aria-pressed={option.selected}
-                  className="min-h-[76px] rounded-[12px] border px-3 py-3 text-left transition-[transform,opacity] duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                  className="hint-tap-sparkle min-h-[72px] rounded-[12px] border px-2 py-2.5 text-left transition-[transform,opacity] duration-200 hover:-translate-y-0.5 active:translate-y-0"
                   style={{
                     background: option.selected
                       ? "linear-gradient(145deg, rgba(243,212,144,0.34), rgba(122,226,214,0.16))"
@@ -657,7 +655,7 @@ export function DailyPullView() {
         <DailyReportCard
           detailed
           dateOverride={selectedDate}
-          className="mb-5 lg:mb-6"
+          className="mb-5"
           cardOverride={
             selectedOffset === 0 && pull && !birthPersonalized
               ? {
@@ -687,9 +685,9 @@ export function DailyPullView() {
               onChange={(e) => setNote(e.target.value)}
               onBlur={saveNote}
               placeholder={t("dailyPull.notePlaceholder")}
-              className="w-full h-24 rounded-[8px] px-4 py-3 font-serif text-[14px] bg-transparent focus:outline-none resize-none"
+              className="w-full h-24 rounded-[16px] px-4 py-3 font-serif text-[14px] bg-transparent focus:outline-none resize-none"
               style={{
-                background: "rgba(0,0,0,0.25)",
+                background: "color-mix(in srgb, var(--hint-input-bg) 86%, transparent)",
                 border: `1px solid ${GLASS.border}`,
                 color: GLASS.text,
               }}
@@ -716,12 +714,7 @@ export function DailyPullView() {
           </p>
           <Link
             href="/app/tarot"
-            className="inline-flex items-center justify-center w-full h-11 rounded-[8px] mt-4 font-serif text-[12px] uppercase tracking-[0.24em]"
-            style={{
-              background: "rgba(206,178,110,0.12)",
-              border: "1px solid rgba(206,178,110,0.3)",
-              color: ACCENT.gold,
-            }}
+            className="hint-soft-button hint-tap-sparkle inline-flex items-center justify-center w-full h-11 rounded-full mt-4 font-sans text-[12px] font-black uppercase tracking-[0.16em]"
           >
             {t("dailyPull.openRoom")}
           </Link>

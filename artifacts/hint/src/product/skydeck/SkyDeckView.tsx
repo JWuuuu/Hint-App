@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Moon } from "lucide-react";
+import { Check, Moon, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
 import { SkyDeckCard } from "../../components/skydeck/SkyDeckCard";
@@ -14,38 +14,63 @@ import { getAnonId } from "../../lib/identity";
 import { getOrCreateDailyReceipt, parseServerDailyKey } from "../../lib/dailyReceipts";
 import { readBirthProfile } from "../../lib/astro/userBirthProfile";
 
-const EMBER = "#f1a66b";
 const SCORE_COLORS: Record<string, string> = {
-  love: "#f3a7c5",
-  wealth: "#e6cb8e",
-  career: "#86d6c7",
-  study: "#9fb7ff",
-  people: "#cba6c4",
+  love: "#d98aaa",
+  wealth: "#cda866",
+  career: "#9b98c9",
+  study: "#8ab9b2",
+  people: "#b48abf",
 };
 
-function ScoreRing({ label, score, color, large = false }: { label: string; score: number; color: string; large?: boolean }) {
-  const size = large ? 116 : 74;
-  const inner = large ? 90 : 58;
+function ScoreTile({ label, score, color, large = false }: { label: string; score: number; color: string; large?: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div
+      className={[
+        "relative overflow-hidden rounded-[18px] border",
+        large ? "px-4 py-4" : "px-3 py-3",
+      ].join(" ")}
+      style={{
+        background:
+          "linear-gradient(145deg, color-mix(in srgb, var(--hint-surface-soft) 88%, transparent), color-mix(in srgb, var(--hint-input-bg) 70%, transparent))",
+        borderColor: `color-mix(in srgb, ${color} 22%, var(--hint-border))`,
+        boxShadow: large
+          ? `0 18px 44px color-mix(in srgb, ${color} 10%, transparent), inset 0 1px 0 rgba(255,255,255,0.14)`
+          : "inset 0 1px 0 rgba(255,255,255,0.12)",
+      }}
+    >
       <div
-        className="grid rounded-full place-items-center"
-        style={{
-          width: size,
-          height: size,
-          background: `conic-gradient(${color} ${score * 3.6}deg, rgba(255,255,255,0.12) 0deg)`,
-          boxShadow: large ? `0 0 32px ${color}33` : undefined,
-        }}
-      >
-        <div className="grid rounded-full place-items-center" style={{ width: inner, height: inner, background: "rgba(5,7,14,0.94)" }}>
-          <span className={large ? "font-serif text-[38px] leading-none tabular-nums" : "font-serif text-[19px] leading-none tabular-nums"} style={{ color }}>
-            {score}
-          </span>
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-1 rounded-r-full"
+        style={{ background: color }}
+      />
+      <div className={large ? "flex items-end justify-between gap-3" : "flex items-center justify-between gap-2"}>
+        <div className="min-w-0">
+          <p className="truncate font-sans text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: GLASS.muted }}>
+            {label}
+          </p>
+          {large ? (
+            <p className="mt-1 font-sans text-[12px] leading-snug" style={{ color: GLASS.faint }}>
+              The day’s full sky signal
+            </p>
+          ) : null}
         </div>
+        <span
+          className={large ? "font-serif text-[48px] leading-none tabular-nums" : "font-serif text-[28px] leading-none tabular-nums"}
+          style={{ color: "var(--hint-text)", textShadow: `0 0 14px color-mix(in srgb, ${color} 14%, transparent)` }}
+        >
+          {score}
+        </span>
       </div>
-      <span className="font-sans text-[10px] uppercase tracking-[0.12em]" style={{ color: GLASS.faint }}>
-        {label}
-      </span>
+      <div className={large ? "mt-4 h-2" : "mt-3 h-1.5"} style={{ background: "color-mix(in srgb, var(--hint-border) 58%, transparent)", borderRadius: 999 }}>
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${score}%`,
+            background: `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 48%, var(--hint-gold)))`,
+            boxShadow: `0 0 14px color-mix(in srgb, ${color} 20%, transparent)`,
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -58,7 +83,7 @@ function EnergyTask({ deck }: { deck: DailySkyDeck }) {
       : "Drink a glass of water slowly and name one thing you can finish";
 
   return (
-    <GlassPanel>
+    <GlassPanel className="hint-shimmer-border">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <SectionLabel>Energy task</SectionLabel>
@@ -71,19 +96,19 @@ function EnergyTask({ deck }: { deck: DailySkyDeck }) {
         </span>
       </div>
       <div className="grid gap-3">
-        <div className="flex items-center gap-3 rounded-[13px] border px-3 py-3" style={{ borderColor: "rgba(134,214,199,0.26)", background: "rgba(134,214,199,0.08)" }}>
+        <div className="hint-selected-glow flex items-center gap-3 rounded-[16px] border px-3 py-3" style={{ borderColor: "color-mix(in srgb, var(--hint-aqua, #9dded9) 30%, var(--hint-border))", background: "color-mix(in srgb, var(--hint-aqua, #9dded9) 10%, var(--hint-surface-soft))" }}>
           <span className="grid size-5 shrink-0 place-items-center rounded-full" style={{ color: "#08221f", background: ACCENT.aqua }}>
             <Check size={13} />
           </span>
           <span className="font-sans text-[13px]" style={{ color: GLASS.text }}>{task}</span>
         </div>
-        <div className="flex items-center gap-3 rounded-[13px] border px-3 py-3" style={{ borderColor: GLASS.border }}>
+        <div className="hint-status-pill flex items-center gap-3 rounded-[16px] border px-3 py-3">
           <span className="size-5 shrink-0 rounded-full border" style={{ borderColor: GLASS.border }} />
           <span className="font-sans text-[13px]" style={{ color: GLASS.muted }}>Write one sentence about what the card changed</span>
         </div>
       </div>
       <div className="mt-5 flex items-center gap-3 border-t pt-4" style={{ borderColor: GLASS.border }}>
-        <span className="grid size-10 place-items-center overflow-hidden rounded-[12px] bg-[#f3ecdd]">
+        <span className="grid size-10 place-items-center overflow-hidden rounded-[12px]" style={{ background: "color-mix(in srgb, var(--hint-gold, #dcc383) 16%, var(--hint-surface-soft))" }}>
           <SafeImage src="/lucky/flower/lavender.png" alt="" className="size-8 object-contain" fallbackClassName="size-8 rounded-[10px]" />
         </span>
         <p className="font-sans text-[12px]" style={{ color: GLASS.muted }}>
@@ -154,7 +179,7 @@ export function SkyDeckView() {
         <p className="font-sans text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT.gold }}>
           Sky Deck
         </p>
-        <h1 className="mt-2 font-serif text-[30px] leading-none" style={{ color: GLASS.text }}>
+        <h1 className="mt-2 font-serif text-[30px] leading-none hint-app-title" style={{ color: GLASS.text }}>
           Today’s sky card
         </h1>
         <p className="mt-3 max-w-xl font-sans text-[13px] leading-relaxed" style={{ color: GLASS.muted }}>
@@ -167,31 +192,34 @@ export function SkyDeckView() {
         )}
       </header>
 
-      <GlassPanel hero>
+      <GlassPanel hero className="hint-shimmer-border">
         {deck ? (
-          <div className="grid gap-6 md:grid-cols-[0.95fr_1.05fr] md:items-start">
+          <div className="grid gap-5">
             <div className="grid gap-5">
-              <div className="relative overflow-hidden rounded-[24px] border p-5" style={{ borderColor: "rgba(206,178,110,0.28)", background: "rgba(255,255,255,0.045)", boxShadow: "0 24px 70px rgba(0,0,0,0.28)" }}>
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(320px_240px_at_50%_16%,rgba(230,203,142,0.15),transparent_64%)]" />
-                <div className="relative grid justify-items-center gap-5">
+              <div className="hint-app-card relative overflow-hidden rounded-[24px] border p-4" style={{ borderColor: "color-mix(in srgb, var(--hint-gold, #dcc383) 26%, var(--hint-border))" }}>
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{ background: "radial-gradient(360px 260px at 18% 8%, color-mix(in srgb, var(--hint-rose) 12%, transparent), transparent 64%), radial-gradient(320px 240px at 92% 10%, color-mix(in srgb, var(--hint-aqua) 9%, transparent), transparent 62%)" }}
+                />
+                <div className="relative grid gap-4">
                   <SectionLabel>Overall tonight</SectionLabel>
-                  <ScoreRing label="Sky score" score={deck.scores.overall} color={ACCENT.gold} large />
-                  <div className="grid w-full grid-cols-2 gap-3 min-[420px]:grid-cols-3 sm:grid-cols-5">
+                  <ScoreTile label="Sky score" score={deck.scores.overall} color={ACCENT.gold} large />
+                  <div className="grid w-full grid-cols-2 gap-2.5">
                     {deck.scoreBars.map((score) => (
-                      <ScoreRing key={score.key} label={score.label} score={score.score} color={SCORE_COLORS[score.key] ?? ACCENT.gold} />
+                      <ScoreTile key={score.key} label={score.label} score={score.score} color={SCORE_COLORS[score.key] ?? ACCENT.gold} />
                     ))}
                   </div>
                 </div>
               </div>
               <SkyDeckCard deck={deck} revealed />
             </div>
-            <div>
+            <div className="hint-app-card rounded-[24px] p-4">
               <SectionLabel>Reading</SectionLabel>
               <h2 className="mt-3 font-serif text-[34px] leading-none" style={{ color: GLASS.text }}>
                 {deck.dailyCard.cardName}
               </h2>
               {getTarotCardImage(deck.dailyCard.cardId, "hint-card-2") ? (
-                <div className="mt-5 w-[min(170px,46vw)] overflow-hidden rounded-[12px] border" style={{ borderColor: "rgba(206,178,110,0.36)", boxShadow: "0 20px 56px rgba(0,0,0,0.32)" }}>
+                <div className="mt-5 w-[min(170px,46vw)] overflow-hidden rounded-[12px] border" style={{ borderColor: "color-mix(in srgb, var(--hint-gold, #dcc383) 36%, var(--hint-border))", boxShadow: "0 20px 56px color-mix(in srgb, var(--hint-plum, #271d38) 24%, transparent)" }}>
                   <SafeImage
                     src={getTarotCardImage(deck.dailyCard.cardId, "hint-card-2")}
                     alt={deck.dailyCard.cardName}
@@ -211,7 +239,8 @@ export function SkyDeckView() {
                   </p>
                 ))}
               </div>
-              <Link href="/app/astrology" className="mt-6 inline-flex h-11 items-center rounded-full px-5 font-sans text-[13px] font-black" style={{ color: "#fffaf2", background: EMBER }}>
+              <Link href="/app/astrology" className="hint-soft-button hint-tap-sparkle mt-6 inline-flex h-11 items-center gap-2 rounded-full px-5 font-sans text-[13px] font-black">
+                <Sparkles size={15} />
                 Open astrology
               </Link>
             </div>

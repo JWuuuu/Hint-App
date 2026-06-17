@@ -165,9 +165,9 @@ function StepDots({ panel }: { panel: IntakePanel }) {
     <div
       className="flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-1.5"
       style={{
-        borderColor: "rgba(228,198,138,0.16)",
-        background: "rgba(255,255,255,0.035)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+        borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 24%, var(--hint-border))",
+        background: "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)",
       }}
       aria-hidden
     >
@@ -193,58 +193,82 @@ function TarotIntakeArtwork({ spread }: { spread?: SpreadChoice }) {
   const images = INTAKE_ART_CARDS
     .map((cardId) => getTarotCardImage(cardId, "hint-classic") ?? getTarotCardImage(cardId, "original"))
     .filter((image): image is string => Boolean(image));
+  const cardTransforms = [
+    "translate3d(-8px, 8px, 0) rotate(-7deg)",
+    "translate3d(0, 0, 0) rotate(0deg)",
+    "translate3d(10px, 7px, 0) rotate(7deg)",
+  ];
 
   return (
     <div
-      className="relative min-h-[142px] overflow-hidden rounded-[10px] border"
+      className="hint-liquid-panel relative min-h-[318px] overflow-hidden rounded-[24px] border sm:min-h-[204px]"
       style={{
-        borderColor: "rgba(228,198,138,0.18)",
+        borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 28%, var(--hint-liquid-border))",
         background:
-          "radial-gradient(circle at 20% 20%, rgba(64,224,208,0.14), transparent 32%), radial-gradient(circle at 78% 28%, rgba(228,198,138,0.18), transparent 34%), linear-gradient(135deg, rgba(5,8,16,0.96), rgba(15,20,34,0.96))",
-        boxShadow: "0 18px 44px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.06)",
+          "radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--hint-aqua, #86d6c7) 20%, transparent), transparent 32%), radial-gradient(circle at 78% 28%, color-mix(in srgb, var(--hint-gold, #cba866) 24%, transparent), transparent 34%), var(--hint-liquid-panel-strong)",
+        boxShadow: "var(--hint-liquid-shadow)",
       }}
     >
       <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.62)_0_1px,transparent_1px),radial-gradient(circle_at_80%_22%,rgba(228,198,138,0.72)_0_1px,transparent_1px),radial-gradient(circle_at_62%_76%,rgba(64,224,208,0.58)_0_1px,transparent_1px)] [background-size:86px_94px]" />
       <motion.div
         aria-hidden
-        className="absolute left-[8%] top-1/2 h-28 w-28 -translate-y-1/2 rounded-full border border-[#e4c174]/18"
-        animate={{ opacity: [0.22, 0.58, 0.22], scale: [0.96, 1.08, 0.96] }}
-        transition={{ duration: 4.6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute left-[8%] top-1/2 h-36 w-36 -translate-y-1/2 rounded-full border border-[#e4c174]/18 sm:h-44 sm:w-44"
+        animate={{ opacity: [0.18, 0.42, 0.18], scale: [0.98, 1.035, 0.98] }}
+        transition={{ duration: 6.8, repeat: Infinity, ease: "easeInOut" }}
       />
-      <div className="absolute bottom-3 left-5 flex h-[118px] w-[148px] items-end justify-center">
+      <motion.div
+        aria-hidden
+        className="absolute bottom-6 left-8 h-28 w-52 rounded-full blur-2xl"
+        style={{
+          background: "radial-gradient(ellipse, rgba(228,198,138,0.24), rgba(64,224,208,0.11) 48%, transparent 74%)",
+        }}
+        animate={{ opacity: [0.46, 0.72, 0.46], scale: [0.98, 1.04, 0.98] }}
+        transition={{ duration: 5.8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <div className="absolute left-1/2 top-5 flex h-[154px] w-[220px] -translate-x-1/2 items-end justify-center sm:h-[170px] sm:w-[246px]">
         {images.map((image, index) => (
-          <motion.span
+          <span
             key={image}
-            className="absolute bottom-0 block h-[108px] w-[68px] overflow-hidden rounded-[8px] border bg-black/30 shadow-[0_18px_34px_rgba(0,0,0,0.38)]"
+            className="absolute bottom-0 block h-[146px] w-[92px] overflow-hidden rounded-[14px] border shadow-[0_22px_42px_rgba(0,0,0,0.28)] sm:h-[164px] sm:w-[104px]"
             style={{
-              left: `${index * 34}px`,
-              borderColor: index === 1 ? "rgba(228,198,138,0.72)" : "rgba(255,255,255,0.24)",
-              zIndex: index + 1,
+              left: `${index * 48}px`,
+              transform: cardTransforms[index],
+              transformOrigin: "50% 88%",
+              borderColor: index === 1
+                ? "color-mix(in srgb, var(--hint-gold, #cba866) 72%, var(--hint-liquid-border))"
+                : "color-mix(in srgb, var(--hint-liquid-border) 72%, transparent)",
+              zIndex: index === 1 ? 3 : index === 2 ? 2 : 1,
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden",
+              background: "var(--hint-deck-card-bg)",
             }}
-            animate={{
-              y: index === 1 ? [0, -5, 0] : [0, -2, 0],
-              rotate: index === 0 ? -10 : index === 1 ? 0 : 10,
-            }}
-            transition={{ duration: 5.2 + index * 0.3, repeat: Infinity, ease: "easeInOut" }}
           >
             <img
               src={image}
               alt=""
               aria-hidden="true"
               draggable={false}
+              decoding="async"
               className="h-full w-full object-cover"
+              style={{
+                filter: "brightness(1.06) contrast(1.06) saturate(1.05)",
+                imageRendering: "auto",
+                transform: "translateZ(0)",
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+              }}
             />
-          </motion.span>
+          </span>
         ))}
       </div>
-      <div className="absolute inset-y-0 right-0 flex w-[48%] flex-col justify-center px-4 text-left">
-        <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.2em]" style={{ color: GOLD.ink }}>
+      <div className="absolute inset-x-5 bottom-5 top-auto flex flex-col justify-center px-0 text-center">
+        <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.2em] sm:text-[10px]" style={{ color: GOLD.ink }}>
           Energy-selected
         </p>
-        <p className="mt-1 font-serif text-[22px] leading-tight" style={{ color: IVORY.primary, textShadow: TEXT_HALO.soft }}>
+        <p className="mt-1 font-serif text-[23px] leading-tight sm:text-[28px]" style={{ color: IVORY.primary, textShadow: TEXT_HALO.soft }}>
           The cards wait for your hand.
         </p>
-        <p className="mt-2 line-clamp-2 font-sans text-[11px] leading-relaxed" style={{ color: IVORY.dim }}>
+        <p className="mt-2 line-clamp-2 font-sans text-[11px] leading-relaxed sm:text-[12px]" style={{ color: IVORY.dim }}>
           {spread
             ? `${spread.label} · ${spread.cardCount} ${spread.cardCount === 1 ? "card" : "cards"}`
             : "Ask first, then choose from a fixed hidden deck."}
@@ -272,7 +296,7 @@ function GhostButton({
       style={{
         color: IVORY.body,
         borderColor: "var(--hint-border)",
-        background: "var(--hint-card-surface-muted)",
+        background: "color-mix(in srgb, var(--hint-card-surface-muted) 82%, transparent)",
       }}
     >
       {children}
@@ -294,13 +318,9 @@ function PrimaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex h-11 items-center gap-2 rounded-[8px] border px-4 font-sans text-[12px] font-semibold uppercase tracking-[0.14em] transition-all duration-500 disabled:opacity-35"
+      className="hint-prism-action inline-flex h-11 items-center gap-2 rounded-[16px] px-4 font-sans text-[12px] font-semibold uppercase tracking-[0.14em] transition-all duration-500 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-35"
       style={{
-        color: IVORY.primary,
-        borderColor: GOLD.edge,
-        background:
-          "linear-gradient(135deg, rgba(228,198,138,0.16), rgba(100,156,158,0.10))",
-        boxShadow: "0 0 24px rgba(228,198,138,0.10)",
+        color: "var(--hint-special-action-text)",
       }}
     >
       {children}
@@ -321,11 +341,13 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[50px] items-center rounded-[8px] border px-3 py-2 text-left font-sans text-[13px] font-medium leading-snug transition-all duration-500"
+      className="flex min-h-[50px] items-center rounded-[16px] border px-3 py-2 text-left font-sans text-[13px] font-medium leading-snug transition-all duration-500 hover:-translate-y-0.5 active:translate-y-0"
       style={{
         color: selected ? IVORY.primary : IVORY.body,
         borderColor: selected ? GOLD.edge : "var(--hint-border)",
-        background: selected ? "rgba(228,198,138,0.13)" : "var(--hint-card-surface-muted)",
+        background: selected
+          ? "linear-gradient(135deg, color-mix(in srgb, var(--hint-gold, #cba866) 18%, transparent), color-mix(in srgb, var(--hint-aqua, #86d6c7) 9%, transparent))"
+          : "color-mix(in srgb, var(--hint-card-surface-muted) 88%, transparent)",
         textShadow: selected ? TEXT_HALO.soft : "none",
       }}
     >
@@ -339,10 +361,10 @@ function MiniSpreadDiagram({ spread }: { spread: SpreadChoice }) {
 
   return (
     <div
-      className="relative h-[70px] w-[84px] shrink-0 overflow-hidden rounded-[8px]"
+      className="relative h-[70px] w-[84px] shrink-0 overflow-hidden rounded-[14px]"
       style={{
-        background: "linear-gradient(180deg, rgba(8,12,22,0.95), rgba(18,23,38,0.95))",
-        boxShadow: "inset 0 0 0 1px rgba(228,198,138,0.18)",
+        background: "var(--hint-liquid-panel-strong)",
+        boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--hint-gold, #cba866) 22%, var(--hint-border))",
       }}
     >
       <svg aria-hidden className="absolute inset-0 h-full w-full" viewBox="0 0 100 100">
@@ -366,9 +388,9 @@ function MiniSpreadDiagram({ spread }: { spread: SpreadChoice }) {
             top: `${point.y}%`,
             width: 16,
             height: 24,
-            color: "#f2d48d",
-            borderColor: "rgba(228,198,138,0.5)",
-            background: "rgba(5,9,16,0.96)",
+            color: "var(--hint-gold-bright, #f2d48d)",
+            borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 50%, var(--hint-border))",
+            background: "color-mix(in srgb, var(--hint-deck-card-bg) 72%, transparent)",
           }}
         >
           {point.n}
@@ -785,14 +807,14 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 1.5, ease: "easeInOut" }}
-      className="flex w-full max-w-[460px] flex-col px-4 lg:max-w-[540px]"
+      className="flex w-full max-w-[430px] flex-col px-4"
     >
       <div
-        className="relative overflow-hidden rounded-[8px] border"
+        className="hint-liquid-panel relative overflow-hidden rounded-[28px] border"
         style={{
-          background: "var(--hint-card-surface)",
-          borderColor: "var(--hint-border)",
-          boxShadow: "var(--hint-elevated-shadow)",
+          background: "var(--hint-liquid-panel)",
+          borderColor: "var(--hint-liquid-border)",
+          boxShadow: "var(--hint-liquid-shadow)",
         }}
       >
         {submitted && (
@@ -829,7 +851,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
           <div
             ref={scrollRef}
             data-tarot-intake-scroll
-            className="min-h-0 flex-1 overflow-y-auto px-5 py-6 lg:py-4"
+            className="min-h-0 flex-1 overflow-y-auto px-5 py-6"
           >
             <>
               {panel === "context" && (
@@ -854,7 +876,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                         maxLength={1000}
                         rows={4}
                         placeholder="Ask about a person, a decision, a feeling, or something you can't stop thinking about."
-                        className="hint-ritual-input w-full resize-none rounded-[8px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none"
+                        className="hint-ritual-input w-full resize-none rounded-[22px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none transition-[border-color,box-shadow,background] duration-300 focus:shadow-[var(--hint-chat-input-shadow-focus)]"
                         style={{
                           color: IVORY.strong,
                           borderColor: question.trim()
@@ -910,7 +932,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                         maxLength={1000}
                         rows={3}
                         placeholder={t("tarot.intake.questionPlaceholder")}
-                        className="hint-ritual-input w-full resize-none rounded-[8px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none"
+                        className="hint-ritual-input w-full resize-none rounded-[22px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none transition-[border-color,box-shadow,background] duration-300 focus:shadow-[var(--hint-chat-input-shadow-focus)]"
                         style={{
                           color: IVORY.strong,
                           borderColor: question.trim()
@@ -932,7 +954,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                         maxLength={1600}
                         rows={3}
                         placeholder="One or two details are enough. You can also leave this blank and tell me after the cards reveal."
-                        className="hint-ritual-input w-full resize-none rounded-[8px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none"
+                        className="hint-ritual-input w-full resize-none rounded-[22px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none transition-[border-color,box-shadow,background] duration-300 focus:shadow-[var(--hint-chat-input-shadow-focus)]"
                         style={{
                           color: IVORY.strong,
                           borderColor: "var(--hint-border)",
@@ -1265,10 +1287,10 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                           {visiblePositionLabels.map((label, index) => (
                             <div
                               key={`${selectedSpread.id}-guide-${index}-${label}`}
-                              className="grid grid-cols-[1.75rem_1fr] gap-2 rounded-[8px] border px-2 py-1.5"
+                              className="grid grid-cols-[1.75rem_1fr] gap-2 rounded-[14px] border px-2 py-1.5"
                               style={{
-                                borderColor: "rgba(228,198,138,0.14)",
-                                background: "rgba(255,255,255,0.025)",
+                                borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 16%, var(--hint-border))",
+                                background: "color-mix(in srgb, var(--hint-card-surface-muted) 78%, transparent)",
                               }}
                             >
                               <span className="font-sans text-[10px] font-semibold" style={{ color: GOLD.ink }}>
@@ -1286,7 +1308,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                     </div>
 
                     <div
-                      className="rounded-[8px] border p-2"
+                      className="rounded-[18px] border p-2"
                       style={{
                         borderColor: "var(--hint-border)",
                         background: "var(--hint-card-surface-muted)",
@@ -1339,7 +1361,12 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
 
           <footer
             className="flex items-center justify-between gap-3 border-t px-5 py-4"
-            style={{ borderColor: "var(--hint-border)" }}
+            style={{
+              borderColor: "var(--hint-border)",
+              background: "color-mix(in srgb, var(--hint-surface) 74%, transparent)",
+              backdropFilter: "blur(24px) saturate(1.24)",
+              WebkitBackdropFilter: "blur(24px) saturate(1.24)",
+            }}
           >
             <GhostButton onClick={goBack} disabled={panel === "context" || submitted}>
               <ArrowLeft size={14} />

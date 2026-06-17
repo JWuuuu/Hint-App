@@ -96,40 +96,44 @@ export function ReadingReveal({
 
   return (
     <section className="relative h-full w-full overflow-y-auto overflow-x-hidden px-4 py-10 text-center sm:py-12">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(226,190,116,0.17),transparent_28%),radial-gradient(circle_at_50%_72%,rgba(8,19,34,0.74),transparent_34%),linear-gradient(180deg,#050816,#010207)]" />
-      <div className="pointer-events-none absolute inset-x-0 top-[22%] mx-auto h-[55%] max-w-5xl rounded-full bg-[#e4c174]/[0.045] blur-3xl" />
+      <div className="absolute inset-0" style={{ background: "var(--hint-page-bg)" }} />
+      <div className="pointer-events-none absolute inset-x-0 top-[18%] mx-auto h-[58%] max-w-5xl rounded-full blur-3xl" style={{ background: "color-mix(in srgb, var(--hint-rose, #f0b6cf) 12%, transparent)" }} />
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[45%] h-[410px] w-[410px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(114,227,213,0.10),transparent_60%)] blur-2xl"
+        className="pointer-events-none absolute left-1/2 top-[45%] h-[410px] w-[410px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl"
+        style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--hint-aqua, #9dded9) 15%, transparent), transparent 60%)" }}
         animate={{ opacity: allRevealed ? 0.32 : [0.18, 0.42, 0.18], scale: allRevealed ? 1.02 : [0.88, 1.08, 0.88] }}
         transition={{ duration: 5.6, repeat: allRevealed ? 0 : Infinity, ease: "easeInOut" }}
       />
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[45%] h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#e4c174]/12"
+        className="pointer-events-none absolute left-1/2 top-[45%] h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full border"
+        style={{ borderColor: "color-mix(in srgb, var(--hint-gold, #dcc383) 18%, transparent)" }}
         animate={{ opacity: [0.16, 0.46, 0.16], scale: [0.9, 1.16, 0.9] }}
         transition={{ duration: 6.2, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[45%] h-[180px] w-[180px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#72e3d5]/10"
+        className="pointer-events-none absolute left-1/2 top-[45%] h-[180px] w-[180px] -translate-x-1/2 -translate-y-1/2 rounded-full border"
+        style={{ borderColor: "color-mix(in srgb, var(--hint-aqua, #9dded9) 15%, transparent)" }}
         animate={{ opacity: [0.12, 0.38, 0.12], scale: [1.08, 0.92, 1.08] }}
         transition={{ duration: 5.4, repeat: Infinity, ease: "easeInOut" }}
       />
 
       <div className="relative z-30 mx-auto mb-8 max-w-3xl sm:mb-10">
-        <p className="font-serif text-[30px] leading-tight text-[#f7ead0] sm:text-5xl">{title}</p>
-        <p className="mt-3 font-sans text-sm text-[#d8c7a6]/78 sm:text-[15px]">{subtitle}</p>
-        <div className="mx-auto mt-4 flex w-fit flex-wrap items-center justify-center gap-2 rounded-full border border-[#e4c174]/18 bg-black/24 px-3 py-2 font-sans text-[10px] uppercase tracking-[0.14em] text-[#d8c7a6]/78 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-md">
-          <span className="text-[#ffe8aa]">
+        <p className="font-serif text-[30px] leading-tight sm:text-5xl" style={{ color: "var(--hint-text)" }}>{title}</p>
+        <p className="mt-3 font-sans text-sm sm:text-[15px]" style={{ color: "var(--hint-muted)" }}>{subtitle}</p>
+        <div className="hint-status-pill mx-auto mt-4 flex w-fit flex-wrap items-center justify-center gap-2 rounded-full border px-3 py-2 font-sans text-[10px] uppercase tracking-[0.14em] backdrop-blur-md">
+          <span style={{ color: "var(--hint-gold)" }}>
             {allRevealed ? "Spread revealed" : autoReveal ? "Opening sequence" : "Manual reveal"}
           </span>
-          <span className="h-1 w-1 rounded-full bg-[#72e3d5]/55" />
+          <span className="h-1 w-1 rounded-full" style={{ background: "var(--hint-aqua)" }} />
           <span>{revealedIds.length} / {selectedCards.length}</span>
         </div>
-        <div className="mx-auto mt-3 h-1 w-full max-w-[18rem] overflow-hidden rounded-full bg-white/8">
+        <div className="mx-auto mt-3 h-1 w-full max-w-[18rem] overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--hint-border) 62%, transparent)" }}>
           <motion.div
-            className="h-full rounded-full bg-[linear-gradient(90deg,#72e3d5,#e4c174)] shadow-[0_0_18px_rgba(228,193,116,0.22)]"
+            className="h-full rounded-full"
+            style={{ background: "linear-gradient(90deg, var(--hint-aqua), var(--hint-rose), var(--hint-gold))", boxShadow: "0 0 18px color-mix(in srgb, var(--hint-gold) 22%, transparent)" }}
             initial={{ width: "0%" }}
             animate={{ width: `${Math.round(revealProgress * 100)}%` }}
             transition={{ duration: 0.45, ease: "easeOut" }}
@@ -162,7 +166,8 @@ export function ReadingReveal({
                 className={`relative grid place-items-center ${cardShellClass}`}
               >
                 <motion.div
-                  className="pointer-events-none absolute -inset-6 rounded-[24px] bg-[radial-gradient(circle,rgba(228,193,116,0.28),rgba(114,227,213,0.08)_45%,transparent_72%)] blur-2xl"
+                  className="pointer-events-none absolute -inset-6 rounded-[24px] blur-2xl"
+                  style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--hint-gold) 24%, transparent), color-mix(in srgb, var(--hint-aqua) 9%, transparent) 45%, transparent 72%)" }}
                   animate={{
                     opacity: revealed ? 0.82 : isNextAutoCard ? [0.28, 0.7, 0.28] : 0.24,
                     scale: revealed ? 1.08 : isNextAutoCard ? [0.86, 1.04, 0.86] : 0.86,
@@ -172,7 +177,8 @@ export function ReadingReveal({
                 {!revealed && (canReveal || isNextAutoCard) && (
                   <motion.div
                     aria-hidden
-                    className="pointer-events-none absolute -inset-3 rounded-[18px] border border-[#e4c174]/28"
+                    className="pointer-events-none absolute -inset-3 rounded-[18px] border"
+                    style={{ borderColor: "color-mix(in srgb, var(--hint-gold) 30%, transparent)" }}
                     animate={{ opacity: [0.22, 0.62, 0.22], scale: [0.96, 1.05, 0.96] }}
                     transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
                   />
@@ -180,7 +186,8 @@ export function ReadingReveal({
                 {revealed && (
                   <motion.div
                     aria-hidden
-                    className="pointer-events-none absolute -inset-5 rounded-[22px] border border-[#72e3d5]/18"
+                    className="pointer-events-none absolute -inset-5 rounded-[22px] border"
+                    style={{ borderColor: "color-mix(in srgb, var(--hint-aqua) 24%, transparent)" }}
                     initial={{ opacity: 0.7, scale: 0.78 }}
                     animate={{ opacity: 0, scale: 1.28 }}
                     transition={{ duration: 0.7, ease: "easeOut" }}
@@ -199,7 +206,7 @@ export function ReadingReveal({
                   className={cardSizeClass}
                 />
               </motion.div>
-              <p className="max-w-[11rem] truncate font-sans text-[10px] uppercase tracking-[0.18em] text-[#d8c7a6]/78 sm:text-[11px] sm:tracking-[0.22em]">
+              <p className="max-w-[11rem] truncate font-sans text-[10px] uppercase tracking-[0.18em] sm:text-[11px] sm:tracking-[0.22em]" style={{ color: "var(--hint-muted)" }}>
                 {revealed ? card.name : label}
               </p>
             </motion.div>
@@ -211,7 +218,7 @@ export function ReadingReveal({
         <button
           type="button"
           onClick={onContinue}
-          className="relative z-10 mt-10 rounded-full border border-[#e4c174]/58 bg-[linear-gradient(135deg,rgba(228,193,116,0.18),rgba(114,227,213,0.10))] px-7 py-3.5 font-sans text-xs uppercase tracking-[0.22em] text-[#ffe8aa] shadow-[0_12px_30px_rgba(0,0,0,0.35),0_0_24px_rgba(228,193,116,0.12)] transition-[background,transform] hover:scale-[1.02] hover:bg-[#e4c174]/16"
+          className="hint-soft-button hint-tap-sparkle relative z-10 mt-10 rounded-full px-7 py-3.5 font-sans text-xs uppercase tracking-[0.18em] transition-[background,transform] hover:scale-[1.02]"
         >
           Read my Hint
         </button>
