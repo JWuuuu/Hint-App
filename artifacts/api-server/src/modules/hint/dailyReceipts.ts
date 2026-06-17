@@ -8,6 +8,7 @@ export const DAILY_RECEIPT_FEATURES = [
   "sky-deck",
   "energy-score",
   "collection-rare-reward",
+  "animal-tarot",
 ] as const;
 
 export type DailyReceiptFeature = (typeof DAILY_RECEIPT_FEATURES)[number];
@@ -39,6 +40,15 @@ const MAJOR_CARD_IDS = new Set([
 ]);
 
 const RARE_COLLECTION_CARDS = dailyPullDeck.filter((card) => MAJOR_CARD_IDS.has(card.id));
+const ANIMAL_TAROT_IDS = [
+  "moon-moth",
+  "black-cat",
+  "white-stag",
+  "night-swan",
+  "amber-fox",
+  "silver-rabbit",
+  "golden-lion",
+] as const;
 
 export function getServerDailyWindow(now = new Date()) {
   const dailyKey = now.toISOString().slice(0, 10);
@@ -58,6 +68,9 @@ function pickOrientation(featureType: DailyReceiptFeature): DailyOrientation | n
 
 function assignCard(featureType: DailyReceiptFeature): string | null {
   if (featureType === "energy-score") return null;
+  if (featureType === "animal-tarot") {
+    return ANIMAL_TAROT_IDS[Math.floor(Math.random() * ANIMAL_TAROT_IDS.length)] ?? ANIMAL_TAROT_IDS[0];
+  }
   if (featureType === "collection-rare-reward") return pickRandomCard(RARE_COLLECTION_CARDS).id;
   return drawDailyPull().id;
 }

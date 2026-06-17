@@ -58,7 +58,7 @@ export function RoomsLibrary() {
           className="mb-7"
         >
           <Link
-            href="/"
+            href="/app"
             className="mb-5 inline-flex h-9 items-center gap-2 rounded-[8px] border px-3 font-sans text-[11px] uppercase tracking-[0.18em]"
             style={{
               color: "var(--hint-muted)",

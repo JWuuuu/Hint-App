@@ -945,7 +945,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
           }}
         >
           <Link
-            href="/"
+            href="/app"
             className="inline-flex h-10 items-center justify-center rounded-[8px] border px-4 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:border-[#8f806f]/40 hover:bg-white/65 active:scale-[0.98]"
             style={{
               color: IVORY.body,

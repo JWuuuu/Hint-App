@@ -1398,10 +1398,10 @@ function AstrologyAccessGate({
           <div className="mt-5 flex flex-wrap gap-3">
             {needsLogin ? (
               <>
-                <Link href="/login?mode=login" className="inline-flex h-11 items-center justify-center rounded-[8px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)]" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
+                <Link href="/app/login?mode=login" className="inline-flex h-11 items-center justify-center rounded-[8px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)]" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
                   Log in
                 </Link>
-                <Link href="/login?mode=signup" className="inline-flex h-11 items-center justify-center rounded-[8px] border px-5 text-[13px] font-black" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
+                <Link href="/app/login?mode=signup" className="inline-flex h-11 items-center justify-center rounded-[8px] border px-5 text-[13px] font-black" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
                   Sign up
                 </Link>
               </>

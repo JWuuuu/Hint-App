@@ -3,6 +3,7 @@ import { Check, Moon } from "lucide-react";
 import { Link } from "wouter";
 import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
 import { SkyDeckCard } from "../../components/skydeck/SkyDeckCard";
+import { SafeImage } from "../../shared/ui/SafeImage";
 import { ACCENT, GLASS } from "../../modules/hold/atmosphere";
 import { getTarotCardImage } from "../../modules/tarot/logic/cardImageMap";
 import {
@@ -83,7 +84,7 @@ function EnergyTask({ deck }: { deck: DailySkyDeck }) {
       </div>
       <div className="mt-5 flex items-center gap-3 border-t pt-4" style={{ borderColor: GLASS.border }}>
         <span className="grid size-10 place-items-center overflow-hidden rounded-[12px] bg-[#f3ecdd]">
-          <img src="/lucky/flower/lavender.png" alt="" className="size-8 object-contain" />
+          <SafeImage src="/lucky/flower/lavender.png" alt="" className="size-8 object-contain" fallbackClassName="size-8 rounded-[10px]" />
         </span>
         <p className="font-sans text-[12px]" style={{ color: GLASS.muted }}>
           Finish to earn <span className="font-serif text-[15px]" style={{ color: ACCENT.gold }}>+20 XP · ritual progress</span>
@@ -191,7 +192,13 @@ export function SkyDeckView() {
               </h2>
               {getTarotCardImage(deck.dailyCard.cardId, "hint-card-2") ? (
                 <div className="mt-5 w-[min(170px,46vw)] overflow-hidden rounded-[12px] border" style={{ borderColor: "rgba(206,178,110,0.36)", boxShadow: "0 20px 56px rgba(0,0,0,0.32)" }}>
-                  <img src={getTarotCardImage(deck.dailyCard.cardId, "hint-card-2") ?? ""} alt={deck.dailyCard.cardName} className="h-full w-full object-cover" />
+                  <SafeImage
+                    src={getTarotCardImage(deck.dailyCard.cardId, "hint-card-2")}
+                    alt={deck.dailyCard.cardName}
+                    className="h-full w-full object-cover"
+                    fallbackClassName="aspect-[46/71] rounded-[12px]"
+                    fallbackLabel="Card loading"
+                  />
                 </div>
               ) : null}
               <p className="mt-4 font-sans text-[15px] leading-relaxed" style={{ color: GLASS.muted }}>
@@ -204,7 +211,7 @@ export function SkyDeckView() {
                   </p>
                 ))}
               </div>
-              <Link href="/astrology" className="mt-6 inline-flex h-11 items-center rounded-full px-5 font-sans text-[13px] font-black" style={{ color: "#fffaf2", background: EMBER }}>
+              <Link href="/app/astrology" className="mt-6 inline-flex h-11 items-center rounded-full px-5 font-sans text-[13px] font-black" style={{ color: "#fffaf2", background: EMBER }}>
                 Open astrology
               </Link>
             </div>

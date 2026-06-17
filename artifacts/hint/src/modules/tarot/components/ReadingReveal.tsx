@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { RitualCard } from "../logic/createHiddenDeck";
 import type { TarotCardArtId } from "../logic/cardImageMap";
@@ -54,12 +54,24 @@ export function ReadingReveal({
   onReveal,
 }: ReadingRevealProps) {
   const [readyToReveal, setReadyToReveal] = useState(false);
+  const sequenceStartedRef = useRef("");
   const allRevealed = selectedCards.every((card) => revealedIds.includes(card.visualId));
   const oneCard = selectedCards.length === 1;
-  const title = allRevealed ? "The cards are open." : "These are the cards that came through.";
+  const revealProgress = selectedCards.length === 0 ? 0 : revealedIds.length / selectedCards.length;
+  const sequenceKey = useMemo(
+    () => selectedCards.map((card) => card.visualId).join("|"),
+    [selectedCards],
+  );
+  const title = allRevealed
+    ? "The cards are open."
+    : autoReveal
+      ? "The cards are opening."
+      : "These are the cards that came through.";
   const subtitle = allRevealed
     ? "Read what they are pointing toward."
-    : oneCard
+    : autoReveal
+      ? "Let the spread reveal itself in the order you selected."
+      : oneCard
       ? `Turn ${getSpreadPositionLabel(spread, 0)} when you are ready.`
       : "Turn each card when you are ready.";
   const gridClass = revealGridClass(selectedCards.length);
@@ -68,24 +80,30 @@ export function ReadingReveal({
 
   useEffect(() => {
     setReadyToReveal(false);
+    sequenceStartedRef.current = "";
     const timer = window.setTimeout(() => setReadyToReveal(true), 760);
     return () => window.clearTimeout(timer);
-  }, [selectedCards]);
+  }, [sequenceKey]);
 
   useEffect(() => {
-    if (!autoReveal) return;
-    const timers = selectedCards
-      .filter((card) => !revealedIds.includes(card.visualId))
-      .map((card, index) =>
-        window.setTimeout(() => onReveal(card.visualId), 260 + index * 120),
-      );
+    if (!autoReveal || !readyToReveal || sequenceStartedRef.current === sequenceKey) return;
+    sequenceStartedRef.current = sequenceKey;
+    const timers = selectedCards.map((card, index) =>
+      window.setTimeout(() => onReveal(card.visualId), 220 + index * 430),
+    );
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [autoReveal, onReveal, revealedIds, selectedCards]);
+  }, [autoReveal, onReveal, readyToReveal, selectedCards, sequenceKey]);
 
   return (
     <section className="relative h-full w-full overflow-y-auto overflow-x-hidden px-4 py-10 text-center sm:py-12">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(226,190,116,0.17),transparent_28%),radial-gradient(circle_at_50%_72%,rgba(8,19,34,0.74),transparent_34%),linear-gradient(180deg,#050816,#010207)]" />
       <div className="pointer-events-none absolute inset-x-0 top-[22%] mx-auto h-[55%] max-w-5xl rounded-full bg-[#e4c174]/[0.045] blur-3xl" />
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[45%] h-[410px] w-[410px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(114,227,213,0.10),transparent_60%)] blur-2xl"
+        animate={{ opacity: allRevealed ? 0.32 : [0.18, 0.42, 0.18], scale: allRevealed ? 1.02 : [0.88, 1.08, 0.88] }}
+        transition={{ duration: 5.6, repeat: allRevealed ? 0 : Infinity, ease: "easeInOut" }}
+      />
       <motion.div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-[45%] h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#e4c174]/12"
@@ -102,6 +120,21 @@ export function ReadingReveal({
       <div className="relative z-30 mx-auto mb-8 max-w-3xl sm:mb-10">
         <p className="font-serif text-[30px] leading-tight text-[#f7ead0] sm:text-5xl">{title}</p>
         <p className="mt-3 font-sans text-sm text-[#d8c7a6]/78 sm:text-[15px]">{subtitle}</p>
+        <div className="mx-auto mt-4 flex w-fit flex-wrap items-center justify-center gap-2 rounded-full border border-[#e4c174]/18 bg-black/24 px-3 py-2 font-sans text-[10px] uppercase tracking-[0.14em] text-[#d8c7a6]/78 shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-md">
+          <span className="text-[#ffe8aa]">
+            {allRevealed ? "Spread revealed" : autoReveal ? "Opening sequence" : "Manual reveal"}
+          </span>
+          <span className="h-1 w-1 rounded-full bg-[#72e3d5]/55" />
+          <span>{revealedIds.length} / {selectedCards.length}</span>
+        </div>
+        <div className="mx-auto mt-3 h-1 w-full max-w-[18rem] overflow-hidden rounded-full bg-white/8">
+          <motion.div
+            className="h-full rounded-full bg-[linear-gradient(90deg,#72e3d5,#e4c174)] shadow-[0_0_18px_rgba(228,193,116,0.22)]"
+            initial={{ width: "0%" }}
+            animate={{ width: `${Math.round(revealProgress * 100)}%` }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+          />
+        </div>
       </div>
 
       <div className={`relative z-10 mx-auto grid w-full ${gridClass} place-items-center gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-7`}>
@@ -109,6 +142,7 @@ export function ReadingReveal({
           const revealed = revealedIds.includes(card.visualId);
           const label = getSpreadPositionLabel(spread, index);
           const canReveal = !autoReveal && !revealed && readyToReveal;
+          const isNextAutoCard = autoReveal && !revealed && revealedIds.length === index;
           return (
             <motion.div
               key={card.visualId}
@@ -129,15 +163,27 @@ export function ReadingReveal({
               >
                 <motion.div
                   className="pointer-events-none absolute -inset-6 rounded-[24px] bg-[radial-gradient(circle,rgba(228,193,116,0.28),rgba(114,227,213,0.08)_45%,transparent_72%)] blur-2xl"
-                  animate={{ opacity: revealed ? 0.82 : 0.24, scale: revealed ? 1.08 : 0.86 }}
+                  animate={{
+                    opacity: revealed ? 0.82 : isNextAutoCard ? [0.28, 0.7, 0.28] : 0.24,
+                    scale: revealed ? 1.08 : isNextAutoCard ? [0.86, 1.04, 0.86] : 0.86,
+                  }}
                   transition={{ duration: 0.92, ease: [0.2, 0.74, 0.18, 1] }}
                 />
-                {!revealed && canReveal && (
+                {!revealed && (canReveal || isNextAutoCard) && (
                   <motion.div
                     aria-hidden
                     className="pointer-events-none absolute -inset-3 rounded-[18px] border border-[#e4c174]/28"
                     animate={{ opacity: [0.22, 0.62, 0.22], scale: [0.96, 1.05, 0.96] }}
                     transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                )}
+                {revealed && (
+                  <motion.div
+                    aria-hidden
+                    className="pointer-events-none absolute -inset-5 rounded-[22px] border border-[#72e3d5]/18"
+                    initial={{ opacity: 0.7, scale: 0.78 }}
+                    animate={{ opacity: 0, scale: 1.28 }}
+                    transition={{ duration: 0.7, ease: "easeOut" }}
                   />
                 )}
                 <TarotCardVisual

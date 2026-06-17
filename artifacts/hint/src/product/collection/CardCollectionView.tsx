@@ -9,6 +9,7 @@ import {
 } from "../../lib/dailyReceipts";
 import { ACCENT, GLASS } from "../../modules/hold/atmosphere";
 import { useCardCollection } from "../../shared/hooks/useCardCollection";
+import { SafeImage } from "../../shared/ui/SafeImage";
 import {
   getDailyCollectionReward,
   saveLocalCollectionUnlock,
@@ -115,7 +116,7 @@ export function CardCollectionView() {
             {(collection.recent.length ? collection.recent : collection.cards.slice(0, 6)).map((card) => (
               <div key={card.cardId} className="relative aspect-[46/71] overflow-hidden rounded-[8px] border" style={{ borderColor: card.unlocked ? "rgba(206,178,110,0.32)" : GLASS.border, background: "rgba(255,255,255,0.04)" }}>
                 {card.unlocked && card.image ? (
-                  <img src={card.image} alt={card.name} className="h-full w-full object-cover" />
+                  <SafeImage src={card.image} alt={card.name} className="h-full w-full object-cover" fallbackClassName="h-full w-full rounded-[8px]" fallbackLabel="Card" />
                 ) : (
                   <div className="grid h-full place-items-center">
                     <Lock size={16} color={GLASS.faint} />
@@ -162,7 +163,7 @@ export function CardCollectionView() {
               >
                 <div className="relative aspect-[46/71] overflow-hidden rounded-[8px] border transition-transform enabled:hover:-translate-y-0.5" style={{ borderColor: card.unlocked ? "rgba(206,178,110,0.32)" : GLASS.border, background: card.unlocked ? "rgba(0,0,0,0.18)" : "rgba(255,255,255,0.035)" }}>
                 {card.unlocked && card.image ? (
-                  <img src={card.image} alt={card.name} className="h-full w-full object-cover" />
+                  <SafeImage src={card.image} alt={card.name} className="h-full w-full object-cover" fallbackClassName="h-full w-full rounded-[8px]" fallbackLabel="Card" />
                 ) : (
                   <div className="grid h-full place-items-center">
                     <Lock size={15} color={GLASS.faint} />

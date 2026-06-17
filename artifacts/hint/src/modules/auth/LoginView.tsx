@@ -496,7 +496,7 @@ export function LoginView() {
               ))}
             </div>
             <Link
-              href="/profile"
+              href="/app/profile"
               className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[8px] font-serif text-[12px] uppercase tracking-[0.2em]"
               style={{ background: "rgba(100,156,158,0.14)", border: "1px solid rgba(100,156,158,0.28)", color: ACCENT.aqua }}
             >

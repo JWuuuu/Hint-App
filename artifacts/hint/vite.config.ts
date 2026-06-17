@@ -17,13 +17,20 @@ const basePath = process.env.BASE_PATH ?? "/";
 const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:5050";
 
 function copyTarotDeckAssets() {
+  let publicDir = "";
+  let outDir = "";
+
   return {
     name: "copy-tarot-deck-assets",
-    closeBundle() {
-      const source = path.resolve(import.meta.dirname, "public/brand/tarot/decks");
-      const destination = path.resolve(import.meta.dirname, "dist/public/brand/tarot/decks");
+    configResolved(config: { publicDir: string; build: { outDir: string } }) {
+      publicDir = config.publicDir;
+      outDir = config.build.outDir;
+    },
+    writeBundle() {
+      const source = path.resolve(publicDir, "brand/tarot/decks");
+      const destination = path.resolve(outDir, "brand/tarot/decks");
       if (!fs.existsSync(source)) return;
-      fs.cpSync(source, destination, { recursive: true });
+      fs.cpSync(source, destination, { recursive: true, force: true });
     },
   };
 }

@@ -142,7 +142,7 @@ export function FeedCards({ dailyCardRevealed }: { dailyCardRevealed: boolean })
       </FeedCardBase>
 
       {/* Weekly Reflection — live, opens the ask room with tonight's prompt */}
-      <FeedCardBase href="/ask" index={5}>
+      <FeedCardBase href="/app/ask" index={5}>
         <div className="flex justify-between items-start mb-3">
           <Eyebrow label={t("feed.weeklyReflection")} color={ACCENT.lavender} />
           <Cta label={t("feed.ask")} color={ACCENT.aqua} />

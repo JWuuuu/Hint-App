@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import {
   Bird,
@@ -20,9 +20,15 @@ import type { LucideIcon } from "lucide-react";
 import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
 import { ACCENT, GLASS } from "../../modules/hold/atmosphere";
 import { getAnonId, getLocalDateString } from "../../lib/identity";
+import {
+  getOrCreateDailyReceipt,
+  openDailyReceipt,
+  type DailyReceipt,
+} from "../../lib/dailyReceipts";
 import { RITUAL_TAROT_DECK } from "../../modules/tarot/logic/createHiddenDeck";
 import { getTarotCardImage } from "../../modules/tarot/logic/cardImageMap";
 import { saveLocalCollectionUnlock } from "../../shared/tarot/cardCollection";
+import { SafeImage } from "../../shared/ui/SafeImage";
 import "./animal-tarot.css";
 
 type AnimalSpirit = {
@@ -38,19 +44,8 @@ type AnimalSpirit = {
   task: string;
 };
 
-type LocalAnimalReceipt = {
-  anonId: string;
-  dayKey: string;
-  animalId: string;
-  assignedAt: string;
-  expiresAt: string;
-  openedAt?: string;
-  lastSeenAt?: string;
-};
+type DrawPhase = "loading" | "intro" | "revealing" | "revealed";
 
-type DrawPhase = "intro" | "revealing" | "revealed";
-
-const LOCAL_ANIMAL_RECEIPTS_KEY = "hint_animal_tarot_receipts_v1";
 const EMBER = "#f1a66b";
 
 const ANIMAL_SPIRITS: AnimalSpirit[] = [
@@ -149,71 +144,9 @@ function hashString(value: string): number {
   return hash >>> 0;
 }
 
-function nextLocalMidnight(now = new Date()): Date {
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-}
-
-function readAnimalReceipts(): LocalAnimalReceipt[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(LOCAL_ANIMAL_RECEIPTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeAnimalReceipts(receipts: LocalAnimalReceipt[]) {
-  try {
-    window.localStorage.setItem(LOCAL_ANIMAL_RECEIPTS_KEY, JSON.stringify(receipts));
-  } catch {
-    // Local animal receipts are best effort until this feature gets server receipts.
-  }
-}
-
-function animalForReceipt(anonId: string, dayKey: string): AnimalSpirit {
+function fallbackAnimalId(anonId = getAnonId(), dayKey = getLocalDateString()): AnimalSpirit["id"] {
   const index = hashString(`${anonId}:${dayKey}:animal-tarot`) % ANIMAL_SPIRITS.length;
-  return ANIMAL_SPIRITS[index] ?? ANIMAL_SPIRITS[0]!;
-}
-
-function getOrCreateAnimalReceipt(anonId = getAnonId(), now = new Date()): LocalAnimalReceipt {
-  const dayKey = getLocalDateString(now);
-  const existing = readAnimalReceipts().find((item) => item.anonId === anonId && item.dayKey === dayKey);
-  if (existing) return existing;
-
-  const animal = animalForReceipt(anonId, dayKey);
-  const receipt: LocalAnimalReceipt = {
-    anonId,
-    dayKey,
-    animalId: animal.id,
-    assignedAt: now.toISOString(),
-    expiresAt: nextLocalMidnight(now).toISOString(),
-    lastSeenAt: now.toISOString(),
-  };
-
-  writeAnimalReceipts([
-    receipt,
-    ...readAnimalReceipts().filter((item) => !(item.anonId === anonId && item.dayKey === dayKey)),
-  ].slice(0, 90));
-
-  return receipt;
-}
-
-function openAnimalReceipt(receipt: LocalAnimalReceipt, now = new Date()): LocalAnimalReceipt {
-  const opened: LocalAnimalReceipt = {
-    ...receipt,
-    openedAt: receipt.openedAt ?? now.toISOString(),
-    lastSeenAt: now.toISOString(),
-  };
-
-  writeAnimalReceipts([
-    opened,
-    ...readAnimalReceipts().filter((item) => !(item.anonId === opened.anonId && item.dayKey === opened.dayKey)),
-  ].slice(0, 90));
-
-  return opened;
+  return (ANIMAL_SPIRITS[index] ?? ANIMAL_SPIRITS[0]!).id;
 }
 
 function getAnimalById(id: string): AnimalSpirit {
@@ -225,14 +158,6 @@ function companionCard(cardId: string) {
   return {
     ...card,
     image: getTarotCardImage(card.cardId, "hint-card-2") ?? getTarotCardImage(card.cardId),
-  };
-}
-
-function loadInitialReceipt() {
-  const receipt = getOrCreateAnimalReceipt();
-  return {
-    receipt,
-    phase: receipt.openedAt ? "revealed" as DrawPhase : "intro" as DrawPhase,
   };
 }
 
@@ -257,7 +182,15 @@ function SpiritCard({
         <span>Animal Tarot</span>
       </div>
       <div className="animal-card-face animal-card-front">
-        {cardImage && <img src={cardImage} alt="" aria-hidden="true" />}
+        {cardImage && (
+          <SafeImage
+            src={cardImage}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            fallbackClassName="absolute inset-0 h-full w-full rounded-[20px]"
+            fallbackLabel="Spirit"
+          />
+        )}
         <div className="animal-card-veils" />
         <div className="animal-card-symbol" style={{ borderColor: animal.aura, color: animal.aura }}>
           <Icon size={compact ? 28 : 38} strokeWidth={1.45} />
@@ -291,24 +224,64 @@ function ReadingBlock({
 }
 
 export function AnimalTarotView() {
-  const initial = useMemo(loadInitialReceipt, []);
-  const [receipt, setReceipt] = useState(initial.receipt);
-  const [phase, setPhase] = useState<DrawPhase>(initial.phase);
+  const anonId = useMemo(() => getAnonId(), []);
+  const fallbackAssignedCardId = useMemo(() => fallbackAnimalId(anonId), [anonId]);
+  const [receipt, setReceipt] = useState<DailyReceipt | null>(null);
+  const [phase, setPhase] = useState<DrawPhase>("loading");
   const [saved, setSaved] = useState(false);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
 
-  const animal = getAnimalById(receipt.animalId);
+  useEffect(() => {
+    let cancelled = false;
+    setPhase("loading");
+    getOrCreateDailyReceipt("animal-tarot", { anonId, fallbackAssignedCardId })
+      .then((nextReceipt) => {
+        if (cancelled) return;
+        setReceipt(nextReceipt);
+        setPhase(nextReceipt.openedAt ? "revealed" : "intro");
+        setReceiptError(nextReceipt.source === "local-fallback"
+          ? "Server daily lock is unavailable. This draw is locked locally for now and may resync when the backend returns."
+          : null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setReceipt(null);
+        setPhase("intro");
+        setReceiptError("Animal Tarot could not reach the daily lock service. Try again when the backend is available.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [anonId, fallbackAssignedCardId]);
+
+  const animal = getAnimalById(receipt?.assignedCardId ?? fallbackAssignedCardId);
   const companion = companionCard(animal.companionCardId);
   const revealed = phase === "revealed";
   const revealing = phase === "revealing";
-  const canReplay = Boolean(receipt.openedAt);
+  const loading = phase === "loading";
+  const canReplay = Boolean(receipt?.openedAt);
+  const fallbackMode = receipt?.source === "local-fallback";
 
   function drawAnimal() {
+    if (!receipt) {
+      setReceiptError("Animal Tarot is waiting for the daily lock service. Refresh once the backend is available.");
+      return;
+    }
     setSaved(false);
     setPhase("revealing");
     window.setTimeout(() => {
-      const opened = openAnimalReceipt(receipt);
-      setReceipt(opened);
-      setPhase("revealed");
+      openDailyReceipt("animal-tarot", { anonId, fallbackAssignedCardId })
+        .then((opened) => {
+          setReceipt(opened);
+          setReceiptError(opened.source === "local-fallback"
+            ? "Server daily lock is unavailable. This opened draw is locked locally until the backend returns."
+            : null);
+          setPhase("revealed");
+        })
+        .catch(() => {
+          setReceiptError("Animal Tarot could not mark this draw opened on the daily lock service. Try again in a moment.");
+          setPhase(receipt.openedAt ? "revealed" : "intro");
+        });
     }, 1280);
   }
 
@@ -335,7 +308,7 @@ export function AnimalTarotView() {
             Animal Terrace
           </h1>
           <p className="mt-3 max-w-2xl font-sans text-[13px] leading-relaxed sm:text-[14px]" style={{ color: GLASS.muted }}>
-            Draw the animal walking with you today. The card stays with this local session until tomorrow and can be wired to server receipts later.
+            Draw the animal walking with you today. The card is assigned once per server day and stays open after you reveal it.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {["Instinct", "Emotion", "Today"].map((item) => (
@@ -360,8 +333,29 @@ export function AnimalTarotView() {
           </div>
 
           <div>
+            {receiptError && (
+              <div className="mb-4 rounded-[16px] border px-4 py-3" style={{ borderColor: "rgba(241,166,107,0.34)", background: "rgba(241,166,107,0.08)" }}>
+                <p className="font-sans text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: EMBER }}>
+                  {fallbackMode ? "Local fallback" : "Daily lock unavailable"}
+                </p>
+                <p className="mt-1 font-sans text-[12px] leading-relaxed" style={{ color: GLASS.muted }}>
+                  {receiptError}
+                </p>
+              </div>
+            )}
             <SectionLabel>{revealed ? animal.title : "Mystical animal ritual"}</SectionLabel>
-            {!revealed && !revealing && (
+            {loading && (
+              <div className="py-6">
+                <h2 className="font-serif text-[34px] leading-tight" style={{ color: GLASS.text }}>
+                  Finding today’s animal.
+                </h2>
+                <p className="mt-4 font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>
+                  Asking the server for today’s locked draw.
+                </p>
+              </div>
+            )}
+
+            {!loading && !revealed && !revealing && (
               <>
                 <h2 className="font-serif text-[32px] leading-tight sm:text-[38px]" style={{ color: GLASS.text }}>
                   Let one animal step forward.
@@ -421,10 +415,16 @@ export function AnimalTarotView() {
             )}
 
             <div className="mt-6 flex flex-wrap gap-3">
-              {!revealing && !revealed && (
-                <button type="button" onClick={drawAnimal} className="animal-primary-button">
+              {!loading && !revealing && !revealed && (
+                <button type="button" onClick={drawAnimal} className="animal-primary-button" disabled={!receipt}>
                   <Sparkles size={16} />
                   Draw animal card
+                </button>
+              )}
+              {loading && (
+                <button type="button" className="animal-primary-button is-loading" disabled>
+                  <Moon size={16} />
+                  Loading lock
                 </button>
               )}
               {revealing && (
@@ -463,7 +463,7 @@ export function AnimalTarotView() {
           <Bookmark size={17} />
           <span>Open Collection</span>
         </Link>
-        <Link href="/ask" className="animal-action-card">
+        <Link href="/app/ask" className="animal-action-card">
           <MessageCircle size={17} />
           <span>Ask Hint</span>
         </Link>

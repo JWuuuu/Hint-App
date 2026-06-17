@@ -6,7 +6,8 @@ export type DailyReceiptFeature =
   | "daily-tarot"
   | "sky-deck"
   | "energy-score"
-  | "collection-rare-reward";
+  | "collection-rare-reward"
+  | "animal-tarot";
 
 export type DailyReceiptSource = "server" | "local-fallback";
 

@@ -39,11 +39,11 @@ export function RecordsGrid({
   const readingCount = Math.max(stats?.readings ?? 0, localReadingCount);
   const pullCount = Math.max(stats?.pulls ?? 0, localPullCount);
   const records: Record[] = [
-    { icon: BookOpen, label: t("me.record.archive"), count: String(readingCount), href: "/readings" },
-    { icon: NotebookPen, label: t("me.record.journals"), count: `${stats?.journals ?? 0} ${t("me.notes")}`, href: "/journal" },
+    { icon: BookOpen, label: t("me.record.archive"), count: String(readingCount), href: "/app/readings" },
+    { icon: NotebookPen, label: t("me.record.journals"), count: `${stats?.journals ?? 0} ${t("me.notes")}`, href: "/app/journal" },
     { icon: Bookmark, label: t("me.record.saved"), count: "0", comingSoon: true },
-    { icon: History, label: t("me.record.history"), count: `${pullCount}`, href: "/readings" },
-    { icon: HelpCircle, label: t("me.record.questions"), count: String(localQuestionCount), href: "/readings" },
+    { icon: History, label: t("me.record.history"), count: `${pullCount}`, href: "/app/readings" },
+    { icon: HelpCircle, label: t("me.record.questions"), count: String(localQuestionCount), href: "/app/readings" },
     { icon: HeartPulse, label: t("me.record.mood"), count: `0 ${t("me.notes")}`, comingSoon: true },
     { icon: ShoppingBag, label: t("me.record.orders"), count: "0", comingSoon: true },
     { icon: Users, label: t("me.record.circle"), count: "0", comingSoon: true },

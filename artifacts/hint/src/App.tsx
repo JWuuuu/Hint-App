@@ -25,23 +25,32 @@ const PRODUCT_ROUTES = [
   "/animal-tarot",
   "/sky-deck",
   "/collection",
+  "/profile",
   "/settings",
 ];
 
-function stripAppPrefix(path: string): string {
-  if (path === "/app") return "/";
-  if (path.startsWith("/app?") || path.startsWith("/app#")) return `/${path.slice(4)}`;
-  if (path.startsWith("/app/")) return path.slice(4) || "/";
-  return path;
+function currentPathWithSuffix() {
+  if (typeof window === "undefined") return "/";
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
-function AppAliasRedirect() {
-  const nextPath =
-    typeof window === "undefined"
-      ? "/"
-      : stripAppPrefix(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+function toAppPath(path: string) {
+  if (path === "/" || path.startsWith("/?") || path.startsWith("/#")) return `/app${path.slice(1)}`;
+  if (path === "/daily-pull" || path.startsWith("/daily-pull?") || path.startsWith("/daily-pull#")) {
+    return `/app/daily${path.slice("/daily-pull".length)}`;
+  }
+  if (path === "/me" || path.startsWith("/me?") || path.startsWith("/me#")) {
+    return `/app/profile${path.slice("/me".length)}`;
+  }
+  return path.startsWith("/app") ? path : `/app${path}`;
+}
 
-  return <RedirectTo to={nextPath} />;
+function RootRedirect() {
+  return <RedirectTo to={toAppPath(currentPathWithSuffix())} />;
+}
+
+function LegacyProductRedirect() {
+  return <RedirectTo to={toAppPath(currentPathWithSuffix())} />;
 }
 
 function ProductRouteBoundary() {
@@ -59,26 +68,22 @@ function App() {
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AppShell>
             <Switch>
-              <Route path="/" component={ProductRouteBoundary} />
-              <Route path="/app/tarot" component={ProductRouteBoundary} />
-              <Route path="/app/tarot/:rest*" component={ProductRouteBoundary} />
-              <Route path="/app/animal-tarot" component={ProductRouteBoundary} />
-              <Route path="/app/animal-tarot/:rest*" component={ProductRouteBoundary} />
-              <Route path="/app" component={AppAliasRedirect} />
-              <Route path="/app/:rest*" component={AppAliasRedirect} />
+              <Route path="/" component={RootRedirect} />
+              <Route path="/app" component={ProductRouteBoundary} />
+              <Route path="/app/:rest*" component={ProductRouteBoundary} />
               <Route path="/privacy" component={PrivacyPolicyView} />
               <Route path="/terms" component={TermsView} />
               <Route path="/disclaimer" component={DisclaimerView} />
               <Route path="/contact" component={ContactView} />
               <Route path="/about" component={AboutView} />
               {PRODUCT_ROUTES.map((route) => (
-                <Route key={route} path={route} component={ProductRouteBoundary} />
+                <Route key={route} path={route} component={LegacyProductRedirect} />
               ))}
               {PRODUCT_ROUTES.map((route) => (
-                <Route key={`${route}/*`} path={`${route}/:rest*`} component={ProductRouteBoundary} />
+                <Route key={`${route}/*`} path={`${route}/:rest*`} component={LegacyProductRedirect} />
               ))}
               <Route path="*">
-                <RedirectTo to="/" />
+                <RedirectTo to="/app" />
               </Route>
             </Switch>
           </AppShell>

@@ -434,9 +434,16 @@ export function RibbonSpread({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
           onClick={onContinue}
-          className="absolute bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-[21rem] -translate-x-1/2 rounded-full border border-[#e4c174]/58 bg-[#e4c174]/12 px-5 py-3 font-sans text-[10px] uppercase tracking-[0.16em] text-[#ffe8aa] shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-[#e4c174]/18 sm:bottom-5 sm:w-auto sm:max-w-none sm:px-6 sm:text-[11px] sm:tracking-[0.2em]"
+          className="absolute bottom-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[22rem] -translate-x-1/2 items-center justify-center gap-2 overflow-hidden rounded-full border border-[#e4c174]/64 bg-[linear-gradient(135deg,rgba(228,193,116,0.20),rgba(114,227,213,0.10))] px-5 py-3.5 font-sans text-[10px] uppercase tracking-[0.16em] text-[#ffe8aa] shadow-[0_14px_34px_rgba(0,0,0,0.38),0_0_26px_rgba(228,193,116,0.12)] backdrop-blur-md transition-[background,transform] hover:scale-[1.015] hover:bg-[#e4c174]/18 sm:bottom-5 sm:w-auto sm:max-w-none sm:px-6 sm:text-[11px] sm:tracking-[0.2em]"
         >
-          Reveal the Reading
+          <motion.span
+            aria-hidden
+            className="absolute inset-y-0 left-[-35%] w-[32%] skew-x-[-18deg] bg-white/16 blur-sm"
+            animate={{ left: ["-35%", "118%"] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <span className="relative h-1.5 w-1.5 rounded-full bg-[#72e3d5] shadow-[0_0_14px_rgba(114,227,213,0.8)]" />
+          <span className="relative">Reveal the Reading</span>
         </motion.button>
       )}
     </section>

@@ -82,7 +82,7 @@ export function SettingsList() {
       icon: UserRound,
       label: "Log in / Sign up",
       detail: "Verify email or phone, or connect a social login.",
-      href: "/login",
+      href: "/app/login",
     },
     {
       icon: Sparkles,

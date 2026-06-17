@@ -303,35 +303,35 @@ function buildAstrologyArchive(profile: BirthProfile | null) {
       body: profile
         ? "Your account birth details are ready for charts, transits, together, and reports."
         : "Add birth date, time, and place once, then reuse it across Astrology.",
-      href: "/astrology?tab=birth",
+      href: "/app/astrology?tab=birth",
     },
     {
       id: "chart",
       title: "Chart graph",
       label: "Natal wheel",
       body: "Return to the visual chart and element balance whenever you need the map.",
-      href: "/astrology?tab=chart",
+      href: "/app/astrology?tab=chart",
     },
     {
       id: "transits",
       title: "Transit checks",
       label: "Date-based sky",
       body: "Look up a transit window for any date, not only today.",
-      href: "/astrology?tab=transits",
+      href: "/app/astrology?tab=transits",
     },
     {
       id: "together",
       title: "Together invites",
       label: "Synastry",
       body: "Open relationship maps and invite another person into the web flow.",
-      href: "/astrology?tab=together",
+      href: "/app/astrology?tab=together",
     },
     {
       id: "reports",
       title: "Astrology reports",
       label: "Long reads",
       body: "Keep birth, transit, and relationship report previews in one place.",
-      href: "/astrology?tab=reports",
+      href: "/app/astrology?tab=reports",
     },
   ];
 }

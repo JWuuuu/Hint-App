@@ -17,13 +17,13 @@ import { useLanguage } from "../../../lib/i18n";
 
 const ITEMS: { icon: LucideIcon; labelKey: string; href?: string; comingSoon?: boolean }[] = [
   { icon: MessageSquare, labelKey: "me.more.feedback", href: "/contact" },
-  { icon: UserRound, labelKey: "me.account", href: "/login" },
+  { icon: UserRound, labelKey: "me.account", href: "/app/login" },
   { icon: Sparkles, labelKey: "me.more.creator", comingSoon: true },
   { icon: Ticket, labelKey: "me.more.invite", comingSoon: true },
   { icon: ShieldCheck, labelKey: "me.more.trust", href: "/disclaimer" },
   { icon: Gift, labelKey: "me.more.gift", comingSoon: true },
-  { icon: Sparkles, labelKey: "section.astrology.label", href: "/astrology" },
-  { icon: Palette, labelKey: "me.more.appearance", href: "/profile#me-settings" },
+  { icon: Sparkles, labelKey: "section.astrology.label", href: "/app/astrology" },
+  { icon: Palette, labelKey: "me.more.appearance", href: "/app/profile#me-settings" },
   { icon: Lock, labelKey: "me.more.privacy", href: "/privacy" },
   { icon: LifeBuoy, labelKey: "me.more.support", href: "/contact" },
 ];

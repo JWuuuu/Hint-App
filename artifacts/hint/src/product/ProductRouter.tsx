@@ -19,58 +19,115 @@ import { SettingsView } from "./settings/SettingsView";
 import { SkyDeckView } from "./skydeck/SkyDeckView";
 import { TarotRoomApp } from "./tarot/TarotRoomApp";
 
-function legacyTarotTarget() {
-  if (typeof window === "undefined") return "/app/tarot";
-  return `/app/tarot${window.location.search}${window.location.hash}`;
+function currentSuffix() {
+  if (typeof window === "undefined") return "";
+  return `${window.location.search}${window.location.hash}`;
+}
+
+function legacyTarget(appPath: string) {
+  return `${appPath}${currentSuffix()}`;
+}
+
+function LegacyRedirect({ to }: { to: string }) {
+  return <RedirectTo to={legacyTarget(to)} />;
 }
 
 function LegacyTarotRedirect() {
-  return <RedirectTo to={legacyTarotTarget()} />;
-}
-
-function legacyAnimalTarotTarget() {
-  if (typeof window === "undefined") return "/app/animal-tarot";
-  return `/app/animal-tarot${window.location.search}${window.location.hash}`;
+  return <LegacyRedirect to="/app/tarot" />;
 }
 
 function LegacyAnimalTarotRedirect() {
-  return <RedirectTo to={legacyAnimalTarotTarget()} />;
+  return <LegacyRedirect to="/app/animal-tarot" />;
 }
 
 export function ProductRouter() {
   return (
     <Switch>
-      <Route path="/" component={HomeDashboard} />
-      <Route path="/daily" component={DailyPullView} />
-      <Route path="/daily-pull">
-        <RedirectTo to="/daily" />
+      <Route path="/app" component={HomeDashboard} />
+      <Route path="/app/daily" component={DailyPullView} />
+      <Route path="/app/daily-pull">
+        <RedirectTo to="/app/daily" />
       </Route>
       <Route path="/app/tarot" component={TarotRoomApp} />
       <Route path="/app/tarot/:rest*" component={TarotRoomApp} />
-      <Route path="/tarot" component={LegacyTarotRedirect} />
-      <Route path="/tarot/:rest*" component={LegacyTarotRedirect} />
       <Route path="/app/animal-tarot" component={AnimalTarotView} />
       <Route path="/app/animal-tarot/:rest*" component={AnimalTarotView} />
+      <Route path="/app/sky-deck" component={SkyDeckView} />
+      <Route path="/app/astrology" component={AstrologyView} />
+      <Route path="/app/collection" component={CardCollectionView} />
+      <Route path="/app/profile" component={MeView} />
+      <Route path="/app/me">
+        <RedirectTo to="/app/profile" />
+      </Route>
+      <Route path="/app/settings" component={SettingsView} />
+      <Route path="/app/ask" component={AskHint} />
+      <Route path="/app/rooms" component={RoomsLibrary} />
+      <Route path="/app/readings/:id" component={ReadingDetailView} />
+      <Route path="/app/readings" component={ReadingsView} />
+      <Route path="/app/login" component={LoginView} />
+      <Route path="/app/compatibility/invite/:token" component={CompatibilityView} />
+      <Route path="/app/compatibility/:id" component={CompatibilityView} />
+      <Route path="/app/compatibility" component={CompatibilityView} />
+      <Route path="/app/dream" component={DreamView} />
+      <Route path="/app/journal" component={JournalView} />
+      <Route path="/daily">
+        <LegacyRedirect to="/app/daily" />
+      </Route>
+      <Route path="/daily-pull">
+        <LegacyRedirect to="/app/daily" />
+      </Route>
+      <Route path="/tarot" component={LegacyTarotRedirect} />
+      <Route path="/tarot/:rest*" component={LegacyTarotRedirect} />
       <Route path="/animal-tarot" component={LegacyAnimalTarotRedirect} />
       <Route path="/animal-tarot/:rest*" component={LegacyAnimalTarotRedirect} />
-      <Route path="/sky-deck" component={SkyDeckView} />
-      <Route path="/astrology" component={AstrologyView} />
-      <Route path="/collection" component={CardCollectionView} />
-      <Route path="/profile" component={MeView} />
-      <Route path="/me">
-        <RedirectTo to="/profile" />
+      <Route path="/sky-deck">
+        <LegacyRedirect to="/app/sky-deck" />
       </Route>
-      <Route path="/settings" component={SettingsView} />
-      <Route path="/ask" component={AskHint} />
-      <Route path="/rooms" component={RoomsLibrary} />
-      <Route path="/readings/:id" component={ReadingDetailView} />
-      <Route path="/readings" component={ReadingsView} />
-      <Route path="/login" component={LoginView} />
-      <Route path="/compatibility/invite/:token" component={CompatibilityView} />
-      <Route path="/compatibility/:id" component={CompatibilityView} />
-      <Route path="/compatibility" component={CompatibilityView} />
-      <Route path="/dream" component={DreamView} />
-      <Route path="/journal" component={JournalView} />
+      <Route path="/astrology">
+        <LegacyRedirect to="/app/astrology" />
+      </Route>
+      <Route path="/collection">
+        <LegacyRedirect to="/app/collection" />
+      </Route>
+      <Route path="/profile">
+        <LegacyRedirect to="/app/profile" />
+      </Route>
+      <Route path="/me">
+        <LegacyRedirect to="/app/profile" />
+      </Route>
+      <Route path="/settings">
+        <LegacyRedirect to="/app/settings" />
+      </Route>
+      <Route path="/ask">
+        <LegacyRedirect to="/app/ask" />
+      </Route>
+      <Route path="/rooms">
+        <LegacyRedirect to="/app/rooms" />
+      </Route>
+      <Route path="/readings/:id">
+        {(params) => <RedirectTo to={`/app/readings/${params.id}${currentSuffix()}`} />}
+      </Route>
+      <Route path="/readings">
+        <LegacyRedirect to="/app/readings" />
+      </Route>
+      <Route path="/login">
+        <LegacyRedirect to="/app/login" />
+      </Route>
+      <Route path="/compatibility/invite/:token">
+        {(params) => <RedirectTo to={`/app/compatibility/invite/${params.token}${currentSuffix()}`} />}
+      </Route>
+      <Route path="/compatibility/:id">
+        {(params) => <RedirectTo to={`/app/compatibility/${params.id}${currentSuffix()}`} />}
+      </Route>
+      <Route path="/compatibility">
+        <LegacyRedirect to="/app/compatibility" />
+      </Route>
+      <Route path="/dream">
+        <LegacyRedirect to="/app/dream" />
+      </Route>
+      <Route path="/journal">
+        <LegacyRedirect to="/app/journal" />
+      </Route>
       <Route path="*">
         <div className="min-h-full flex items-center justify-center font-serif text-white/20 text-sm">
           -

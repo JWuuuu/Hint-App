@@ -34,7 +34,7 @@ export function AskHint() {
         {/* Header */}
         <header className="flex items-center justify-between px-5 pt-5 pb-3">
           <Link
-            href="/"
+            href="/app"
             className="inline-flex h-9 items-center gap-2 rounded-[8px] border px-3 font-sans text-[11px] uppercase tracking-[0.18em] transition-colors duration-700"
             style={{ color: IVORY.mute }}
           >
