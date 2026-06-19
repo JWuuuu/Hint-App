@@ -52,15 +52,16 @@ function BackDesign({
       shadow: "0 10px 18px rgba(58,42,20,0.24), inset 0 1px 0 rgba(255,255,255,0.60), inset 0 -14px 24px rgba(96,70,34,0.12)",
     },
     rose: {
-      surface: "linear-gradient(155deg,#f5c7ea,#9f73d0 56%,#3b275c)",
-      borderColor: "rgba(255,219,180,0.72)",
-      filter: "brightness(1.12) saturate(1.06)",
-      imageOpacity: 0.86,
-      shadow: "0 10px 18px rgba(26,12,36,0.34), inset 0 1px 0 rgba(255,255,255,0.20), inset 0 -14px 24px rgba(42,29,68,0.20)",
+      surface: "linear-gradient(155deg,#fffaf5,#f2eef2 52%,#deddea)",
+      borderColor: "rgba(185,153,101,0.52)",
+      filter: "grayscale(0.62) brightness(1.18) saturate(0.24)",
+      imageOpacity: 0.5,
+      shadow: "0 10px 18px rgba(74,58,82,0.14), inset 0 1px 0 rgba(255,255,255,0.68), inset 0 -14px 24px rgba(111,94,128,0.08)",
     },
   };
   const style = styles[backStyle];
-  const imageUrl = `/brand/tarot/hint-back-${backStyle}.svg`;
+  const imageStyle = backStyle === "rose" ? "ivory" : backStyle;
+  const imageUrl = `/brand/tarot/hint-back-${imageStyle}.svg`;
   const imageOpacity = subtle ? style.imageOpacity * 0.68 : style.imageOpacity;
   const shadow = subtle
     ? "0 6px 12px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -10px 18px rgba(0,0,0,0.16)"

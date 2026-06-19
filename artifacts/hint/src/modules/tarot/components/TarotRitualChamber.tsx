@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Home } from "lucide-react";
+import { X } from "lucide-react";
 import { Link } from "wouter";
 import type { RitualCard } from "../types/ritual.types";
 import { createHiddenDeck } from "../logic/createHiddenDeck";
@@ -25,7 +25,7 @@ import { TarotHintReadingChat } from "./TarotHintReadingChat";
 import { SPREAD_CHOICES } from "../../hold/useHoldFlow";
 import type { TarotRoomSetup } from "../../hold/useHoldFlow";
 
-type RitualStage = "placed" | "washing" | "gathering" | "cutting" | "selecting" | "reveal" | "reading";
+type RitualStage = "placed" | "washing" | "gathering" | "cutReady" | "cutting" | "selecting" | "reveal" | "reading";
 
 type ChamberDeckState = {
   hiddenDeckOrder: RitualCard[];
@@ -223,7 +223,34 @@ export function TarotRitualChamber({
     setStage("selecting");
   }
 
-  function completeWashAndCut() {
+  function startCutDeck() {
+    setStage("cutting");
+    setDeckState((current) => ({
+      ...current,
+      hiddenDeckOrder: cutHiddenOrder(current.hiddenDeckOrder, 0.42),
+      ritualCards: cutDeckIntoPackets(current.ritualCards, washDirection),
+    }));
+    clearGatherTimers();
+    gatherTimers.current = [
+      window.setTimeout(() => {
+        setDeckState((current) => ({
+          ...current,
+          ritualCards: transferCutPacket(current.ritualCards, washDirection),
+        }));
+      }, 420),
+      window.setTimeout(() => {
+        setDeckState((current) => ({
+          ...current,
+          ritualCards: mergeCutDeckAtCenter(current.ritualCards),
+        }));
+      }, 820),
+      window.setTimeout(() => {
+        enterSelectCards();
+      }, 1180),
+    ];
+  }
+
+  function finishWash() {
     if (stage !== "placed" && stage !== "washing") return;
     setWashScore(56);
     setActiveVisualIds([]);
@@ -240,50 +267,19 @@ export function TarotRitualChamber({
           ...current,
           ritualCards: squareDeckAtCenter(current.ritualCards),
         }));
-      }, 780),
+      }, 620),
       window.setTimeout(() => {
-        setStage("cutting");
-        setDeckState((current) => ({
-          ...current,
-          hiddenDeckOrder: cutHiddenOrder(current.hiddenDeckOrder, 0.37),
-          ritualCards: cutDeckIntoPackets(current.ritualCards, 1),
-        }));
-      }, 1240),
+        setStage("cutReady");
+      }, 880),
       window.setTimeout(() => {
-        setDeckState((current) => ({
-          ...current,
-          ritualCards: transferCutPacket(current.ritualCards, 1),
-        }));
-      }, 1700),
-      window.setTimeout(() => {
-        setDeckState((current) => ({
-          ...current,
-          ritualCards: mergeCutDeckAtCenter(current.ritualCards),
-        }));
-      }, 2160),
-      window.setTimeout(() => {
-        setDeckState((current) => ({
-          ...current,
-          hiddenDeckOrder: cutHiddenOrder(current.hiddenDeckOrder, 0.62),
-          ritualCards: cutDeckIntoPackets(current.ritualCards, -1),
-        }));
-      }, 2580),
-      window.setTimeout(() => {
-        setDeckState((current) => ({
-          ...current,
-          ritualCards: transferCutPacket(current.ritualCards, -1),
-        }));
-      }, 3020),
-      window.setTimeout(() => {
-        setDeckState((current) => ({
-          ...current,
-          ritualCards: mergeCutDeckAtCenter(current.ritualCards),
-        }));
-      }, 3460),
-      window.setTimeout(() => {
-        enterSelectCards();
-      }, 3920),
+        startCutDeck();
+      }, 1040),
     ];
+  }
+
+  function cutDeck() {
+    if (stage !== "cutReady") return;
+    startCutDeck();
   }
 
   function beginWash() {
@@ -319,9 +315,9 @@ export function TarotRitualChamber({
     });
   }
 
-  function revealCard(visualId: string) {
+  const revealCard = useCallback((visualId: string) => {
     setRevealedIds((current) => current.includes(visualId) ? current : [...current, visualId]);
-  }
+  }, []);
 
   function restartRitual() {
     const hiddenDeckOrder = createHiddenDeck();
@@ -353,13 +349,13 @@ export function TarotRitualChamber({
 
       <Link
         href="/app"
-        aria-label="Go to home"
-        className="absolute left-4 top-4 z-[80] inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e4c174]/28 bg-black/34 text-[#f7ead0]/82 shadow-[0_10px_24px_rgba(0,0,0,0.28)] transition duration-300 hover:border-[#e4c174]/55 hover:bg-[#e4c174]/10 hover:text-[#ffe8aa] active:scale-95 sm:left-5 sm:top-5"
+        aria-label="Close Tarot Room"
+        className="absolute left-4 top-[calc(var(--hint-safe-top)+0.75rem)] z-[80] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/12 bg-black/28 text-[#f7ead0]/84 shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-md transition duration-300 hover:border-[#e4c174]/55 hover:bg-[#e4c174]/10 hover:text-[#ffe8aa] active:scale-95 sm:left-5"
       >
-        <Home size={17} strokeWidth={1.8} aria-hidden="true" />
+        <X size={19} strokeWidth={1.9} aria-hidden="true" />
       </Link>
 
-      {(stage === "placed" || stage === "washing" || stage === "gathering" || stage === "cutting") && (
+      {(stage === "placed" || stage === "washing" || stage === "gathering" || stage === "cutReady" || stage === "cutting") && (
         <CardWashRitual
           stage={stage}
           ritualCards={deckState.ritualCards}
@@ -367,7 +363,9 @@ export function TarotRitualChamber({
           theme={theme}
           onBeginWash={beginWash}
           onWash={wash}
-          onWashRelease={completeWashAndCut}
+          onWashRelease={finishWash}
+          onCutDeck={cutDeck}
+          onContinue={enterSelectCards}
           showControls
         />
       )}
@@ -381,6 +379,7 @@ export function TarotRitualChamber({
           onSelect={selectFromSpread}
           onContinue={() => setStage("reveal")}
           backStyle={theme.cardBackStyle}
+          cardArtId={cardArtId}
         />
       )}
 

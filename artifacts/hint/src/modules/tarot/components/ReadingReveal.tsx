@@ -23,8 +23,8 @@ function revealGridClass(count: number) {
   if (count === 1) return "grid-cols-1 max-w-sm";
   if (count === 2) return "grid-cols-1 min-[520px]:grid-cols-2 max-w-2xl";
   if (count === 3) return "grid-cols-1 min-[520px]:grid-cols-3 max-w-3xl";
-  if (count <= 5) return "grid-cols-2 min-[520px]:grid-cols-3 sm:grid-cols-5 max-w-5xl";
-  return "grid-cols-2 min-[520px]:grid-cols-4 lg:grid-cols-7 max-w-6xl";
+  if (count <= 5) return "grid-cols-2 min-[520px]:grid-cols-3 xl:grid-cols-5 max-w-5xl";
+  return "grid-cols-2 min-[520px]:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 max-w-5xl 2xl:max-w-6xl";
 }
 
 function revealCardSizeClass(count: number) {
@@ -32,7 +32,7 @@ function revealCardSizeClass(count: number) {
   if (count === 2) return "!h-[202px] !w-[124px] sm:!h-[256px] sm:!w-[156px] md:!h-[288px] md:!w-[176px]";
   if (count === 3) return "!h-[172px] !w-[106px] min-[520px]:!h-[164px] min-[520px]:!w-[100px] sm:!h-[236px] sm:!w-[144px] md:!h-[276px] md:!w-[168px]";
   if (count <= 5) return "!h-[142px] !w-[88px] sm:!h-[216px] sm:!w-[132px] md:!h-[250px] md:!w-[152px]";
-  return "!h-[126px] !w-[78px] sm:!h-[184px] sm:!w-[114px] md:!h-[214px] md:!w-[130px]";
+  return "!h-[150px] !w-[92px] sm:!h-[200px] sm:!w-[122px] md:!h-[232px] md:!w-[142px] 2xl:!h-[214px] 2xl:!w-[130px]";
 }
 
 function revealCardShellClass(count: number) {
@@ -40,7 +40,7 @@ function revealCardShellClass(count: number) {
   if (count === 2) return "h-[202px] w-[124px] sm:h-[256px] sm:w-[156px] md:h-[288px] md:w-[176px]";
   if (count === 3) return "h-[172px] w-[106px] min-[520px]:h-[164px] min-[520px]:w-[100px] sm:h-[236px] sm:w-[144px] md:h-[276px] md:w-[168px]";
   if (count <= 5) return "h-[142px] w-[88px] sm:h-[216px] sm:w-[132px] md:h-[250px] md:w-[152px]";
-  return "h-[126px] w-[78px] sm:h-[184px] sm:w-[114px] md:h-[214px] md:w-[130px]";
+  return "h-[150px] w-[92px] sm:h-[200px] sm:w-[122px] md:h-[232px] md:w-[142px] 2xl:h-[214px] 2xl:w-[130px]";
 }
 
 export function ReadingReveal({
@@ -95,7 +95,7 @@ export function ReadingReveal({
   }, [autoReveal, onReveal, readyToReveal, selectedCards, sequenceKey]);
 
   return (
-    <section className="relative h-full w-full overflow-y-auto overflow-x-hidden px-4 py-10 text-center sm:py-12">
+    <section className="relative h-full w-full overflow-y-auto overflow-x-hidden px-4 py-8 text-center sm:py-10">
       <div className="absolute inset-0" style={{ background: "var(--hint-page-bg)" }} />
       <div className="pointer-events-none absolute inset-x-0 top-[18%] mx-auto h-[58%] max-w-5xl rounded-full blur-3xl" style={{ background: "color-mix(in srgb, var(--hint-rose, #f0b6cf) 12%, transparent)" }} />
       <motion.div
@@ -120,8 +120,8 @@ export function ReadingReveal({
         transition={{ duration: 5.4, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      <div className="relative z-30 mx-auto mb-8 max-w-3xl sm:mb-10">
-        <p className="font-serif text-[30px] leading-tight sm:text-5xl" style={{ color: "var(--hint-text)" }}>{title}</p>
+      <div className="relative z-30 mx-auto mb-7 max-w-3xl sm:mb-9">
+        <p className="font-serif text-[30px] leading-tight sm:text-[42px]" style={{ color: "var(--hint-text)" }}>{title}</p>
         <p className="mt-3 font-sans text-sm sm:text-[15px]" style={{ color: "var(--hint-muted)" }}>{subtitle}</p>
         <div className="hint-status-pill mx-auto mt-4 flex w-fit flex-wrap items-center justify-center gap-2 rounded-full border px-3 py-2 font-sans text-[10px] uppercase tracking-[0.14em] backdrop-blur-md">
           <span style={{ color: "var(--hint-gold)" }}>
@@ -141,7 +141,7 @@ export function ReadingReveal({
         </div>
       </div>
 
-      <div className={`relative z-10 mx-auto grid w-full ${gridClass} place-items-center gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-7`}>
+      <div className={`relative z-10 mx-auto grid w-full ${gridClass} place-items-start gap-x-4 gap-y-7 sm:gap-x-6 sm:gap-y-8`}>
         {selectedCards.map((card, index) => {
           const revealed = revealedIds.includes(card.visualId);
           const label = getSpreadPositionLabel(spread, index);
@@ -154,7 +154,7 @@ export function ReadingReveal({
               initial={{ opacity: 0, y: 18, scale: 0.94 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: index * 0.08, type: "spring", stiffness: 165, damping: 23 }}
-              className={`relative grid justify-items-center gap-4 text-center ${canReveal ? "cursor-pointer" : ""}`}
+              className={`relative grid justify-items-center gap-3 text-center ${canReveal ? "cursor-pointer" : ""}`}
               onClick={canReveal ? () => onReveal(card.visualId) : undefined}
             >
               <motion.div
@@ -206,7 +206,7 @@ export function ReadingReveal({
                   className={cardSizeClass}
                 />
               </motion.div>
-              <p className="max-w-[11rem] truncate font-sans text-[10px] uppercase tracking-[0.18em] sm:text-[11px] sm:tracking-[0.22em]" style={{ color: "var(--hint-muted)" }}>
+              <p className="hint-status-pill max-w-[11rem] truncate rounded-full border px-3 py-1.5 font-sans text-[10px] uppercase tracking-[0.14em] sm:text-[11px] sm:tracking-[0.18em]" style={{ color: "var(--hint-muted)" }}>
                 {revealed ? card.name : label}
               </p>
             </motion.div>
