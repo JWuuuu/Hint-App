@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CalendarDays, MapPin, Search } from "lucide-react";
 import { getGeoDetails, getTimezoneDetails, type AstroGeoPlace } from "../../lib/astro/astroClient";
 import { useLanguage } from "../../lib/i18n";
 import type { BirthProfile } from "../../types/astrology";
@@ -151,7 +152,7 @@ export function BirthProfileForm({
 
   return (
     <form
-      className="rounded-[8px] border p-5 shadow-[var(--astro-shadow)]"
+      className="rounded-[8px] border p-3.5 shadow-[var(--astro-shadow)]"
       style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}
       onSubmit={(event) => {
         event.preventDefault();
@@ -159,19 +160,26 @@ export function BirthProfileForm({
         onSubmit(draft);
       }}
     >
-      <p className="mb-2 text-[11px] font-black uppercase tracking-[0.18em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{t("birthProfile.editor")}</p>
-      <h2 className="font-serif text-[30px] leading-tight" style={{ color: ASTRO_TEXT }}>
-        {title}
-      </h2>
-      <p className="mt-2 text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>
-        {t("birthProfile.localSave")}
-      </p>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <input aria-label={t("birthProfile.name")} className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder={t("birthProfile.name")} />
-        <input aria-label={t("birthProfile.birthDate")} className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.birthDate} onChange={(event) => update("birthDate", event.target.value)} placeholder={t("birthProfile.birthDate")} inputMode="numeric" />
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[8px] border" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_GOLD_BRIGHT }}>
+          <CalendarDays size={17} />
+        </span>
+        <div className="min-w-0">
+          <p className="mb-1 text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{t("birthProfile.editor")}</p>
+          <h2 className="font-serif text-[20px] leading-tight" style={{ color: ASTRO_TEXT }}>
+            {title}
+          </h2>
+          <p className="mt-1 text-[11px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>
+            {t("birthProfile.localSave")}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+        <input aria-label={t("birthProfile.name")} className="astro-themed-input h-10 rounded-[8px] border px-3 text-[13px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder={t("birthProfile.name")} />
+        <input aria-label={t("birthProfile.birthDate")} type="date" className="astro-themed-input h-10 rounded-[8px] border px-3 text-[13px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.birthDate} onChange={(event) => update("birthDate", event.target.value)} placeholder={t("birthProfile.birthDate")} />
         <input
           aria-label={t("birthProfile.birthTime")}
-          className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none"
+          className="astro-themed-input h-10 rounded-[8px] border px-3 text-[13px] font-semibold outline-none"
           style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}
           value={draft.birthTime}
           onChange={(event) => update("birthTime", event.target.value)}
@@ -180,8 +188,12 @@ export function BirthProfileForm({
         />
         <div className="sm:col-span-2">
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-            <input aria-label={t("birthProfile.birthPlace")} className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.birthPlace} onChange={(event) => update("birthPlace", event.target.value)} placeholder={t("birthProfile.birthPlace")} />
-            <button type="button" onClick={searchPlace} disabled={placeLoading || !draft.birthPlace.trim()} className="h-12 rounded-[8px] border px-4 text-[13px] font-black transition-[opacity] disabled:opacity-50" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}>
+            <label className="flex h-10 items-center gap-2 rounded-[8px] border px-3" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}>
+              <MapPin size={14} style={{ color: ASTRO_GOLD_BRIGHT }} />
+              <input aria-label={t("birthProfile.birthPlace")} className="astro-themed-input min-w-0 flex-1 bg-transparent text-[13px] font-semibold outline-none" style={{ color: ASTRO_TEXT }} value={draft.birthPlace} onChange={(event) => update("birthPlace", event.target.value)} placeholder={t("birthProfile.birthPlace")} />
+            </label>
+            <button type="button" onClick={searchPlace} disabled={placeLoading || !draft.birthPlace.trim()} className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] border px-3 text-[12px] font-black transition-[opacity] disabled:opacity-50" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}>
+              <Search size={13} />
               {placeLoading ? t("birthProfile.searching") : t("birthProfile.findPlace")}
             </button>
           </div>
@@ -202,35 +214,38 @@ export function BirthProfileForm({
           ) : null}
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {SAMPLE_PLACES.map((sample) => (
-          <button
-            key={sample.label}
-            type="button"
-            className="rounded-[8px] border px-3 py-2 text-[12px] font-black"
-            style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}
-            onClick={() => setDraft((current) => ({ ...current, ...sample.draft }))}
-          >
-            {sample.label}
-          </button>
-        ))}
-      </div>
-      <details className="mt-4 rounded-[8px] border p-4" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
-        <summary className="cursor-pointer text-[12px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{t("birthProfile.advancedLocation")}</summary>
+      <details className="mt-3 rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
+        <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[0.13em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Sample autofill</summary>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {SAMPLE_PLACES.map((sample) => (
+            <button
+              key={sample.label}
+              type="button"
+              className="rounded-[8px] border px-3 py-2 text-[11px] font-black"
+              style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}
+              onClick={() => setDraft((current) => ({ ...current, ...sample.draft }))}
+            >
+              {sample.label}
+            </button>
+          ))}
+        </div>
+      </details>
+      <details className="mt-3 rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
+        <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[0.13em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{t("birthProfile.advancedLocation")}</summary>
         <p className="mt-2 text-[12px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>
           {t("birthProfile.advancedHelp")}
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <input className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.latitude} onChange={(event) => update("latitude", event.target.value)} placeholder={t("birthProfile.latitude")} inputMode="decimal" />
-          <input className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.longitude} onChange={(event) => update("longitude", event.target.value)} placeholder={t("birthProfile.longitude")} inputMode="decimal" />
-          <input className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.timezone} onChange={(event) => update("timezone", event.target.value)} placeholder={t("birthProfile.timezone")} />
-          <input className="astro-themed-input h-12 rounded-[8px] border px-4 text-[14px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.timezoneOffset} onChange={(event) => update("timezoneOffset", event.target.value)} placeholder={t("birthProfile.timezoneOffset")} inputMode="decimal" />
+        <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+          <input className="astro-themed-input h-10 rounded-[8px] border px-3 text-[13px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.latitude} onChange={(event) => update("latitude", event.target.value)} placeholder={t("birthProfile.latitude")} inputMode="decimal" />
+          <input className="astro-themed-input h-10 rounded-[8px] border px-3 text-[13px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.longitude} onChange={(event) => update("longitude", event.target.value)} placeholder={t("birthProfile.longitude")} inputMode="decimal" />
+          <input className="astro-themed-input h-10 rounded-[8px] border px-3 text-[13px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.timezone} onChange={(event) => update("timezone", event.target.value)} placeholder={t("birthProfile.timezone")} />
+          <input className="astro-themed-input h-10 rounded-[8px] border px-3 text-[13px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.timezoneOffset} onChange={(event) => update("timezoneOffset", event.target.value)} placeholder={t("birthProfile.timezoneOffset")} inputMode="decimal" />
         </div>
       </details>
       <button
         type="submit"
         disabled={!complete}
-        className="mt-5 h-12 w-full rounded-[8px] text-[14px] font-black shadow-[var(--astro-button-shadow)] transition-[transform,opacity] duration-200 hover:-translate-y-0.5 disabled:opacity-45"
+        className="mt-3 h-10 w-full rounded-[8px] text-[13px] font-black shadow-[var(--astro-button-shadow)] transition-[transform,opacity] duration-200 hover:-translate-y-0.5 disabled:opacity-45"
         style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}
       >
         {submitLabel}

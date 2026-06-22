@@ -13,17 +13,17 @@ const ASTRO_INNER = "var(--astro-inner)";
 export function BirthProfileCard({ profile, onEdit }: { profile: BirthProfile; onEdit: () => void }) {
   const { t } = useLanguage();
   return (
-    <section className="rounded-[8px] border p-5 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
-      <div className="flex items-start justify-between gap-4">
+    <section className="rounded-[8px] border p-3.5 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="font-sans text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: ASTRO_GOLD }}>{t("account.birthProfile")}</p>
-          <h2 className="mt-2 font-serif text-[32px] leading-tight" style={{ color: ASTRO_TEXT }}>{profile.name}</h2>
+          <p className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_GOLD }}>{t("account.birthProfile")}</p>
+          <h2 className="mt-1 font-serif text-[21px] leading-tight" style={{ color: ASTRO_TEXT }}>{profile.name}</h2>
         </div>
-        <button type="button" onClick={onEdit} className="grid h-10 w-10 shrink-0 place-items-center rounded-[8px] border" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_GOLD_BRIGHT }} aria-label={t("account.editBirthProfile")}>
-          <Edit3 size={16} />
+        <button type="button" onClick={onEdit} className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] border" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_GOLD_BRIGHT }} aria-label={t("account.editBirthProfile")}>
+          <Edit3 size={15} />
         </button>
       </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
         {[
           [t("birthProfile.date"), profile.birthDate],
           [t("birthProfile.time"), profile.birthTime || t("birthProfile.unknown")],
@@ -32,9 +32,9 @@ export function BirthProfileCard({ profile, onEdit }: { profile: BirthProfile; o
           [t("birthProfile.coordinates"), profile.latitude !== undefined && profile.longitude !== undefined ? `${profile.latitude}, ${profile.longitude}` : t("birthProfile.neededForHouses")],
           [t("birthProfile.utcOffset"), profile.timezoneOffset !== undefined ? String(profile.timezoneOffset) : t("birthProfile.neededForHouses")],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-[8px] border px-4 py-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: ASTRO_FAINT }}>{label}</p>
-            <p className="mt-1 text-[14px] font-black" style={{ color: ASTRO_TEXT }}>{value}</p>
+          <div key={label} className="rounded-[8px] border px-2.5 py-2" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>{label}</p>
+            <p className="mt-1 break-words text-[12px] font-black leading-snug" style={{ color: ASTRO_TEXT }}>{value}</p>
           </div>
         ))}
       </div>

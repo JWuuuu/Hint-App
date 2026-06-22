@@ -1,0 +1,1 @@
+export { AnimalTarotView } from "./AnimalTarotView";

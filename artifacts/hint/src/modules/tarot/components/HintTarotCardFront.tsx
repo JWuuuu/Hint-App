@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { RitualCard } from "../logic/createHiddenDeck";
 import { getTarotCardImage, type TarotCardArtId } from "../logic/cardImageMap";
 import { getCardKeywords } from "../logic/createHiddenDeck";
-import type { TarotCardBackStyle } from "./TarotCardVisual";
+import type { TarotCardBackStyle } from "../logic/cardBacks";
 
 type HintTarotCardFrontProps = {
   card: RitualCard;

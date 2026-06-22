@@ -1,8 +1,0 @@
-Checkpoint: /Users/jwu/Documents/Hint-main/artifacts/checkpoints/checkpoint-20260607-140348.zip
-Created: 2026-06-07T14:03:48-07:00
-Root: /Users/jwu/Documents/Hint-main
-Files: 414
-Excluded: node_modules, dist, artifacts/checkpoints, artifacts/local-run, env files, logs, tsbuildinfo, .git
-Notes:
-- Includes current working tree source state.
-- Includes domain/deployment setup files for mydailyhint.com: render.yaml, DEPLOY_DOMAIN.md, .node-version, and packageManager pin in package.json.

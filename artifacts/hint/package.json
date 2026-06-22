@@ -13,7 +13,8 @@
     "mobile:ios": "vite build --config vite.config.ts && cap sync ios && cap open ios",
     "mobile:android": "vite build --config vite.config.ts && cap sync android && cap open android",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "check:launch-intro": "node scripts/check-launch-intro.mjs",
+    "typecheck": "node scripts/check-launch-intro.mjs && tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@capacitor/android": "^8.4.0",

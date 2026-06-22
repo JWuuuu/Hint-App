@@ -1,9 +1,13 @@
 import { motion } from "framer-motion";
 import type { RitualCard } from "../logic/createHiddenDeck";
 import type { TarotCardArtId } from "../logic/cardImageMap";
+import {
+  getDefaultTarotCardBackForStyle,
+  getTarotCardBackImage,
+  type TarotCardBackId,
+  type TarotCardBackStyle,
+} from "../logic/cardBacks";
 import { HintTarotCardFront } from "./HintTarotCardFront";
-
-export type TarotCardBackStyle = "nocturne" | "ivory" | "rose";
 
 type TarotCardVisualProps = {
   card?: RitualCard;
@@ -14,6 +18,7 @@ type TarotCardVisualProps = {
   active?: boolean;
   selected?: boolean;
   backStyle?: TarotCardBackStyle;
+  cardBackId?: TarotCardBackId;
   cardArtId?: TarotCardArtId;
   positionLabel?: string;
   ariaLabel?: string;
@@ -25,10 +30,12 @@ type TarotCardVisualProps = {
 function BackDesign({
   subtle = false,
   backStyle = "nocturne",
+  cardBackId,
 }: {
   compact?: boolean;
   subtle?: boolean;
   backStyle?: TarotCardBackStyle;
+  cardBackId?: TarotCardBackId;
 }) {
   const styles: Record<TarotCardBackStyle, {
     surface: string;
@@ -40,27 +47,27 @@ function BackDesign({
     nocturne: {
       surface: "linear-gradient(155deg,#2d527d,#173452 58%,#0b1a2d)",
       borderColor: "rgba(231,197,121,0.86)",
-      filter: "brightness(1.28) saturate(1.08)",
-      imageOpacity: 0.82,
+      filter: "none",
+      imageOpacity: 1,
       shadow: "0 10px 18px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -14px 24px rgba(0,0,0,0.24)",
     },
     ivory: {
       surface: "linear-gradient(155deg,#fff4d8,#ead7aa 58%,#cab477)",
       borderColor: "rgba(181,136,55,0.68)",
-      filter: "brightness(1.04) saturate(1.03)",
-      imageOpacity: 0.88,
+      filter: "none",
+      imageOpacity: 1,
       shadow: "0 10px 18px rgba(58,42,20,0.24), inset 0 1px 0 rgba(255,255,255,0.60), inset 0 -14px 24px rgba(96,70,34,0.12)",
     },
     rose: {
-      surface: "linear-gradient(155deg,#f5c7ea,#9f73d0 56%,#3b275c)",
-      borderColor: "rgba(255,219,180,0.72)",
-      filter: "brightness(1.12) saturate(1.06)",
-      imageOpacity: 0.86,
-      shadow: "0 10px 18px rgba(26,12,36,0.34), inset 0 1px 0 rgba(255,255,255,0.20), inset 0 -14px 24px rgba(42,29,68,0.20)",
+      surface: "linear-gradient(155deg,#fffaf5,#f2eef2 52%,#deddea)",
+      borderColor: "rgba(185,153,101,0.52)",
+      filter: "none",
+      imageOpacity: 1,
+      shadow: "0 10px 18px rgba(74,58,82,0.14), inset 0 1px 0 rgba(255,255,255,0.68), inset 0 -14px 24px rgba(111,94,128,0.08)",
     },
   };
   const style = styles[backStyle];
-  const imageUrl = `/brand/tarot/hint-back-${backStyle}.svg`;
+  const imageUrl = getTarotCardBackImage(cardBackId ?? getDefaultTarotCardBackForStyle(backStyle));
   const imageOpacity = subtle ? style.imageOpacity * 0.68 : style.imageOpacity;
   const shadow = subtle
     ? "0 6px 12px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -10px 18px rgba(0,0,0,0.16)"
@@ -104,6 +111,7 @@ export function TarotCardVisual({
   active = false,
   selected = false,
   backStyle = "nocturne",
+  cardBackId,
   cardArtId = "original",
   positionLabel,
   ariaLabel,
@@ -143,7 +151,7 @@ export function TarotCardVisual({
         style={{ transformStyle: "preserve-3d" }}
       >
         <div className="absolute inset-0 backface-hidden">
-          <BackDesign compact={compact} subtle={subtleBack} backStyle={backStyle} />
+          <BackDesign compact={compact} subtle={subtleBack} backStyle={backStyle} cardBackId={cardBackId} />
         </div>
         {isFront && card && (
           <div

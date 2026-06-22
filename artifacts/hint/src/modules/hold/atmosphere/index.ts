@@ -25,10 +25,10 @@ export const TEXT_HALO = {
 } as const;
 
 export const GOLD = {
-  edge: "rgba(218, 182, 122, 0.42)",
-  bloom: "rgba(255, 220, 160, 0.26)",
-  stroke: "rgba(228, 198, 138, 0.78)",
-  ink: "rgba(232, 204, 150, 0.92)",
+  edge: "color-mix(in srgb, var(--hint-gold, #dcc383) 42%, transparent)",
+  bloom: "color-mix(in srgb, var(--hint-gold-bright, #fff0bd) 26%, transparent)",
+  stroke: "color-mix(in srgb, var(--hint-gold, #dcc383) 78%, transparent)",
+  ink: "var(--hint-gold, #dcc383)",
 } as const;
 
 /* ─── NEW APP CHROME TOKENS (For redesigned Home/Rooms) ──────── */
@@ -47,9 +47,9 @@ export const APP_IVORY = {
 } as const;
 
 export const ACCENT = {
-  aqua: "#649C9E",
-  gold: "#C4A962",
-  lavender: "#B298B3",
+  aqua: "var(--hint-aqua, #5eaeb3)",
+  gold: "var(--hint-gold, #caa865)",
+  lavender: "var(--hint-lavender, #b8a4d8)",
 } as const;
 
 /* ─── GLASSMORPHIC PREMIUM DARK TOKENS ───────────────────────── */

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { LockKeyhole, Sparkles } from "lucide-react";
 import { ChatMessage } from "./ChatMessage";
 import { FollowUpInput, type FollowUpInputHandle } from "./FollowUpInput";
 import { ReadingActions, type ReadingAction } from "./ReadingActions";
@@ -18,10 +19,134 @@ interface Props {
 }
 
 const TYPE_SPEED = 22;
+const CONVERSION_PROMPTS = [
+  "What should I do next?",
+  "What is the first small action?",
+  "What is the hidden block?",
+  "What resource am I not using yet?",
+  "What should I stop worrying about?",
+  "What boundary do I need?",
+  "What am I repeating?",
+  "What should I let go?",
+  "What is the timing?",
+  "Where is the opening?",
+  "What should I say to them?",
+  "What are they not showing?",
+  "What would reopening require?",
+  "What happens if I choose path A?",
+  "What happens if I wait?",
+  "What should I change at work?",
+  "What money lesson is here?",
+];
+
+function ReadingUnlockPanel({
+  onDismiss,
+  onPrompt,
+}: {
+  onDismiss: () => void;
+  onPrompt: (prompt: string) => void;
+}) {
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.9, ease: "easeOut" }}
+      className="rounded-[22px] border p-4"
+      style={{
+        borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 34%, var(--hint-chat-input-border))",
+        background:
+          "linear-gradient(145deg, color-mix(in srgb, var(--hint-card-inner) 78%, transparent), color-mix(in srgb, var(--hint-rose, #f0b6cf) 10%, transparent))",
+        boxShadow: "0 18px 42px rgba(0,0,0,0.18)",
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border"
+          style={{
+            color: "var(--hint-gold-bright, #f2d48d)",
+            borderColor: "rgba(228,198,138,0.28)",
+            background: "rgba(228,198,138,0.10)",
+          }}
+        >
+          <LockKeyhole size={15} strokeWidth={1.8} />
+        </span>
+        <div className="min-w-0">
+          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: IVORY.mute }}>
+            Deeper thread ready
+          </p>
+          <h2 className="mt-1 font-serif text-[22px] leading-tight" style={{ color: IVORY.primary, textShadow: TEXT_HALO.soft }}>
+            Keep this reading open.
+          </h2>
+          <p className="mt-2 font-sans text-[12px] leading-relaxed" style={{ color: IVORY.mute }}>
+            Ask for card-by-card detail, action steps, timing, or what to watch next. The best follow-up is usually already hiding inside the first spread.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {[
+          ["5 follow-ups", "$2"],
+          ["Monthly pass", "$8"],
+          ["Year pass", "$29"],
+        ].map(([label, price]) => (
+          <button
+            key={label}
+            type="button"
+            onClick={onDismiss}
+            className="min-h-[62px] rounded-[16px] border px-2 py-2 text-left transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+            style={{
+              color: IVORY.body,
+              borderColor: "rgba(228,198,138,0.22)",
+              background: "color-mix(in srgb, var(--hint-chat-input-bg) 82%, transparent)",
+            }}
+          >
+            <span className="block font-sans text-[10px] font-semibold leading-tight">{label}</span>
+            <span className="mt-1 block font-serif text-[18px] leading-none" style={{ color: IVORY.primary }}>
+              {price}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
+        {CONVERSION_PROMPTS.map((prompt) => (
+          <button
+            key={prompt}
+            type="button"
+            onClick={() => onPrompt(prompt)}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 font-sans text-[12px] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+            style={{
+              color: IVORY.body,
+              borderColor: "rgba(228,198,138,0.20)",
+              background: "rgba(255,255,255,0.045)",
+            }}
+          >
+            <Sparkles size={12} strokeWidth={1.8} />
+            {prompt}
+          </button>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="mt-3 w-full rounded-[16px] px-4 py-3 font-sans text-[12px] font-semibold uppercase tracking-[0.14em] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+        style={{
+          color: "var(--hint-special-action-text)",
+          background: "var(--hint-special-action-bg)",
+          boxShadow: "0 16px 34px rgba(0,0,0,0.18)",
+        }}
+      >
+        Continue in this reading
+      </button>
+    </motion.section>
+  );
+}
 
 export function TarotChatRoom({ session, onSessionUpdate, onRedraw, onReset }: Props) {
   const { t } = useLanguage();
   const [redrawOpen, setRedrawOpen] = useState(false);
+  const [unlockDismissed, setUnlockDismissed] = useState(false);
   const inputRef = useRef<FollowUpInputHandle | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -33,6 +158,7 @@ export function TarotChatRoom({ session, onSessionUpdate, onRedraw, onReset }: P
     const text = session.active.initialReading;
     setTyped("");
     setTypingDone(false);
+    setUnlockDismissed(false);
     const id = setInterval(() => {
       i++;
       setTyped(text.slice(0, i));
@@ -167,6 +293,16 @@ export function TarotChatRoom({ session, onSessionUpdate, onRedraw, onReset }: P
             />
             <span className="relative">"{session.active.emotionalQuote}"</span>
           </motion.blockquote>
+        )}
+
+        {typingDone && !unlockDismissed && (
+          <ReadingUnlockPanel
+            onDismiss={() => setUnlockDismissed(true)}
+            onPrompt={(prompt) => {
+              setUnlockDismissed(true);
+              void chat.sendMessage(prompt);
+            }}
+          />
         )}
 
         {/* Chat thread */}
