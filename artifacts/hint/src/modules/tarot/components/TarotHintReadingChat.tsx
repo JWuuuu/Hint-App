@@ -6,7 +6,7 @@ import { apiUrl } from "../../../lib/api";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { getCardKeywords, type RitualCard } from "../logic/createHiddenDeck";
 import type { TarotCardArtId } from "../logic/cardImageMap";
-import type { TarotCardBackStyle } from "./TarotCardVisual";
+import type { TarotCardBackId, TarotCardBackStyle } from "../logic/cardBacks";
 import { TarotCardVisual } from "./TarotCardVisual";
 import { saveLocalTarotReading } from "../../readings/localTarotReadings";
 import { saveLocalQuestionHistory } from "../../readings/localQuestionHistory";
@@ -23,6 +23,7 @@ type TarotHintReadingChatProps = {
   selectedCards: RitualCard[];
   spread: SpreadChoice;
   backStyle?: TarotCardBackStyle;
+  cardBackId?: TarotCardBackId;
   cardArtId?: TarotCardArtId;
   question?: string;
   story?: string;
@@ -258,41 +259,198 @@ function getReadableCardMeaning(card: RitualCard) {
   };
 }
 
-function buildShortAnswer(cards: RitualCard[], spread: SpreadChoice, question?: string) {
-  const first = cards[0];
-  const firstMeaning = first ? getReadableCardMeaning(first) : null;
-  const questionPrefix = question?.trim() ? "Short answer: " : "Short answer: ";
-  if (spread.id === "relationship") {
-    return `${questionPrefix}read the space between both sides first. ${first ? firstMeaning?.sentence : "Look at the shared pattern first."}`;
-  }
-  if (spread.id === "three") {
-    return `${questionPrefix}there is a before, now, and next step here. Let the first card set the practical move.`;
-  }
-  if (spread.cardCount > 3) {
-    return `${questionPrefix}this is layered. Follow the repeated signal across the cards before making one big move.`;
-  }
-  return `${questionPrefix}${firstMeaning?.sentence ?? "start with the clearest signal and take one honest next step."}`;
+const BLOCKING_CARD_IDS = new Set([
+  "12-hanged-man",
+  "13-death",
+  "15-devil",
+  "16-tower",
+  "18-moon",
+  "five-cups",
+  "five-swords",
+  "seven-swords",
+  "eight-swords",
+  "nine-swords",
+  "ten-swords",
+]);
+
+const OPENING_CARD_IDS = new Set([
+  "0-fool",
+  "1-magician",
+  "3-empress",
+  "6-lovers",
+  "7-chariot",
+  "8-strength",
+  "14-temperance",
+  "17-star",
+  "19-sun",
+  "20-judgement",
+  "21-world",
+  "ace-wands",
+  "ace-cups",
+  "ace-pentacles",
+  "six-wands",
+  "ten-cups",
+  "ten-pentacles",
+]);
+
+function getReadingSignal(cards: RitualCard[]): StructuredSignalType {
+  const reversedCount = cards.filter((card) => card.orientation === "reversed").length;
+  const blockingScore = cards.reduce((score, card) => score + (BLOCKING_CARD_IDS.has(card.cardId) ? 1 : 0), 0) + reversedCount;
+  const openingScore = cards.reduce((score, card) => score + (OPENING_CARD_IDS.has(card.cardId) ? 1 : 0), 0);
+
+  if (cards.length === 0) return "mixed_signal";
+  if (openingScore >= Math.max(1, blockingScore + 1) && reversedCount === 0) return "opening";
+  if (openingScore > blockingScore && reversedCount <= 1) return "soft_yes";
+  if (blockingScore >= openingScore + 2 || reversedCount >= Math.ceil(cards.length * 0.6)) return "blocked";
+  if (blockingScore > openingScore) return "soft_no";
+  if (openingScore === blockingScore && cards.length > 1) return "mixed_signal";
+  return "clear_signal";
 }
 
-function buildCardMeaning(card: RitualCard, index: number, spread: SpreadChoice) {
-  return `${getSpreadPositionLabel(spread, index)}: ${getReadableCardMeaning(card).sentence}`;
+function getSignalLanguage(signalType: StructuredSignalType) {
+  switch (signalType) {
+    case "opening":
+      return {
+        label: "a very clear positive signal",
+        direction: "the cards are not asking you to step back; they are saying this can move forward if you act with steadiness instead of waiting for perfect certainty",
+      };
+    case "soft_yes":
+    case "clear_signal":
+      return {
+        label: "a positive signal with a clear direction",
+        direction: "the cards lean toward movement, but they want that movement to be clean, paced, and based on what is already visible",
+      };
+    case "blocked":
+      return {
+        label: "a heavy blocked signal",
+        direction: "the cards are not supporting a rushed push right now; they are asking you to stop feeding the part of this that is draining your judgment",
+      };
+    case "soft_no":
+      return {
+        label: "a warning signal more than a green light",
+        direction: "the cards are not saying everything is closed, but they are telling you not to trust the surface version of this too quickly",
+      };
+    case "mixed_signal":
+    default:
+      return {
+        label: "a mixed signal",
+        direction: "the cards do not fully reject this, but they also do not give an easy yes; you can keep looking, but not blindly invest more before the pattern becomes clearer",
+      };
+  }
 }
 
-function buildQuestionMeaning(cards: RitualCard[], question?: string, story?: string) {
-  const first = cards[0];
-  const firstMeaning = first ? getReadableCardMeaning(first) : null;
-  const questionLine = question?.trim() ? `For "${question.trim()}", ` : "";
-  const storyLine = story?.trim() ? "based on the story you gave, " : "";
-  if (cards.length > 1) {
-    return `${questionLine}${storyLine}the spread says to read the whole pattern, not just the loudest card. The first signal is ${firstMeaning?.sentence ?? "clarity"} Let the rest show what changes next.`;
+function questionLead(question?: string) {
+  const clean = question?.trim();
+  return clean ? `For "${clean}", ` : "For this question, ";
+}
+
+function buildOverallReading(cards: RitualCard[], question?: string): { signalType: StructuredSignalType; text: string } {
+  const signalType = getReadingSignal(cards);
+  const signal = getSignalLanguage(signalType);
+  const cardCountLabel = cards.length === 1 ? "this card" : `these ${cards.length} cards`;
+  return {
+    signalType,
+    text: `${questionLead(question)}${cardCountLabel} give ${signal.label}. ${signal.direction}.`,
+  };
+}
+
+function getPositionFrame(position: string, index: number, spread: SpreadChoice) {
+  const normalized = position.toLowerCase();
+  if (/past|before|root|break|cause/.test(normalized)) {
+    return "This shows what has been shaping the situation before this moment";
   }
-  return `${questionLine}${storyLine}${firstMeaning?.sentence ?? "keep the next move small and truthful."}`;
+  if (/present|now|outer|you|trunk|appears|signal/.test(normalized)) {
+    return "This shows the energy that is active right now";
+  }
+  if (/future|next|direction|trend|gain|crown|fruit|result/.test(normalized)) {
+    return "This points to where the pattern is likely to move if nothing important changes";
+  }
+  if (/block|barrier|challenge|obstacle/.test(normalized)) {
+    return "This names what is slowing the situation down";
+  }
+  if (/advice|approach|action/.test(normalized)) {
+    return "This is the card's direct guidance for how to move";
+  }
+  if (/them|feeling|other|between|connection|true view/.test(normalized)) {
+    return "This describes the relational thread showing up in this position";
+  }
+  if (spread.cardCount === 3 && index === 0) return "This shows the influence that brought you here";
+  if (spread.cardCount === 3 && index === 1) return "This shows the real pressure or energy in the present";
+  if (spread.cardCount === 3 && index === 2) return "This points to the next movement if the pattern continues";
+  return "This shows the specific part of the reading that wants attention here";
+}
+
+function buildCardMeaning(card: RitualCard, index: number, spread: SpreadChoice): StructuredCardMeaning {
+  const position = getSpreadPositionLabel(spread, index);
+  const frame = getPositionFrame(position, index, spread);
+  const orientation = card.orientation === "reversed" ? "reversed" : "upright";
+  return {
+    position,
+    card_name: card.name,
+    orientation,
+    meaning: `${frame}. ${getReadableCardMeaning(card).sentence}`,
+  };
+}
+
+function buildFinalGuidance(signalType: StructuredSignalType, question?: string, story?: string) {
+  const storyLine = story?.trim() ? "Because the story already has emotional weight, " : "";
+  switch (signalType) {
+    case "opening":
+    case "soft_yes":
+    case "clear_signal":
+      return `${storyLine}your next move is to lean forward, but not all at once. Make one clear action that matches what you already know, and do not keep waiting for a perfect sign before you let the situation move.`;
+    case "blocked":
+      return `${storyLine}your next move is to stop giving this situation unlimited access to your energy. Pull the focus back to what is real, what is repeated, and what you can act on without chasing reassurance.`;
+    case "soft_no":
+      return `${storyLine}your next move is to slow down and test the reality of what you are seeing. Do not build the whole choice on hope or on someone else's small reaction; ask what the pattern has already proven.`;
+    case "mixed_signal":
+    default:
+      return `${storyLine}your next move is not to disappear and not to rush. Stay close enough to see what happens next, but put a clearer boundary around how much emotion, time, or trust you give before the signal becomes cleaner.`;
+  }
+}
+
+function buildFollowUpInvitation(question?: string, focusLabel?: string) {
+  const lower = `${question ?? ""} ${focusLabel ?? ""}`.toLowerCase();
+  if (/love|relationship|dating|connection|reconcile|breakup|their|him|her|them/.test(lower)) {
+    return "If you want, tell me what has been happening between you two lately, and I can help you see more clearly where this connection is actually getting stuck.";
+  }
+  if (/work|job|career|exam|school|application|offer/.test(lower)) {
+    return "If you want, tell me what choice or pressure is in front of you right now, and I can help you read which next step these cards are pointing toward.";
+  }
+  return "If you want, tell me more about the part that feels stuck right now, and I can help you read the next step through these cards more closely.";
+}
+
+function buildLocalStructuredReading(
+  cards: RitualCard[],
+  spread: SpreadChoice,
+  question?: string,
+  story?: string,
+  focusLabel?: string,
+): StructuredTarotReading {
+  const overall = buildOverallReading(cards, question);
+  return {
+    signal_type: overall.signalType,
+    overall_summary: overall.text,
+    cards: cards.map((card, index) => buildCardMeaning(card, index, spread)),
+    final_action_advice: buildFinalGuidance(overall.signalType, question, story),
+    follow_up_invitation: buildFollowUpInvitation(question, focusLabel),
+  };
 }
 
 function buildFollowUpReply(question: string, cards: RitualCard[]) {
   const anchor = cards[0];
   const cleanQuestion = question.replace(/\s+/g, " ").trim();
-  return `For "${cleanQuestion}", I would return to ${anchor?.name ?? "the first Hint"}. ${anchor ? getReadableCardMeaning(anchor).sentence : "Name what is true, then choose the smallest action that matches it."}`;
+  return `For "${cleanQuestion}", the cards are still pointing back to the whole pattern, not only one card. ${anchor ? getReadableCardMeaning(anchor).sentence : "Name what is true, then choose the smallest action that matches it."} Tell me the part that feels hardest to read, and I can stay with that thread.`;
+}
+
+function structuredReadingToText(reading: StructuredTarotReading) {
+  return [
+    `Overall Reading: ${reading.overall_summary}`,
+    "Card Breakdown:",
+    ...reading.cards.map((card) => `${card.position} - ${card.card_name} (${card.orientation}): ${card.meaning}`),
+    `Final Guidance: ${reading.final_action_advice}`,
+    `Keep Reading: ${reading.follow_up_invitation}`,
+  ].join("\n\n");
 }
 
 function toApiCardDraw(card: RitualCard, index: number, spread: SpreadChoice): TarotCardDraw {
@@ -333,6 +491,7 @@ export function TarotHintReadingChat({
   selectedCards,
   spread,
   backStyle = "nocturne",
+  cardBackId,
   cardArtId = "original",
   question,
   story,
@@ -342,6 +501,7 @@ export function TarotHintReadingChat({
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [structuredReading, setStructuredReading] = useState<StructuredTarotReading | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const savedReadingKeyRef = useRef<string | null>(null);
@@ -350,24 +510,73 @@ export function TarotHintReadingChat({
       retry: false,
     },
   });
-  const shortAnswer = useMemo(() => buildShortAnswer(selectedCards, spread, question), [selectedCards, spread, question]);
-  const cardMeanings = useMemo(
-    () => selectedCards.map((card, index) => buildCardMeaning(card, index, spread)),
-    [selectedCards, spread],
+  const selectedCardKey = useMemo(
+    () => selectedCards.map((card) => `${card.visualId}:${card.cardId}:${card.orientation}`).join("|"),
+    [selectedCards],
   );
-  const questionMeaning = useMemo(() => buildQuestionMeaning(selectedCards, question, story), [selectedCards, question, story]);
-  const overallSummary = useMemo(() => trimReading(shortAnswer, 2, 320), [shortAnswer]);
-  const finalAdvice = useMemo(() => trimReading(questionMeaning, 2, 320), [questionMeaning]);
-  const compactCardMeanings = useMemo(
-    () => cardMeanings.map((meaning) => trimReading(meaning, 2, 260)),
-    [cardMeanings],
+  const localReading = useMemo(
+    () => buildLocalStructuredReading(selectedCards, spread, question, story, focusLabel),
+    [focusLabel, question, selectedCardKey, selectedCards, spread, story],
   );
+  const reading = structuredReading ?? localReading;
+  const shortAnswer = reading.overall_summary;
+  const cardMeanings = reading.cards.map((card) => `${card.position}: ${card.meaning}`);
+  const questionMeaning = reading.final_action_advice;
+  const initialReadingText = useMemo(() => structuredReadingToText(reading), [reading]);
   const previewCardSize = previewCardSizeClass(selectedCards.length);
   const previewItemWidth = previewItemWidthClass(selectedCards.length);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [selectedCards]);
+
+  useEffect(() => {
+    if (selectedCards.length === 0) return undefined;
+
+    const controller = new AbortController();
+    setStructuredReading(null);
+
+    const requestBody = {
+      question: question?.trim() || focusLabel?.trim() || "What do I need to understand right now?",
+      spreadType: spread.id,
+      emotionalContext: story?.trim() || null,
+      focusLabel: focusLabel?.trim() || null,
+      requiredCardCount: selectedCards.length,
+      cards: selectedCards.map((card, index) => {
+        const meaning = getReadableCardMeaning(card);
+        const isMajor = /^\d+-/.test(card.cardId);
+        return {
+          cardId: card.cardId,
+          name: card.name,
+          orientation: card.orientation,
+          position: getSpreadPositionLabel(spread, index),
+          keywords: meaning.keywords,
+          upright: meaning.upright,
+          reversed: meaning.reversed,
+          arcana: isMajor ? "major" : "minor",
+          suit: isMajor ? null : getCardSuit(card.cardId),
+        };
+      }),
+    };
+
+    void fetch(apiUrl("/api/tarot/structured-reading"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    })
+      .then((response) => response.ok ? response.json() as Promise<StructuredTarotReading> : null)
+      .then((nextReading) => {
+        if (nextReading?.overall_summary && Array.isArray(nextReading.cards)) {
+          setStructuredReading(nextReading);
+        }
+      })
+      .catch(() => {
+        // The local reading already follows the same structure; API failure should not interrupt the room.
+      });
+
+    return () => controller.abort();
+  }, [focusLabel, question, selectedCardKey, selectedCards, spread, story]);
 
   useEffect(() => {
     if (!archiveOnOpen) return;
@@ -429,7 +638,7 @@ export function TarotHintReadingChat({
           emotionalContext: story?.trim() || undefined,
           spreadType: spread.id,
           cards: selectedCards.map((card, index) => toApiCardDraw(card, index, spread)),
-          initialReading: [shortAnswer, ...cardMeanings, questionMeaning].join("\n\n"),
+          initialReading: initialReadingText,
           messages: priorMessages.map((message) => ({
             role: message.role,
             content: message.content,
@@ -500,7 +709,7 @@ export function TarotHintReadingChat({
                 Cards drawn
               </p>
               <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-[#d8c7a6]/48">
-                {selectedCards.length} hints
+                {selectedCards.length} cards
               </p>
             </div>
             <div className="overflow-x-auto pb-2 [scrollbar-width:none]">
@@ -512,6 +721,7 @@ export function TarotHintReadingChat({
                       faceDown={false}
                       revealed
                       backStyle={backStyle}
+                      cardBackId={cardBackId}
                       cardArtId={cardArtId}
                       positionLabel={getSpreadPositionLabel(spread, index)}
                       ariaLabel={`${getSpreadPositionLabel(spread, index)}, ${card.name}, ${card.orientation}`}
@@ -542,24 +752,36 @@ export function TarotHintReadingChat({
               </p>
               <div className="mt-3 space-y-3">
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Overall summary</h3>
-                  <p className="mt-1.5 font-sans text-[15px] leading-6 text-[#f7ead0]/92 sm:text-[16px]">{overallSummary}</p>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Overall Reading</h3>
+                  <p className="mt-1.5 font-sans text-[15px] leading-6 text-[#f7ead0]/92 sm:text-[16px]">{reading.overall_summary}</p>
                 </section>
                 <section>
                   <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">
-                    Card by card
+                    Card Breakdown
                   </h3>
                   <div className="mt-2 grid gap-2 md:grid-cols-2">
-                    {compactCardMeanings.map((meaning, index) => (
-                      <p key={`${selectedCards[index]?.visualId ?? index}-meaning`} className="rounded-[10px] border border-white/8 bg-black/20 px-3 py-2 font-sans text-[12.5px] leading-5 text-[#f7ead0]/86 sm:text-[13px]">
-                        {meaning}
-                      </p>
+                    {reading.cards.map((card, index) => (
+                      <div key={`${selectedCards[index]?.visualId ?? index}-meaning`} className="rounded-[10px] border border-white/8 bg-black/20 px-3 py-2">
+                        <p className="font-sans text-[10px] uppercase tracking-[0.16em] text-[#e4c174]/68">
+                          {card.position}
+                        </p>
+                        <p className="mt-0.5 font-serif text-[14px] leading-tight text-[#f7ead0]">
+                          {card.card_name}{card.orientation === "reversed" ? " reversed" : ""}
+                        </p>
+                        <p className="mt-1.5 font-sans text-[12.5px] leading-5 text-[#f7ead0]/86 sm:text-[13px]">
+                          {trimReading(card.meaning, 3, 360)}
+                        </p>
+                      </div>
                     ))}
                   </div>
                 </section>
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Final advice</h3>
-                  <p className="mt-1.5 font-sans text-[13.5px] leading-6 text-[#f7ead0]/88 sm:text-sm">{finalAdvice}</p>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Final Guidance</h3>
+                  <p className="mt-1.5 font-sans text-[13.5px] leading-6 text-[#f7ead0]/88 sm:text-sm">{reading.final_action_advice}</p>
+                </section>
+                <section>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Keep Reading</h3>
+                  <p className="mt-1.5 font-serif text-[15px] italic leading-6 text-[#f7ead0]/88 sm:text-[16px]">{reading.follow_up_invitation}</p>
                 </section>
               </div>
             </motion.article>

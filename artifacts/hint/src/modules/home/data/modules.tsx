@@ -21,7 +21,6 @@ import {
   NatalSigil,
   ReportSigil,
   MoonPhaseSigil,
-  StarsSigil,
   InnerTypeSigil,
   ShadowSigil,
   FutureSelfSigil,
@@ -100,8 +99,8 @@ export const HOME_MODULES: ModuleDefinition[] = [
   },
   {
     id: "daily-pull",
-    title: "Daily Pull",
-    hint: "One card, already turned for tonight.",
+    title: "Daily Draw",
+    hint: "Your Sky Deck card, score, and small action for today.",
     href: "/app/daily",
     sigil: DailyPullSigil,
     section: "reflection",
@@ -224,15 +223,6 @@ export const HOME_MODULES: ModuleDefinition[] = [
     sigil: MoonPhaseSigil,
     section: "astrology",
   },
-  {
-    id: "daily-stars",
-    title: "Sky Deck",
-    hint: "Today's sky translated into card and score.",
-    href: "/app/sky-deck",
-    sigil: StarsSigil,
-    section: "astrology",
-  },
-
   /* ── Inner Self ── */
   {
     id: "personality",
@@ -320,7 +310,7 @@ export const HOME_MODULES: ModuleDefinition[] = [
 
 /** IDs surfaced in the compact home rail (live first, then notable rooms). */
 const FEATURED_IDS = [
-  "daily-stars",
+  "daily-pull",
   "natal",
   "animal-tarot",
   "meditation",
@@ -338,7 +328,7 @@ const SOON_IDS = [
 
 /** Title overrides for the home grid (broader, more app-like labels). */
 const FEATURED_TITLES: Record<string, string> = {
-  "daily-stars": "Sky Deck",
+  "daily-pull": "Daily Draw",
   natal: "Birth Chart",
 };
 

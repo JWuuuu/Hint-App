@@ -6,6 +6,8 @@ const CARD_IMAGE_BASE_PATHS: Record<TarotCardArtId, string> = {
   "hint-card-2": "/brand/tarot/decks/hint-card-2/cards",
 };
 
+const TAROT_CARD_ASSET_VERSION = "20260616";
+
 export function isTarotCardArtId(value: unknown): value is TarotCardArtId {
   return value === "original" || value === "hint-classic" || value === "hint-card-2";
 }
@@ -60,7 +62,7 @@ const MINOR_SUIT_PREFIXES: Record<string, string> = {
 };
 
 function withBasePath(fileName: string, cardArtId: TarotCardArtId) {
-  return `${CARD_IMAGE_BASE_PATHS[cardArtId]}/${fileName}`;
+  return `${CARD_IMAGE_BASE_PATHS[cardArtId]}/${fileName}?v=${TAROT_CARD_ASSET_VERSION}`;
 }
 
 export function getTarotCardImage(cardId: string, cardArtId: TarotCardArtId = "original"): string | null {

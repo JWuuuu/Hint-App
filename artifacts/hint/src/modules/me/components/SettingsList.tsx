@@ -1,22 +1,29 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
-  Palette,
-  Sparkles,
-  Wind,
-  Volume2,
-  Lock,
-  Trash2,
-  Info,
+  CalendarDays,
   ChevronRight,
-  ShieldAlert,
+  FileText,
+  Globe2,
+  Info,
+  KeyRound,
   LifeBuoy,
+  Lock,
   Mail,
+  Moon,
+  Palette,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  Trash2,
   UserRound,
+  Volume2,
+  Wind,
+  type LucideIcon,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { Link } from "wouter";
+import type { Profile } from "@workspace/api-client-react";
 import { ACCENT, GLASS } from "../../hold/atmosphere";
-import { SectionLabel, GlassPanel } from "../../../components/app/AppChrome";
 import { LanguageToggle } from "../../../components/LanguageToggle";
 import { CONTACT_EMAIL } from "../../../components/LegalNotice";
 import { useLanguage } from "../../../lib/i18n";
@@ -30,15 +37,34 @@ import {
   getInitialHintTheme,
   type HintTheme,
 } from "../../../components/app/theme";
+import { useLocalAccount, type LocalAccount } from "../../../lib/auth";
 
 interface Row {
+  id: string;
   icon: LucideIcon;
   label: string;
   detail?: string;
   href?: string;
   danger?: boolean;
-  comingSoon?: boolean;
+  control?: ReactNode;
   onClick?: () => void;
+}
+
+function accountLabel(account: LocalAccount) {
+  return account.email ?? account.phone ?? account.identifier;
+}
+
+function providerLabel(provider: LocalAccount["provider"]) {
+  if (provider === "email") return "Email";
+  if (provider === "phone") return "Phone";
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
+}
+
+function profileDetail(profile: Profile | null, missingText: string) {
+  if (!profile?.birthDate) return missingText;
+  return [profile.birthDate, profile.birthTime, profile.birthPlace]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 async function clearHistory(confirmMessage: string) {
@@ -55,15 +81,21 @@ async function clearHistory(confirmMessage: string) {
   try {
     localStorage.clear();
   } catch {
-    // ignore — nothing more we can do
+    // Best effort only.
   }
   window.location.reload();
 }
 
-export function SettingsList() {
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
+export function SettingsList({
+  profile,
+  onEditProfile,
+}: {
+  profile: Profile | null;
+  onEditProfile: () => void;
+}) {
   const [theme, setTheme] = useState<HintTheme>(getInitialHintTheme);
   const { preferences, setPreference } = useHintPreferences();
+  const account = useLocalAccount();
   const { t } = useLanguage();
 
   function chooseTheme(nextTheme: HintTheme) {
@@ -71,162 +103,219 @@ export function SettingsList() {
     setHintThemePreference(nextTheme);
   }
 
-  const rows: Row[] = [
+  const profileRows: Row[] = [
     {
-      icon: Palette,
-      label: t("me.more.appearance"),
-      detail: t("me.settings.appearanceDetail"),
-      onClick: () => setAppearanceOpen((open) => !open),
+      id: "profile",
+      icon: profile?.birthDate ? CalendarDays : UserRound,
+      label: t("account.birthProfile"),
+      detail: profileDetail(profile, t("account.birthMissing")),
+      onClick: onEditProfile,
     },
     {
-      icon: UserRound,
-      label: "Log in / Sign up",
-      detail: "Verify email or phone, or connect a social login.",
-      href: "/app/login",
+      id: "account",
+      icon: account ? ShieldCheck : KeyRound,
+      label: t("me.account"),
+      detail: account
+        ? `${providerLabel(account.provider)} · ${accountLabel(account)}`
+        : t("me.settings.accountGuestDetail"),
+      href: account ? "/app/login?mode=login" : "/app/login?mode=signup",
     },
+  ];
+
+  const appRows: Row[] = [
     {
+      id: "tarot",
       icon: Sparkles,
-      label: "Tarot room",
-      detail: "Change your saved deck, room mood, and background.",
+      label: t("me.settings.tarotTitle"),
+      detail: t("me.settings.tarotStatus"),
       href: "/app/tarot?setup=1",
     },
-    { icon: Lock, label: t("me.privacyPolicy"), detail: t("me.settings.privacyDetail"), href: "/privacy" },
-    { icon: Info, label: t("me.terms"), detail: t("me.termsDetail"), href: "/terms" },
+  ];
+
+  const supportRows: Row[] = [
+    { id: "privacy", icon: Lock, label: t("me.privacyPolicy"), detail: t("me.settings.privacyDetail"), href: "/privacy" },
+    { id: "terms", icon: FileText, label: t("me.terms"), detail: t("me.termsDetail"), href: "/terms" },
     {
+      id: "disclaimer",
       icon: ShieldAlert,
-      label: "Disclaimer",
-      detail: "Entertainment-only boundaries and professional advice limits.",
+      label: t("me.settings.disclaimerTitle"),
+      detail: t("me.settings.disclaimerDetail"),
       href: "/disclaimer",
     },
-    { icon: LifeBuoy, label: t("me.support"), detail: t("me.supportDetail"), href: "/contact" },
-    { icon: Mail, label: t("me.contact"), detail: CONTACT_EMAIL, href: "/contact" },
+    { id: "support", icon: LifeBuoy, label: t("me.support"), detail: t("me.supportDetail"), href: "/contact" },
+    { id: "contact", icon: Mail, label: t("me.contact"), detail: CONTACT_EMAIL, href: "/contact" },
     {
+      id: "clear-history",
       icon: Trash2,
       label: t("me.clearHistory"),
       detail: t("me.clearHistoryDetail"),
       danger: true,
       onClick: () => void clearHistory(t("me.clearConfirm")),
     },
-    { icon: Info, label: t("me.about"), detail: t("me.aboutDetail"), href: "/about" },
+    { id: "about", icon: Info, label: t("me.about"), detail: t("me.aboutDetail"), href: "/about" },
   ];
 
   return (
-    <section>
-      <SectionLabel>{t("me.settings")}</SectionLabel>
-      <GlassPanel padded={false}>
-        {rows.map((row, index) => (
-          <div key={row.label}>
-            <SettingsRow row={row} isFirst={index === 0} />
-            {row.label === t("me.more.appearance") && appearanceOpen ? (
-              <div
-                className="mx-4 mb-4 rounded-[8px] border p-4"
-                style={{
-                  borderColor: GLASS.border,
-                  background: "rgba(255,255,255,0.035)",
-                }}
-              >
-                <div className="mb-4 grid grid-cols-2 gap-2">
-                  {(["dark", "bright"] as const).map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => chooseTheme(option)}
-                      className="rounded-[8px] border px-3 py-3 text-left font-sans text-[12px] font-semibold transition-colors"
-                      style={{
-                        borderColor:
-                          theme === option ? "rgba(206,178,110,0.65)" : GLASS.border,
-                        color: theme === option ? "rgba(255,232,170,0.98)" : GLASS.text,
-                        background:
-                          theme === option ? "rgba(206,178,110,0.12)" : "rgba(0,0,0,0.14)",
-                      }}
-                    >
-                      {option === "dark" ? "Dark room" : "Bright room"}
-                    </button>
-                  ))}
-                </div>
+    <div className="grid gap-5">
+      <SettingsSection title={t("me.settings.groupProfile")} rows={profileRows} />
 
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <span className="font-serif text-[13px]" style={{ color: GLASS.text }}>
-                    Language
-                  </span>
-                  <LanguageToggle menuPlacement="bottom" />
-                </div>
-
-                <PreferenceSwitch
-                  icon={Wind}
-                  label={t("me.reduceMotion")}
-                  description="Reduce major motion in the website and tarot room."
-                  checked={preferences.reduceMotion}
-                  onChange={(checked) => setPreference("reduceMotion", checked)}
-                />
-                <PreferenceSwitch
-                  icon={Volume2}
-                  label={t("me.sound")}
-                  description="Controls browser vibration/haptics where the device supports it."
-                  checked={preferences.soundAndHaptics}
-                  onChange={(checked) => setPreference("soundAndHaptics", checked)}
-                />
+      <section>
+        <SectionTitle>{t("me.settings.groupPreferences")}</SectionTitle>
+        <div className="overflow-visible rounded-[22px] border" style={groupStyle}>
+          <div className="px-4 py-3.5">
+            <div className="flex items-start gap-3.5">
+              <IconTile icon={Palette} />
+              <div className="min-w-0 flex-1">
+                <p className="font-serif text-[15px]" style={{ color: GLASS.text }}>
+                  {t("me.more.appearance")}
+                </p>
+                <p className="mt-0.5 font-sans text-[11.5px] leading-snug" style={{ color: GLASS.faint }}>
+                  {t("me.settings.appearanceDetail")}
+                </p>
               </div>
-            ) : null}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <ThemeButton
+                active={theme === "dark"}
+                icon={Moon}
+                label={t("me.settings.themeDark")}
+                onClick={() => chooseTheme("dark")}
+              />
+              <ThemeButton
+                active={theme === "bright"}
+                icon={Sun}
+                label={t("me.settings.themeBright")}
+                onClick={() => chooseTheme("bright")}
+              />
+            </div>
           </div>
-        ))}
-      </GlassPanel>
+
+          <ControlRow
+            icon={Globe2}
+            label={t("language.switch")}
+            detail={t("language.switchAria")}
+            control={<LanguageToggle menuPlacement="bottom" />}
+          />
+          <ControlRow
+            icon={Wind}
+            label={t("me.reduceMotion")}
+            detail={t("me.settings.motionDetail")}
+            control={
+              <ToggleSwitch
+                label={t("me.reduceMotion")}
+                checked={preferences.reduceMotion}
+                onChange={(checked) => setPreference("reduceMotion", checked)}
+              />
+            }
+          />
+          <ControlRow
+            icon={Volume2}
+            label={t("me.sound")}
+            detail={t("me.settings.soundDetail")}
+            control={
+              <ToggleSwitch
+                label={t("me.sound")}
+                checked={preferences.soundAndHaptics}
+                onChange={(checked) => setPreference("soundAndHaptics", checked)}
+              />
+            }
+          />
+        </div>
+      </section>
+
+      <SettingsSection title={t("me.settings.groupApp")} rows={appRows} />
+      <SettingsSection title={t("me.settings.groupSafety")} rows={supportRows} />
 
       <div
-        className="mt-4 flex items-start gap-3 rounded-[8px] px-4 py-3.5"
-        style={{ background: GLASS.panel, border: `1px solid ${GLASS.border}` }}
+        className="flex items-start gap-3 rounded-[18px] border px-4 py-3.5"
+        style={{
+          background: "color-mix(in srgb, var(--hint-surface-soft) 54%, transparent)",
+          borderColor: GLASS.border,
+        }}
       >
         <ShieldAlert size={15} color={GLASS.faint} className="mt-0.5 shrink-0" />
         <p className="font-sans text-[11.5px] leading-relaxed" style={{ color: GLASS.faint }}>
           {t("me.disclaimer")}
         </p>
       </div>
+    </div>
+  );
+}
+
+const groupStyle = {
+  background: "var(--hint-liquid-panel)",
+  borderColor: "var(--hint-liquid-border)",
+  boxShadow: "var(--hint-liquid-shadow)",
+  backdropFilter: "blur(34px) saturate(1.36)",
+  WebkitBackdropFilter: "blur(34px) saturate(1.36)",
+} as const;
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <p className="mb-2 px-1 font-sans text-[11px] font-black uppercase tracking-[0.12em]" style={{ color: GLASS.faint }}>
+      {children}
+    </p>
+  );
+}
+
+function IconTile({
+  icon: Icon,
+  danger = false,
+}: {
+  icon: LucideIcon;
+  danger?: boolean;
+}) {
+  return (
+    <span
+      className="grid size-9 shrink-0 place-items-center rounded-[12px]"
+      style={{
+        background: danger
+          ? "rgba(214,140,140,0.12)"
+          : "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)",
+        border: `1px solid ${GLASS.border}`,
+      }}
+    >
+      <Icon size={17} color={danger ? "rgba(214,140,140,0.9)" : ACCENT.aqua} />
+    </span>
+  );
+}
+
+function SettingsSection({ title, rows }: { title: string; rows: Row[] }) {
+  return (
+    <section>
+      <SectionTitle>{title}</SectionTitle>
+      <div className="overflow-hidden rounded-[22px] border" style={groupStyle}>
+        {rows.map((row, index) => (
+          <SettingsRow key={row.id} row={row} isFirst={index === 0} />
+        ))}
+      </div>
     </section>
   );
 }
 
 function SettingsRow({ row, isFirst }: { row: Row; isFirst: boolean }) {
-  const Icon = row.icon;
   const content = (
     <>
-      <Icon
-        size={17}
-        color={row.danger ? "rgba(214,140,140,0.9)" : ACCENT.aqua}
-        className="shrink-0 opacity-90"
-      />
+      <IconTile icon={row.icon} danger={row.danger} />
       <span
-        className="flex-1 font-serif text-[14px]"
+        className="min-w-0 flex-1"
         style={{ color: row.danger ? "rgba(224,168,168,0.95)" : GLASS.text }}
       >
-        <span className="block">{row.label}</span>
+        <span className="block font-serif text-[15px] leading-tight">{row.label}</span>
         {row.detail && (
           <span
-            className="mt-0.5 block font-sans text-[11px] leading-snug"
+            className="mt-0.5 line-clamp-2 block font-sans text-[11.5px] leading-snug"
             style={{ color: row.danger ? "rgba(224,168,168,0.72)" : GLASS.faint }}
           >
             {row.detail}
           </span>
         )}
       </span>
-      {row.comingSoon ? (
-        <span
-          className="rounded-full border px-2 py-1 font-sans text-[9px] uppercase tracking-[0.12em]"
-          style={{
-            borderColor: GLASS.border,
-            color: GLASS.faint,
-            background: "rgba(255,255,255,0.035)",
-          }}
-        >
-          Soon
-        </span>
-      ) : (
-        <ChevronRight size={15} color={GLASS.faint} />
-      )}
+      {row.control ?? <ChevronRight size={15} color={GLASS.faint} className="shrink-0" />}
     </>
   );
 
-  const className =
-    "flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-white/[0.03]";
+  const className = "flex min-h-[64px] w-full items-center gap-3.5 px-4 py-3 text-left transition active:bg-white/[0.06]";
   const style = { borderTop: isFirst ? "none" : `1px solid ${GLASS.border}` };
 
   if (row.href) {
@@ -234,18 +323,6 @@ function SettingsRow({ row, isFirst }: { row: Row; isFirst: boolean }) {
       <Link href={row.href} className={className} style={style}>
         {content}
       </Link>
-    );
-  }
-
-  if (row.comingSoon) {
-    return (
-      <div
-        aria-disabled="true"
-        className={`${className} cursor-default opacity-65 hover:bg-transparent`}
-        style={style}
-      >
-        {content}
-      </div>
     );
   }
 
@@ -262,52 +339,101 @@ function SettingsRow({ row, isFirst }: { row: Row; isFirst: boolean }) {
   );
 }
 
-function PreferenceSwitch({
-  icon: Icon,
+function ControlRow({
+  icon,
   label,
-  description,
-  checked,
-  onChange,
+  detail,
+  control,
 }: {
   icon: LucideIcon;
   label: string;
-  description: string;
+  detail: string;
+  control: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-[64px] items-center gap-3.5 border-t px-4 py-3" style={{ borderColor: GLASS.border }}>
+      <IconTile icon={icon} />
+      <span className="min-w-0 flex-1">
+        <span className="block font-serif text-[15px] leading-tight" style={{ color: GLASS.text }}>
+          {label}
+        </span>
+        <span className="mt-0.5 line-clamp-2 block font-sans text-[11.5px] leading-snug" style={{ color: GLASS.faint }}>
+          {detail}
+        </span>
+      </span>
+      <span className="shrink-0">{control}</span>
+    </div>
+  );
+}
+
+function ThemeButton({
+  active,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-11 items-center justify-center gap-2 rounded-[14px] border px-3 py-2 font-sans text-[12px] font-bold transition active:scale-[0.98]"
+      style={{
+        borderColor: active ? "color-mix(in srgb, var(--hint-rose) 34%, var(--hint-border))" : GLASS.border,
+        color: active ? "var(--hint-special-action-text)" : GLASS.text,
+        background: active
+          ? "var(--hint-special-action-bg)"
+          : "color-mix(in srgb, var(--hint-surface-soft) 86%, transparent)",
+        boxShadow: active
+          ? "0 10px 22px color-mix(in srgb, var(--hint-rose) 16%, transparent), inset 0 1px 0 rgba(255,255,255,0.50)"
+          : "inset 0 1px 0 rgba(255,255,255,0.16)",
+      }}
+    >
+      <Icon size={14} />
+      <span className="min-w-0 truncate">{label}</span>
+    </button>
+  );
+}
+
+function ToggleSwitch({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex items-center gap-4 border-t py-3" style={{ borderColor: GLASS.border }}>
-      <Icon size={16} color={ACCENT.aqua} className="shrink-0 opacity-90" />
-      <span className="flex-1">
-        <span className="block font-serif text-[13px]" style={{ color: GLASS.text }}>
-          {label}
-        </span>
-        <span className="block font-sans text-[11px] leading-snug" style={{ color: GLASS.faint }}>
-          {description}
-        </span>
-      </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        onClick={() => onChange(!checked)}
-        className="relative h-6 w-11 shrink-0 rounded-full transition-colors"
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+      style={{
+        background: checked
+          ? "var(--hint-special-action-bg)"
+          : "color-mix(in srgb, var(--hint-surface-soft) 86%, transparent)",
+        border: `1px solid ${checked ? "color-mix(in srgb, var(--hint-rose) 34%, var(--hint-border))" : GLASS.border}`,
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)",
+      }}
+    >
+      <span
+        className="absolute left-0.5 top-0.5 rounded-full transition-transform"
         style={{
-          background: checked ? "rgba(100,156,158,0.55)" : "rgba(255,255,255,0.1)",
-          border: `1px solid ${checked ? "rgba(100,156,158,0.7)" : GLASS.border}`,
+          width: 22,
+          height: 22,
+          transform: `translateX(${checked ? 20 : 0}px)`,
+          background: "rgba(246,248,252,0.95)",
+          boxShadow: "0 4px 12px rgba(55,38,65,0.20), inset 0 1px 0 rgba(255,255,255,0.92)",
         }}
-      >
-        <span
-          className="absolute top-0.5 rounded-full transition-transform"
-          style={{
-            width: 18,
-            height: 18,
-            transform: `translateX(${checked ? 22 : 3}px)`,
-            background: "rgba(246,248,252,0.95)",
-          }}
-        />
-      </button>
-    </div>
+      />
+    </button>
   );
 }

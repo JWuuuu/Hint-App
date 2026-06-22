@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Link, useRoute } from "wouter";
+import { BookOpen, CalendarDays, HelpCircle } from "lucide-react";
 import { ACCENT, GLASS } from "../hold/atmosphere";
 import { AppScreen, ScreenHeader, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
 import { useListReadings } from "@workspace/api-client-react";
@@ -104,8 +105,8 @@ function ReadingCard({
   return (
     <Link
       href={`/readings/${reading.id}`}
-      className={`flex gap-4 rounded-[8px] ${featured ? "px-5 py-5" : "px-4 py-4"}`}
-      style={{ background: GLASS.panel, border: `1px solid ${GLASS.border}` }}
+      className={`hint-liquid-panel flex gap-3.5 rounded-[22px] ${featured ? "px-4 py-4" : "px-3.5 py-3.5"}`}
+      style={{ borderColor: GLASS.border }}
     >
       <span
         className="shrink-0 font-serif text-[10px] uppercase tracking-[0.22em] w-14 pt-0.5"
@@ -238,8 +239,8 @@ function QuestionCard({
 }) {
   return (
     <div
-      className="rounded-[8px] px-4 py-4"
-      style={{ background: GLASS.panel, border: `1px solid ${GLASS.border}` }}
+      className="hint-liquid-panel rounded-[22px] px-4 py-4"
+      style={{ borderColor: GLASS.border }}
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <span
@@ -267,10 +268,9 @@ function QuestionCard({
       </p>
       <Link
         href={`/readings/${item.readingId ?? item.id}`}
-        className="mt-4 inline-flex h-9 items-center justify-center rounded-[8px] px-3 font-sans text-[12px] font-semibold"
+        className="hint-soft-button mt-4 inline-flex h-10 items-center justify-center rounded-full px-4 font-sans text-[12px] font-bold"
         style={{
-          color: "#08070B",
-          background: "rgba(243,212,144,0.9)",
+          color: "var(--hint-special-action-text)",
         }}
       >
         Open
@@ -282,15 +282,97 @@ function QuestionCard({
 function EmptyPanel({ children }: { children: ReactNode }) {
   return (
     <div
-      className="rounded-[8px] px-4 py-5 text-center font-sans text-[13px] leading-relaxed"
+      className="rounded-[22px] px-4 py-5 text-center font-sans text-[13px] leading-relaxed"
       style={{
-        background: "rgba(255,255,255,0.035)",
+        background: "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)",
         border: `1px dashed ${GLASS.border}`,
         color: GLASS.muted,
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)",
       }}
     >
       {children}
     </div>
+  );
+}
+
+function MemoryStat({
+  icon: Icon,
+  value,
+  label,
+  tone,
+}: {
+  icon: typeof BookOpen;
+  value: number;
+  label: string;
+  tone: string;
+}) {
+  return (
+    <div
+      className="min-w-0 rounded-[14px] border px-2 py-2"
+      style={{
+        background: "color-mix(in srgb, var(--hint-surface-soft) 78%, transparent)",
+        borderColor: "var(--hint-border)",
+      }}
+    >
+      <div className="flex flex-col items-center text-center">
+        <span
+          className="grid size-7 place-items-center rounded-full border"
+          style={{
+            color: tone,
+            background: `color-mix(in srgb, ${tone} 12%, var(--hint-surface-soft))`,
+            borderColor: `color-mix(in srgb, ${tone} 30%, var(--hint-border))`,
+          }}
+        >
+          <Icon size={13} />
+        </span>
+        <div className="mt-1.5 min-w-0">
+          <p className="font-serif text-[18px] leading-none tabular-nums" style={{ color: "var(--hint-text)" }}>
+            {value}
+          </p>
+          <p className="mt-0.5 whitespace-nowrap font-sans text-[7.5px] font-black uppercase tracking-[0.04em]" style={{ color: "var(--hint-muted)" }}>
+            {label}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HistoryMemoryPanel({
+  readingCount,
+  dailyCount,
+  questionCount,
+}: {
+  readingCount: number;
+  dailyCount: number;
+  questionCount: number;
+}) {
+  return (
+    <GlassPanel padded={false} className="mb-5 hint-shimmer-border p-4">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <SectionLabel>Memory</SectionLabel>
+          <h2 className="mt-1.5 font-serif text-[21px] leading-none" style={{ color: "var(--hint-text)" }}>
+            Your Hint memory
+          </h2>
+        </div>
+        <span
+          className="rounded-full border px-2.5 py-1 font-sans text-[9px] font-black uppercase tracking-[0.1em]"
+          style={{
+            color: "var(--hint-gold)",
+            borderColor: "var(--hint-border)",
+            background: "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)",
+          }}
+        >
+          History
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <MemoryStat icon={BookOpen} value={readingCount} label="Reads" tone="#d98aaa" />
+        <MemoryStat icon={CalendarDays} value={dailyCount} label="Daily" tone="#cda866" />
+        <MemoryStat icon={HelpCircle} value={questionCount} label="Asks" tone="#9b98c9" />
+      </div>
+    </GlassPanel>
   );
 }
 
@@ -418,8 +500,8 @@ function AstrologyArchiveGrid({ profile }: { profile: BirthProfile | null }) {
         >
           <Link
             href={item.href}
-            className="block rounded-[8px] border p-4 transition-[transform,opacity] duration-200 hover:-translate-y-0.5"
-            style={{ background: GLASS.panel, borderColor: GLASS.border }}
+            className="hint-liquid-panel block rounded-[22px] p-4 transition-[transform,opacity] duration-200 hover:-translate-y-0.5"
+            style={{ borderColor: GLASS.border }}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <span className="font-sans text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: ACCENT.gold }}>
@@ -533,21 +615,14 @@ export function ReadingsView() {
         eyebrow={t("readings.eyebrow")}
         title={t("readings.title")}
         subtitle={t("readings.subtitle")}
+        showBack={false}
       />
 
-      <div className="mb-7">
-        <Link
-          href="/app/tarot"
-          className="inline-flex h-11 items-center justify-center rounded-[999px] px-5 font-sans text-[14px] font-medium"
-          style={{
-            color: "#08070B",
-            background: "linear-gradient(145deg, rgba(243,212,144,0.98), rgba(122,226,214,0.92))",
-            boxShadow: "0 14px 30px rgba(0,0,0,0.22)",
-          }}
-        >
-          {t("readings.new")}
-        </Link>
-      </div>
+      <HistoryMemoryPanel
+        readingCount={readings.length}
+        dailyCount={dailyHistory.length}
+        questionCount={displayedQuestionHistory.length}
+      />
 
       <div
         className="mb-7 flex gap-2 overflow-x-auto rounded-[14px] border p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -748,8 +823,8 @@ export function ReadingDetailView() {
             className="inline-flex h-11 items-center justify-center rounded-[999px] px-5 font-sans text-[14px] font-medium"
             style={{
               color: "#08070B",
-              background: "linear-gradient(145deg, rgba(243,212,144,0.98), rgba(122,226,214,0.92))",
-              boxShadow: "0 14px 30px rgba(0,0,0,0.22)",
+              background: "linear-gradient(145deg, rgba(255,239,199,0.98), rgba(244,175,203,0.88))",
+              boxShadow: "0 14px 30px rgba(150,92,126,0.18)",
             }}
           >
             {t("readings.returnToChat")}
@@ -931,11 +1006,11 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-11 shrink-0 items-center rounded-[10px] px-3 font-sans text-[13px] font-semibold transition"
+      className="inline-flex h-11 shrink-0 items-center rounded-full px-3.5 font-sans text-[13px] font-bold transition active:scale-[0.98]"
       style={{
-        color: active ? GLASS.text : GLASS.muted,
-        background: active ? "rgba(206,178,110,0.13)" : "transparent",
-        boxShadow: active ? "inset 0 0 0 1px rgba(206,178,110,0.18)" : "none",
+        color: active ? "var(--hint-special-action-text)" : GLASS.muted,
+        background: active ? "var(--hint-special-action-bg)" : "color-mix(in srgb, var(--hint-surface-soft) 54%, transparent)",
+        boxShadow: active ? "0 10px 22px color-mix(in srgb, var(--hint-rose) 14%, transparent), inset 0 1px 0 rgba(255,255,255,0.48)" : "inset 0 1px 0 rgba(255,255,255,0.12)",
       }}
     >
       {children}

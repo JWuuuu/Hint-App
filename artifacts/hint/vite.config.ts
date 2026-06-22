@@ -26,10 +26,11 @@ function copyTarotDeckAssets() {
       publicDir = config.publicDir;
       outDir = config.build.outDir;
     },
-    writeBundle() {
+    closeBundle() {
       const source = path.resolve(publicDir, "brand/tarot/decks");
       const destination = path.resolve(outDir, "brand/tarot/decks");
       if (!fs.existsSync(source)) return;
+      fs.rmSync(destination, { recursive: true, force: true });
       fs.cpSync(source, destination, { recursive: true, force: true });
     },
   };
