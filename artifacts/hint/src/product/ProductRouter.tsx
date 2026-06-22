@@ -5,6 +5,8 @@ import { LoginView } from "../modules/auth";
 import { RoomsLibrary } from "../modules/rooms";
 import { ReadingDetailView, ReadingsView } from "../modules/readings";
 import { MeView } from "../modules/me";
+import { AnimalTarotView } from "../modules/animal-tarot";
+import { CardCollectionView } from "../modules/collection";
 import {
   AstrologyView,
   CompatibilityView,
@@ -12,10 +14,8 @@ import {
   DreamView,
   JournalView,
 } from "../modules/features";
+import { TarotRoom } from "../modules/tarot";
 import { RedirectTo } from "../shared/navigation/RedirectTo";
-import { AnimalTarotView } from "./animal-tarot/AnimalTarotView";
-import { CardCollectionView } from "./collection/CardCollectionView";
-import { TarotRoomApp } from "./tarot/TarotRoomApp";
 
 function currentSuffix() {
   if (typeof window === "undefined") return "";
@@ -46,8 +46,8 @@ export function ProductRouter() {
       <Route path="/app/daily-pull">
         <RedirectTo to="/app/daily" />
       </Route>
-      <Route path="/app/tarot" component={TarotRoomApp} />
-      <Route path="/app/tarot/:rest*" component={TarotRoomApp} />
+      <Route path="/app/tarot" component={TarotRoom} />
+      <Route path="/app/tarot/:rest*" component={TarotRoom} />
       <Route path="/app/animal-tarot" component={AnimalTarotView} />
       <Route path="/app/animal-tarot/:rest*" component={AnimalTarotView} />
       <Route path="/app/sky-deck">

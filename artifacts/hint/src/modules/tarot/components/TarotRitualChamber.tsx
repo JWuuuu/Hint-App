@@ -17,6 +17,7 @@ import {
 import { applyWashForce } from "../logic/washPhysics";
 import type { WashPointer } from "../logic/washPhysics";
 import { selectCardByVisualId } from "../logic/selectCards";
+import { getDefaultTarotCardBackForStyle } from "../logic/cardBacks";
 import { CardWashRitual } from "./CardWashRitual";
 import type { WashRitualTheme } from "./CardWashRitual";
 import { ReadingReveal } from "./ReadingReveal";
@@ -86,9 +87,11 @@ const DECK_BACKS: Record<TarotRoomSetup["deckStyleId"], WashRitualTheme["cardBac
 
 function getTheme(setup?: TarotRoomSetup | null): WashRitualTheme {
   const background = BACKGROUND_THEMES[setup?.backgroundId ?? "stars"];
+  const cardBackStyle = DECK_BACKS[setup?.deckStyleId ?? "nocturne"];
   return {
     ...background,
-    cardBackStyle: DECK_BACKS[setup?.deckStyleId ?? "nocturne"],
+    cardBackStyle,
+    cardBackId: setup?.cardBackId ?? getDefaultTarotCardBackForStyle(cardBackStyle),
   };
 }
 
@@ -395,6 +398,7 @@ export function TarotRitualChamber({
           onSelect={selectFromSpread}
           onContinue={() => setStage("reveal")}
           backStyle={theme.cardBackStyle}
+          cardBackId={theme.cardBackId}
           cardArtId={cardArtId}
           theme={theme}
           question={setup?.question}
@@ -411,6 +415,7 @@ export function TarotRitualChamber({
           onReveal={revealCard}
           onRestart={restartRitual}
           backStyle={theme.cardBackStyle}
+          cardBackId={theme.cardBackId}
           cardArtId={cardArtId}
           theme={theme}
         />
@@ -421,6 +426,7 @@ export function TarotRitualChamber({
           selectedCards={selectedCards}
           spread={selectedSpread}
           backStyle={theme.cardBackStyle}
+          cardBackId={theme.cardBackId}
           cardArtId={cardArtId}
           question={setup?.question}
           story={setup?.story}

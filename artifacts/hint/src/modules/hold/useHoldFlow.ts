@@ -11,6 +11,11 @@ import { readingToActive } from "./chat/types";
 import { useLanguage } from "../../lib/i18n";
 import { saveLocalQuestionHistory } from "../readings/localQuestionHistory";
 import { isTarotCardArtId, type TarotCardArtId } from "../tarot/logic/cardImageMap";
+import {
+  getDefaultTarotCardBackForStyle,
+  isTarotCardBackId,
+  type TarotCardBackId,
+} from "../tarot/logic/cardBacks";
 
 export type HoldStep =
   | "setup"
@@ -24,12 +29,14 @@ export type HoldStep =
 export type RoomPresetId = "hint" | "dawn" | "rose";
 export type DeckStyleId = "nocturne" | "ivory" | "rose";
 export type CardFaceId = TarotCardArtId;
+export type CardBackId = TarotCardBackId;
 export type RoomBackgroundId = "stars" | "dawn" | "sea";
 
 export interface TarotRoomSetup {
   presetId: RoomPresetId;
   deckStyleId: DeckStyleId;
   cardFaceId: CardFaceId;
+  cardBackId: CardBackId;
   backgroundId: RoomBackgroundId;
   cardColor: string;
   spreadType: SpreadType;
@@ -277,6 +284,7 @@ export const DEFAULT_TAROT_ROOM_SETUP: TarotRoomSetup = {
   presetId: "hint",
   deckStyleId: "nocturne",
   cardFaceId: "hint-classic",
+  cardBackId: getDefaultTarotCardBackForStyle("nocturne"),
   backgroundId: "stars",
   cardColor: "Deep navy with gold linework",
   spreadType: "trueHeart",
@@ -297,6 +305,7 @@ export const ROOM_PRESETS: readonly RoomPreset[] = [
       presetId: "dawn",
       deckStyleId: "ivory",
       cardFaceId: "hint-classic",
+      cardBackId: getDefaultTarotCardBackForStyle("ivory"),
       backgroundId: "dawn",
       cardColor: "Ivory with warm gold",
       spreadType: "three",
@@ -310,6 +319,7 @@ export const ROOM_PRESETS: readonly RoomPreset[] = [
       presetId: "rose",
       deckStyleId: "rose",
       cardFaceId: "hint-classic",
+      cardBackId: getDefaultTarotCardBackForStyle("rose"),
       backgroundId: "sea",
       cardColor: "Rose quartz with violet foil",
       spreadType: "relationship",
@@ -398,6 +408,10 @@ function isCardFaceId(value: unknown): value is CardFaceId {
   return isTarotCardArtId(value);
 }
 
+function isCardBackId(value: unknown): value is CardBackId {
+  return isTarotCardBackId(value);
+}
+
 function isRoomBackgroundId(value: unknown): value is RoomBackgroundId {
   return BACKGROUND_STYLES.some((background) => background.id === value);
 }
@@ -427,6 +441,9 @@ export function loadSavedTarotRoomSetup(): TarotRoomSetup | null {
       presetId: isRoomPresetId(parsed.presetId) ? parsed.presetId : DEFAULT_TAROT_ROOM_SETUP.presetId,
       deckStyleId: isDeckStyleId(parsed.deckStyleId) ? parsed.deckStyleId : DEFAULT_TAROT_ROOM_SETUP.deckStyleId,
       cardFaceId: isCardFaceId(parsed.cardFaceId) ? parsed.cardFaceId : DEFAULT_TAROT_ROOM_SETUP.cardFaceId,
+      cardBackId: isCardBackId(parsed.cardBackId) ? parsed.cardBackId : getDefaultTarotCardBackForStyle(
+        isDeckStyleId(parsed.deckStyleId) ? parsed.deckStyleId : DEFAULT_TAROT_ROOM_SETUP.deckStyleId,
+      ),
       backgroundId: isRoomBackgroundId(parsed.backgroundId) ? parsed.backgroundId : DEFAULT_TAROT_ROOM_SETUP.backgroundId,
       cardColor: typeof parsed.cardColor === "string" ? parsed.cardColor : DEFAULT_TAROT_ROOM_SETUP.cardColor,
     };
@@ -442,6 +459,7 @@ export function saveTarotRoomSetupPreference(setup: TarotRoomSetup) {
     presetId: setup.presetId,
     deckStyleId: setup.deckStyleId,
     cardFaceId: setup.cardFaceId,
+    cardBackId: setup.cardBackId,
     backgroundId: setup.backgroundId,
     cardColor: setup.cardColor,
   };

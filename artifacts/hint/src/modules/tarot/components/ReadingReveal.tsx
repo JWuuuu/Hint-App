@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { RitualCard } from "../logic/createHiddenDeck";
 import type { TarotCardArtId } from "../logic/cardImageMap";
+import type { TarotCardBackId, TarotCardBackStyle } from "../logic/cardBacks";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { TarotCardVisual } from "./TarotCardVisual";
-import type { TarotCardBackStyle } from "./TarotCardVisual";
 import type { WashRitualTheme } from "./CardWashRitual";
 import { getSpreadPositionLabel } from "../logic/spreadLabels";
 
@@ -13,6 +13,7 @@ type ReadingRevealProps = {
   revealedIds: readonly string[];
   spread: SpreadChoice;
   backStyle?: TarotCardBackStyle;
+  cardBackId?: TarotCardBackId;
   cardArtId?: TarotCardArtId;
   theme?: Pick<WashRitualTheme, "chamberOverlay" | "starClassName" | "tableRingColor" | "secondaryRingColor">;
   autoReveal?: boolean;
@@ -50,6 +51,7 @@ export function ReadingReveal({
   revealedIds,
   spread,
   backStyle = "nocturne",
+  cardBackId,
   cardArtId = "original",
   theme,
   autoReveal = false,
@@ -205,6 +207,7 @@ export function ReadingReveal({
                   revealed={revealed}
                   active={!revealed}
                   backStyle={backStyle}
+                  cardBackId={cardBackId}
                   cardArtId={cardArtId}
                   positionLabel={label}
                   ariaLabel={revealed ? undefined : `${label}, face-down`}

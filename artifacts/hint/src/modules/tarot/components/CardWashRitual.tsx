@@ -2,8 +2,12 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { motion } from "framer-motion";
 import type { RitualCard } from "../logic/createHiddenDeck";
 import type { WashPointer } from "../logic/washPhysics";
+import {
+  getDefaultTarotCardBackForStyle,
+  type TarotCardBackId,
+  type TarotCardBackStyle,
+} from "../logic/cardBacks";
 import { TarotCardVisual } from "./TarotCardVisual";
-import type { TarotCardBackStyle } from "./TarotCardVisual";
 
 export type WashRitualTheme = {
   chamberOverlay: string;
@@ -14,6 +18,7 @@ export type WashRitualTheme = {
   tableRingColor: string;
   secondaryRingColor: string;
   cardBackStyle: TarotCardBackStyle;
+  cardBackId: TarotCardBackId;
 };
 
 type CardWashRitualProps = {
@@ -44,6 +49,7 @@ const DEFAULT_THEME: WashRitualTheme = {
   tableRingColor: "rgba(246,187,207,0.22)",
   secondaryRingColor: "rgba(248,214,152,0.14)",
   cardBackStyle: "nocturne",
+  cardBackId: getDefaultTarotCardBackForStyle("nocturne"),
 };
 
 const STAGE_INDEX: Record<CardWashRitualProps["stage"], number> = {
@@ -404,6 +410,7 @@ export function CardWashRitual({
                 compact
                 active={false}
                 backStyle={theme.cardBackStyle}
+                cardBackId={theme.cardBackId}
                 className={cardClassName}
               />
             </div>

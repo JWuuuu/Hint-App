@@ -24,6 +24,7 @@ import {
   DEFAULT_TAROT_ROOM_SETUP,
   ROOM_PRESETS,
   SPREAD_CHOICES,
+  type CardBackId,
   type CardFaceId,
   type DeckStyleId,
   type RoomBackgroundId,
@@ -33,6 +34,12 @@ import {
 } from "../useHoldFlow";
 import type { SpreadType } from "../chat/types";
 import { getTarotCardImage } from "../../tarot/logic/cardImageMap";
+import {
+  getDefaultTarotCardBackForStyle,
+  isTarotCardBackId,
+  TAROT_CARD_BACK_CHOICES,
+  type TarotCardBackChoice,
+} from "../../tarot/logic/cardBacks";
 import { GOLD, IVORY, TEXT_HALO } from "../atmosphere";
 import { useLanguage } from "../../../lib/i18n";
 
@@ -400,12 +407,61 @@ function CardFaceButton({
   );
 }
 
+function CardBackButton({
+  choice,
+  selected,
+  onClick,
+}: {
+  choice: TarotCardBackChoice;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`${choice.label}. ${choice.collection}`}
+      className="relative flex min-h-[104px] min-w-0 flex-col items-center justify-center gap-1.5 rounded-[15px] border p-1.5 text-center transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
+      style={{
+        borderColor: selected ? GOLD.edge : "var(--hint-border)",
+        background: selected
+          ? "linear-gradient(135deg, color-mix(in srgb, var(--hint-gold, #cba866) 16%, transparent), color-mix(in srgb, var(--hint-aqua, #86d6c7) 8%, transparent))"
+          : "var(--hint-card-surface-muted)",
+        boxShadow: selected ? "0 0 22px rgba(228,198,138,0.14)" : "none",
+      }}
+    >
+      {selected && <Check className="absolute right-1.5 top-1.5 z-10 shrink-0" size={12} style={{ color: GOLD.ink }} />}
+      <span
+        className="block h-[68px] w-[44px] shrink-0 overflow-hidden rounded-[8px] border shadow-[0_7px_12px_rgba(0,0,0,0.18)]"
+        style={{
+          borderColor: selected
+            ? "color-mix(in srgb, var(--hint-gold, #cba866) 58%, var(--hint-liquid-border))"
+            : "color-mix(in srgb, var(--hint-liquid-border) 62%, transparent)",
+          background: "var(--hint-deck-card-bg)",
+        }}
+      >
+        <img src={choice.image} alt="" aria-hidden="true" className="h-full w-full object-cover" draggable={false} />
+      </span>
+      <span className="min-w-0 max-w-full">
+        <span className="block max-w-full truncate font-sans text-[9px] font-semibold leading-tight" style={{ color: IVORY.strong }}>
+          {choice.label}
+        </span>
+        <span className="block max-w-full truncate font-sans text-[7px] font-semibold leading-tight" style={{ color: IVORY.dim }}>
+          {choice.collection}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function RoomLivePreview({
   title,
   moodLine,
   previewLabel,
   deckLabel,
   deckPreview,
+  cardBackLabel,
+  cardBackImage,
   cardFaceLabel,
   cardPreviewImages,
   backgroundLabel,
@@ -416,6 +472,8 @@ function RoomLivePreview({
   previewLabel: string;
   deckLabel: string;
   deckPreview: string;
+  cardBackLabel: string;
+  cardBackImage: string;
   cardFaceLabel: string;
   cardPreviewImages: readonly string[];
   backgroundLabel: string;
@@ -458,7 +516,7 @@ function RoomLivePreview({
             </p>
           </div>
           <div className="flex max-w-[38%] flex-col items-end gap-1">
-            {[deckLabel, backgroundLabel].map((item) => (
+            {[deckLabel, cardBackLabel, backgroundLabel].map((item) => (
               <span
                 key={item}
                 className="max-w-full truncate rounded-full border px-1.5 py-0.5 font-sans text-[7.5px] font-semibold leading-none"
@@ -482,6 +540,15 @@ function RoomLivePreview({
             boxShadow: "inset 0 0 0 1px var(--hint-border)",
           }}
         >
+          <span
+            className="absolute bottom-3 left-3 z-10 block h-[104px] w-[64px] overflow-hidden rounded-[12px] border shadow-[0_10px_18px_rgba(80,70,50,0.20)] sm:h-[112px] sm:w-[69px]"
+            style={{
+              borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 42%, var(--hint-liquid-border))",
+              background: deckPreview,
+            }}
+          >
+            <img src={cardBackImage} alt="" aria-hidden="true" className="h-full w-full object-cover" draggable={false} />
+          </span>
           {cardPreviewImages.length
             ? cardPreviewImages.slice(0, 3).map((image, index) => (
                 <span
@@ -1028,12 +1095,15 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [setup, setSetup] = useState<TarotRoomSetup>(() => ({
     ...initialSetup,
+    cardBackId: isTarotCardBackId(initialSetup.cardBackId)
+      ? initialSetup.cardBackId
+      : getDefaultTarotCardBackForStyle(initialSetup.deckStyleId),
     spreadType: initialSetup.spreadType === "xRelationship" ? "loveTree" : initialSetup.spreadType,
   }));
   const [showAdvancedSpreads, setShowAdvancedSpreads] = useState(false);
   const [showAllPositions, setShowAllPositions] = useState(false);
   const [showRoomStyle, setShowRoomStyle] = useState(false);
-  const [activeStudioTab, setActiveStudioTab] = useState<StudioTab>("cards");
+  const [activeStudioTab, setActiveStudioTab] = useState<StudioTab>("deck");
 
   const readingShapeChoices = useMemo(
     () =>
@@ -1075,12 +1145,20 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
         .filter((image): image is string => Boolean(image)),
     [selectedCardFace],
   );
+  const selectedCardBack = useMemo(
+    () =>
+      TAROT_CARD_BACK_CHOICES.find((item) => item.id === setup.cardBackId) ??
+      TAROT_CARD_BACK_CHOICES.find((item) => item.id === getDefaultTarotCardBackForStyle(setup.deckStyleId)) ??
+      TAROT_CARD_BACK_CHOICES[0]!,
+    [setup.cardBackId, setup.deckStyleId],
+  );
   const selectedBackground = useMemo(
     () => BACKGROUND_STYLES.find((item) => item.id === setup.backgroundId) ?? BACKGROUND_STYLES[0]!,
     [setup.backgroundId],
   );
   const presetStillMatches = selectedPreset.setup.deckStyleId === setup.deckStyleId &&
     selectedPreset.setup.cardFaceId === setup.cardFaceId &&
+    selectedPreset.setup.cardBackId === setup.cardBackId &&
     selectedPreset.setup.backgroundId === setup.backgroundId;
 
   useEffect(() => {
@@ -1102,12 +1180,17 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
     setSetup((current) => ({
       ...current,
       deckStyleId,
+      cardBackId: getDefaultTarotCardBackForStyle(deckStyleId),
       cardColor: deckColorLabel(deckStyleId),
     }));
   };
 
   const chooseCardFace = (cardFaceId: CardFaceId) => {
     setSetup((current) => ({ ...current, cardFaceId }));
+  };
+
+  const chooseCardBack = (cardBackId: CardBackId) => {
+    setSetup((current) => ({ ...current, cardBackId }));
   };
 
   const chooseBackground = (backgroundId: RoomBackgroundId) => {
@@ -1212,6 +1295,8 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
                 previewLabel={t("tarot.setup.previewLabel")}
                 deckLabel={t(`tarot.deck.${selectedDeck.id}.label`)}
                 deckPreview={selectedDeck.preview}
+                cardBackLabel={selectedCardBack.label}
+                cardBackImage={selectedCardBack.image}
                 cardFaceLabel={t(`tarot.cardFace.${selectedCardFace.id}.label`)}
                 cardPreviewImages={selectedCardPreviewImages}
                 backgroundLabel={t(`tarot.background.${selectedBackground.id}.label`)}
@@ -1244,7 +1329,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
                   <StudioTabButton
                     icon={<Palette size={14} />}
                     label={t("tarot.studio.deck")}
-                    detail={t(`tarot.deck.${selectedDeck.id}.label`)}
+                    detail={selectedCardBack.label}
                     selected={activeStudioTab === "deck"}
                     onClick={() => setActiveStudioTab("deck")}
                   />
@@ -1256,7 +1341,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
                     onClick={() => setActiveStudioTab("cards")}
                   />
                   <StudioTabButton
-                    icon={<Image size={14} />}
+                    icon={<Sparkles size={14} />}
                     label={t("tarot.studio.room")}
                     detail={t(`tarot.background.${selectedBackground.id}.label`)}
                     selected={activeStudioTab === "room"}
@@ -1264,21 +1349,37 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
                   />
                 </div>
 
-                <div className="mt-2 grid grid-cols-3 gap-1.5">
-                  {activeStudioTab === "deck" &&
-                    DECK_STYLES.map((deck) => (
-                      <ChoiceButton
-                        key={deck.id}
-                        label={t(`tarot.deck.${deck.id}.label`)}
-                        description={t(`tarot.deck.${deck.id}.description`)}
-                        preview={deck.preview}
-                        selected={setup.deckStyleId === deck.id}
-                        onClick={() => chooseDeck(deck.id)}
-                      />
-                    ))}
+                <div className="mt-2">
+                  {activeStudioTab === "deck" && (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {DECK_STYLES.map((deck) => (
+                          <ChoiceButton
+                            key={deck.id}
+                            label={t(`tarot.deck.${deck.id}.label`)}
+                            description={t(`tarot.deck.${deck.id}.description`)}
+                            preview={deck.preview}
+                            selected={setup.deckStyleId === deck.id}
+                            onClick={() => chooseDeck(deck.id)}
+                          />
+                        ))}
+                      </div>
+                      <div className="grid max-h-[254px] grid-cols-3 gap-1.5 overflow-y-auto pr-1">
+                        {TAROT_CARD_BACK_CHOICES.map((cardBack) => (
+                          <CardBackButton
+                            key={cardBack.id}
+                            choice={cardBack}
+                            selected={setup.cardBackId === cardBack.id}
+                            onClick={() => chooseCardBack(cardBack.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                  {activeStudioTab === "cards" &&
-                    CARD_FACE_STYLES.map((cardFace) => (
+                  {activeStudioTab === "cards" && (
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {CARD_FACE_STYLES.map((cardFace) => (
                       <CardFaceButton
                         key={cardFace.id}
                         label={t(`tarot.cardFace.${cardFace.id}.label`)}
@@ -1288,10 +1389,13 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
                         selected={setup.cardFaceId === cardFace.id}
                         onClick={() => chooseCardFace(cardFace.id)}
                       />
-                    ))}
+                      ))}
+                    </div>
+                  )}
 
-                  {activeStudioTab === "room" &&
-                    BACKGROUND_STYLES.map((background) => (
+                  {activeStudioTab === "room" && (
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {BACKGROUND_STYLES.map((background) => (
                       <ChoiceButton
                         key={background.id}
                         label={t(`tarot.background.${background.id}.label`)}
@@ -1300,7 +1404,9 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
                         selected={setup.backgroundId === background.id}
                         onClick={() => chooseBackground(background.id)}
                       />
-                    ))}
+                      ))}
+                    </div>
+                  )}
                 </div>
               </section>
             </div>

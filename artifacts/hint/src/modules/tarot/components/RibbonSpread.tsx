@@ -10,9 +10,14 @@ import {
 import { motion } from "framer-motion";
 import type { RitualCard } from "../logic/createHiddenDeck";
 import type { TarotCardArtId } from "../logic/cardImageMap";
+import {
+  getDefaultTarotCardBackForStyle,
+  getTarotCardBackImage,
+  type TarotCardBackId,
+  type TarotCardBackStyle,
+} from "../logic/cardBacks";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { TarotCardVisual } from "./TarotCardVisual";
-import type { TarotCardBackStyle } from "./TarotCardVisual";
 import type { WashRitualTheme } from "./CardWashRitual";
 import { getSpreadPositionLabel } from "../logic/spreadLabels";
 
@@ -22,6 +27,7 @@ type RibbonSpreadProps = {
   maxCards: number;
   spread: SpreadChoice;
   backStyle?: TarotCardBackStyle;
+  cardBackId?: TarotCardBackId;
   cardArtId?: TarotCardArtId;
   theme?: Pick<WashRitualTheme, "chamberOverlay" | "starClassName" | "tableRingColor" | "secondaryRingColor">;
   question?: string;
@@ -225,6 +231,7 @@ export function RibbonSpread({
   maxCards,
   spread,
   backStyle = "nocturne",
+  cardBackId,
   cardArtId = "original",
   theme,
   question,
@@ -268,6 +275,7 @@ export function RibbonSpread({
     "radial-gradient(circle_at_50%_40%,rgba(116,89,255,0.18),transparent_28%),radial-gradient(circle_at_50%_56%,rgba(10,16,34,0.88),rgba(3,5,12,0.98)_64%,#010207_100%)";
   const starClassName = theme?.starClassName ??
     "opacity-35 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.65)_0_1px,transparent_1px),radial-gradient(circle_at_74%_19%,rgba(239,205,139,0.55)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(255,255,255,0.34)_0_1px,transparent_1px)] [background-size:132px_148px]";
+  const cardBackImageUrl = getTarotCardBackImage(cardBackId ?? getDefaultTarotCardBackForStyle(backStyle));
   const mapPoints = constellationPoints(spread, maxCards);
   const constellationLine = mapPoints.map((point) => `${point.x},${point.y}`).join(" ");
   const questionSnippet = getQuestionSnippet(question);
@@ -724,6 +732,7 @@ export function RibbonSpread({
                           revealed={false}
                           active
                           backStyle={backStyle}
+                          cardBackId={cardBackId}
                           positionLabel={label}
                           showFrontCaption={false}
                           className={spreadSlotClass}
@@ -824,6 +833,9 @@ export function RibbonSpread({
                     opacity: selected ? 0 : layout.opacity,
                     pointerEvents: selected ? "none" : "auto",
                     backgroundColor: "#25225a",
+                    backgroundImage: `url("${cardBackImageUrl}")`,
+                    backgroundPosition: "center",
+                    backgroundSize: "cover",
                     borderColor: "rgba(147,139,205,0.42)",
                     boxShadow: popping
                       ? "0 30px 52px rgba(54,38,143,0.44), 0 0 42px rgba(122,96,255,0.48)"
@@ -835,8 +847,8 @@ export function RibbonSpread({
                     transform: `translate(${-cardWidth / 2}px, ${-cardHeight / 2}px) rotate(${layout.rotate}rad) translateY(${popping ? "-24px" : "0px"}) scale(${popping ? 1.28 : layout.scale})`,
                   }}
                 >
-                  <span className="pointer-events-none absolute inset-[8px] rounded-[8px] border border-white/10" />
-                  <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.10),transparent_30%),linear-gradient(140deg,rgba(255,255,255,0.08),transparent_42%)]" />
+                  <span className="pointer-events-none absolute inset-[8px] rounded-[8px] border border-white/12" />
+                  <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.12),transparent_28%),linear-gradient(140deg,rgba(255,255,255,0.08),transparent_42%)]" />
                 </button>
               );
             })}
