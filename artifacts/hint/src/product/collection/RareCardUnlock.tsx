@@ -161,10 +161,10 @@ export function RareCardUnlock({
         <p className="font-sans text-[10.5px] font-bold uppercase tracking-[0.2em]" style={{ color: ACCENT.gold }}>
           Rare card unlock
         </p>
-        <h3 className="mt-4 font-serif text-[30px] font-light leading-tight sm:text-[40px]" style={{ color: GLASS.text }}>
+        <h3 className="mt-4 font-serif text-[28px] font-light leading-tight sm:text-[40px]" style={{ color: GLASS.text }}>
           Some nights, the deck gives back.
         </h3>
-        <p className="mt-4 max-w-md font-sans text-[15px] leading-relaxed" style={{ color: GLASS.muted }}>
+        <p className="mt-4 max-w-md font-sans text-[13.5px] leading-relaxed sm:text-[15px]" style={{ color: GLASS.muted }}>
           {lockedMessage ?? "Keep a streak and rarer arcana surface. Turn tonight's reward and see what came up for you."}
         </p>
         <div className="mt-7 flex flex-wrap gap-3">

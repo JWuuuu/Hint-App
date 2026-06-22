@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
+import { LanguageToggle } from "../../components/LanguageToggle";
 import { ACCENT, GLASS } from "../../modules/hold/atmosphere";
 
 export function SettingsView() {
@@ -16,6 +17,20 @@ export function SettingsView() {
           Profile, language, birth details, local records, membership, and token settings are grouped under the profile hub while dedicated payment systems are still placeholders.
         </p>
       </header>
+      <GlassPanel className="mb-4">
+        <SectionLabel>App language</SectionLabel>
+        <div className="mt-3 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="font-serif text-[20px] leading-tight" style={{ color: GLASS.text }}>
+              Language
+            </p>
+            <p className="mt-1 font-sans text-[12px] leading-relaxed" style={{ color: GLASS.muted }}>
+              Choose the language for Hint copy and app labels.
+            </p>
+          </div>
+          <LanguageToggle menuPlacement="bottom" />
+        </div>
+      </GlassPanel>
       <GlassPanel className="hint-shimmer-border">
         <SectionLabel>Profile hub</SectionLabel>
         <p className="mt-3 max-w-lg font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>

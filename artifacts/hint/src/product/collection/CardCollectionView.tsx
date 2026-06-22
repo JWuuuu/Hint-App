@@ -145,8 +145,8 @@ export function CardCollectionView() {
 
   return (
     <AppScreen>
-      <header className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <header className="mb-7 flex flex-col gap-4">
+        <div className="min-w-0">
           <p className="font-sans text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT.gold }}>
             Collection
           </p>
@@ -159,8 +159,13 @@ export function CardCollectionView() {
         </div>
         <Link
           href="/app/tarot"
-          className="hint-soft-button hint-tap-sparkle inline-flex h-11 w-fit items-center justify-center rounded-full px-5 font-sans text-[13px] font-black"
-          style={{ color: "var(--hint-special-action-text)" }}
+          className="hint-tap-sparkle inline-flex min-h-11 w-full items-center justify-center rounded-full border px-5 py-2.5 text-center font-sans text-[13px] font-black"
+          style={{
+            color: "var(--hint-text)",
+            background: "color-mix(in srgb, var(--hint-surface-soft) 86%, transparent)",
+            borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 34%, var(--hint-border))",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22), 0 10px 24px color-mix(in srgb, var(--hint-gold, #cba866) 10%, transparent)",
+          }}
         >
           Draw in Tarot Room
         </Link>

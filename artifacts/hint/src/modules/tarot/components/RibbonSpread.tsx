@@ -13,6 +13,7 @@ import type { TarotCardArtId } from "../logic/cardImageMap";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { TarotCardVisual } from "./TarotCardVisual";
 import type { TarotCardBackStyle } from "./TarotCardVisual";
+import type { WashRitualTheme } from "./CardWashRitual";
 import { getSpreadPositionLabel } from "../logic/spreadLabels";
 
 type RibbonSpreadProps = {
@@ -22,6 +23,8 @@ type RibbonSpreadProps = {
   spread: SpreadChoice;
   backStyle?: TarotCardBackStyle;
   cardArtId?: TarotCardArtId;
+  theme?: Pick<WashRitualTheme, "chamberOverlay" | "starClassName" | "tableRingColor" | "secondaryRingColor">;
+  question?: string;
   onSelect: (visualId: string) => void;
   onContinue: () => void;
 };
@@ -57,17 +60,17 @@ function getWheelGeometry(zoomed: boolean, size: StageSize): WheelGeometry {
   const centerX = size.width * 1.1;
   const centerY = size.height * 0.58;
   return zoomed
-    ? {
+      ? {
         centerX,
         centerY,
-        radius: size.width * 0.66,
-        numberRadius: size.width * 0.76,
+        radius: size.width * 0.70,
+        numberRadius: size.width * 0.70 + CARD_H_ZOOM / 2 + 20,
         startAngle: -Math.PI * 0.51,
       }
     : {
         centerX,
         centerY,
-        radius: size.width * 0.60,
+        radius: size.width * 0.64,
         numberRadius: 0,
         startAngle: -Math.PI * 0.51,
       };
@@ -104,7 +107,7 @@ function getWheelNumberLayout(
   const angle = geometry.startAngle + rotation + index * wheelFanStep(total);
   const x = geometry.centerX + Math.cos(angle) * geometry.numberRadius;
   const y = geometry.centerY + Math.sin(angle) * geometry.numberRadius;
-  const hidden = y > size.height * 0.92 || x > size.width * 0.96;
+  const hidden = x < -48 || x > size.width + 64 || y < -52 || y > size.height + 18;
 
   return {
     x,
@@ -149,6 +152,54 @@ function getSlotPoint(point: { x: number; y: number }, cardCount: number) {
   };
 }
 
+function getLabelDock(point: { x: number; y: number }, index: number, cardCount: number) {
+  if (cardCount === 1) return "bottom";
+  if (cardCount <= 3) return point.y < 50 ? "top" : "bottom";
+  if (point.y <= 30) return "top";
+  if (point.y >= 70) return "bottom";
+  if (point.x <= 28) return "right";
+  if (point.x >= 72) return "left";
+  return index % 2 === 0 ? "bottom" : "top";
+}
+
+function constellationPoints(spread: SpreadChoice, cardCount: number) {
+  return spread.layout
+    .slice(0, cardCount)
+    .map((point) => getSlotPoint(point, cardCount));
+}
+
+function ordinalWord(value: number) {
+  const words = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth"];
+  return words[value - 1] ?? `${value}th`;
+}
+
+function getQuestionSnippet(question?: string) {
+  const cleaned = question?.trim().replace(/\s+/g, " ");
+  if (!cleaned) return "Hold the question here while each signal is sealed.";
+  return cleaned.length > 92 ? `${cleaned.slice(0, 89).trim()}...` : cleaned;
+}
+
+function getLensGuideText(label: string, index: number) {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("you")) return "your side";
+  if (normalized.includes("them")) return "their side";
+  if (normalized.includes("between")) return "shared thread";
+  if (normalized.includes("past")) return "what shaped this";
+  if (normalized.includes("present")) return "what is active";
+  if (normalized.includes("next") || normalized.includes("future")) return "what wants to move";
+  if (normalized.includes("block") || normalized.includes("barrier")) return "where energy is held";
+  if (normalized.includes("feeling")) return "what is felt";
+  if (normalized.includes("advice")) return "how to respond";
+  if (normalized.includes("message")) return "the direct signal";
+  return index === 0 ? "opening signal" : `signal ${index + 1}`;
+}
+
+function lensNodeSizeClass(cardCount: number) {
+  if (cardCount >= 7) return "h-12 w-12 sm:h-14 sm:w-14";
+  if (cardCount >= 5) return "h-14 w-14 sm:h-16 sm:w-16";
+  return "h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem]";
+}
+
 function getPointerDistance(points: Array<{ clientX: number; clientY: number }>) {
   if (points.length < 2) return 0;
   return Math.hypot(points[0]!.clientX - points[1]!.clientX, points[0]!.clientY - points[1]!.clientY);
@@ -175,6 +226,8 @@ export function RibbonSpread({
   spread,
   backStyle = "nocturne",
   cardArtId = "original",
+  theme,
+  question,
   onSelect,
   onContinue,
 }: RibbonSpreadProps) {
@@ -208,6 +261,16 @@ export function RibbonSpread({
   const [fanRotation, setFanRotation] = useState(0);
   const spreadSlotClass = spreadCardSizeClass(maxCards);
   const spreadField = spreadFieldClass(maxCards);
+  const nextPositionLabel = allSelected
+    ? ""
+    : getSpreadPositionLabel(spread, Math.min(selectedCards.length, maxCards - 1));
+  const pageOverlay = theme?.chamberOverlay ??
+    "radial-gradient(circle_at_50%_40%,rgba(116,89,255,0.18),transparent_28%),radial-gradient(circle_at_50%_56%,rgba(10,16,34,0.88),rgba(3,5,12,0.98)_64%,#010207_100%)";
+  const starClassName = theme?.starClassName ??
+    "opacity-35 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.65)_0_1px,transparent_1px),radial-gradient(circle_at_74%_19%,rgba(239,205,139,0.55)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(255,255,255,0.34)_0_1px,transparent_1px)] [background-size:132px_148px]";
+  const mapPoints = constellationPoints(spread, maxCards);
+  const constellationLine = mapPoints.map((point) => `${point.x},${point.y}`).join(" ");
+  const questionSnippet = getQuestionSnippet(question);
 
   useEffect(() => {
     return () => {
@@ -245,6 +308,16 @@ export function RibbonSpread({
     const timer = window.setTimeout(() => setPlacingVisualId(null), 900);
     return () => window.clearTimeout(timer);
   }, [placingVisualId, selectedCards.length]);
+
+  useEffect(() => {
+    if (!allSelected || mode !== "spread") return undefined;
+    if (autoDrawTimerRef.current) {
+      window.clearTimeout(autoDrawTimerRef.current);
+      autoDrawTimerRef.current = null;
+    }
+    const timer = window.setTimeout(() => onContinue(), 1180);
+    return () => window.clearTimeout(timer);
+  }, [allSelected, mode, onContinue]);
 
   useEffect(() => {
     if (mode !== "spread" || allSelected || poppingVisualId) return undefined;
@@ -292,7 +365,7 @@ export function RibbonSpread({
       setMode("spread");
       setZoomed(false);
       setPoppingVisualId(null);
-    }, 280);
+    }, 520);
   }
 
   function chooseCard(card: RitualCard) {
@@ -422,8 +495,8 @@ export function RibbonSpread({
 
   return (
     <section className="relative h-full w-full overflow-hidden px-4 pb-[calc(var(--hint-safe-bottom)+1.25rem)] pt-[calc(var(--hint-safe-top)+1rem)] text-center">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(116,89,255,0.18),transparent_28%),radial-gradient(circle_at_50%_56%,rgba(10,16,34,0.88),rgba(3,5,12,0.98)_64%,#010207_100%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.65)_0_1px,transparent_1px),radial-gradient(circle_at_74%_19%,rgba(239,205,139,0.55)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(255,255,255,0.34)_0_1px,transparent_1px)] [background-size:132px_148px]" />
+      <div className="pointer-events-none absolute inset-0" style={{ background: pageOverlay }} />
+      <div className={`pointer-events-none absolute inset-0 ${starClassName}`} />
       <div className="pointer-events-none absolute inset-x-[-16%] bottom-[-10%] h-[58%] bg-[radial-gradient(ellipse_at_50%_64%,rgba(116,89,255,0.20),rgba(8,18,34,0.18)_38%,transparent_72%)]" />
 
       <div className="relative z-30 mx-auto mt-2 flex w-full max-w-[18rem] items-center justify-center gap-2">
@@ -448,45 +521,178 @@ export function RibbonSpread({
           transition={{ duration: 0.34, ease: "easeOut" }}
           className="absolute inset-0 z-20"
         >
-          <div className="absolute inset-x-5 top-[calc(var(--hint-safe-top)+5.75rem)] z-30">
-            <p className="font-serif text-[24px] leading-tight text-[#f7ead0] md:text-[34px]">
-              {allSelected ? "Cards chosen" : `Card ${nextCardNumber}`}
+          <div className="pointer-events-none absolute inset-x-5 top-[calc(var(--hint-safe-top)+5.15rem)] z-30">
+            <p className="mx-auto w-fit rounded-full border border-[#f1b8c9]/22 bg-white/[0.07] px-3 py-1 font-sans text-[9px] font-black uppercase tracking-[0.24em] text-[#f1b8c9]/86 shadow-[0_12px_32px_rgba(31,20,64,0.18)] backdrop-blur-md">
+              Signal path
             </p>
-            <p className="mx-auto mt-2 max-w-[20rem] font-sans text-[12px] font-semibold text-[#d8c7a6]/72">
-              {spread.label}
+            <p className="mt-3 font-serif text-[24px] leading-tight text-[#fff2df] drop-shadow-[0_12px_28px_rgba(22,12,32,0.38)] md:text-[34px]">
+              {allSelected ? "The field is sealed" : `Open the ${ordinalWord(nextCardNumber)} lens`}
             </p>
+            <div className="mx-auto mt-2 flex max-w-[22rem] flex-wrap items-center justify-center gap-1.5 font-sans text-[11px] font-black uppercase tracking-[0.12em] text-[#f7ddaf]/88">
+              {allSelected ? (
+                <span>Reveal is opening</span>
+              ) : (
+                <>
+                  <span>{spread.label}</span>
+                  <span className="h-1 w-1 rounded-full bg-[#f1b8c9]/70" />
+                  <span className="rounded-full border border-[#f7ddaf]/24 bg-[#f7ddaf]/12 px-2 py-0.5 text-[#fff3cf]">
+                    {nextPositionLabel}
+                  </span>
+                  <span className="h-1 w-1 rounded-full bg-[#f1b8c9]/70" />
+                  <span>{nextCardNumber} of {maxCards}</span>
+                </>
+              )}
+            </div>
           </div>
 
-          <div className={`absolute inset-x-5 ${spreadField} z-20 mx-auto max-w-[520px]`}>
+          <div className={`absolute inset-x-4 ${spreadField} z-20 mx-auto max-w-[540px]`}>
+            <div
+              aria-hidden
+              className="absolute left-1/2 top-1/2 h-[108%] w-[108%] -translate-x-1/2 -translate-y-1/2 rounded-[38%] border border-[#f1b8c9]/12 bg-[radial-gradient(ellipse_at_50%_45%,rgba(241,184,201,0.09),transparent_34%),radial-gradient(ellipse_at_48%_70%,rgba(112,87,255,0.12),transparent_56%)] shadow-[inset_0_0_72px_rgba(241,184,201,0.055)]"
+            />
+            <div
+              aria-hidden
+              className={`pointer-events-none absolute left-1/2 z-0 w-[58%] max-w-[270px] -translate-x-1/2 rounded-full border border-[#f7ddaf]/16 bg-[#080615]/42 px-5 py-4 text-center shadow-[0_22px_58px_rgba(0,0,0,0.18),inset_0_0_36px_rgba(241,184,201,0.06)] backdrop-blur-sm ${
+                maxCards === 1 ? "top-[8%]" : "top-1/2 -translate-y-1/2"
+              }`}
+            >
+              <p className="font-sans text-[8px] font-black uppercase tracking-[0.22em] text-[#f1b8c9]/66">Question field</p>
+              <p className="mt-1 line-clamp-2 font-serif text-[13px] leading-snug text-[#fff2df]/70 sm:text-[15px]">
+                {questionSnippet}
+              </p>
+            </div>
+            <svg
+              aria-hidden
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              className="pointer-events-none absolute inset-0 overflow-visible"
+            >
+              <defs>
+                <radialGradient id="signal-node-glow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="rgba(247,221,175,0.92)" />
+                  <stop offset="58%" stopColor="rgba(241,184,201,0.36)" />
+                  <stop offset="100%" stopColor="rgba(112,87,255,0)" />
+                </radialGradient>
+              </defs>
+              <polyline
+                points={constellationLine}
+                fill="none"
+                stroke="rgba(247,221,175,0.22)"
+                strokeWidth="0.38"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="1.4 2.8"
+              />
+              {mapPoints.map((point, index) => (
+                index < selectedCards.length ? (
+                  <line
+                    key={`sealed-ray-${index + 1}`}
+                    x1="50"
+                    y1="50"
+                    x2={point.x}
+                    y2={point.y}
+                    stroke="rgba(247,221,175,0.34)"
+                    strokeWidth="0.34"
+                    strokeLinecap="round"
+                  />
+                ) : null
+              ))}
+              {!allSelected && mapPoints[selectedCards.length] && (
+                <line
+                  x1="50"
+                  y1="50"
+                  x2={mapPoints[selectedCards.length]!.x}
+                  y2={mapPoints[selectedCards.length]!.y}
+                  stroke="rgba(241,184,201,0.32)"
+                  strokeWidth="0.32"
+                  strokeLinecap="round"
+                  strokeDasharray="1.2 2.2"
+                />
+              )}
+              {mapPoints.map((point, index) => (
+                <circle
+                  key={`map-dot-${index + 1}`}
+                  cx={point.x}
+                  cy={point.y}
+                  r={index === selectedCards.length && !allSelected ? 2.25 : 1.35}
+                  fill={index < selectedCards.length ? "url(#signal-node-glow)" : "rgba(151,116,255,0.52)"}
+                  stroke="rgba(255,246,220,0.42)"
+                  strokeWidth="0.32"
+                />
+              ))}
+            </svg>
             {Array.from({ length: maxCards }, (_, index) => {
               const selectedCard = selectedCards[index];
               const point = spread.layout[index] ?? { n: index + 1, x: 50, y: 50 };
               const slotPoint = getSlotPoint(point, maxCards);
               const label = getSpreadPositionLabel(spread, index);
+              const guide = getLensGuideText(label, index);
               const activeSlot = index === selectedCards.length && !allSelected;
+              const labelDock = getLabelDock(slotPoint, index, maxCards);
               return (
                 <div
                   key={`${spread.id}-slot-${index + 1}`}
-                  className="absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center gap-1.5"
+                  className="absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center"
                   style={{ left: `${slotPoint.x}%`, top: `${slotPoint.y}%` }}
                 >
-                  <div className={`relative grid place-items-center ${spreadSlotClass}`}>
+                  <div
+                    className={`pointer-events-none absolute z-20 max-w-[7.6rem] ${
+                      labelDock === "right"
+                        ? "left-[calc(100%+0.55rem)] top-1/2 -translate-y-1/2 text-left"
+                        : labelDock === "left"
+                          ? "right-[calc(100%+0.55rem)] top-1/2 -translate-y-1/2 text-right"
+                          : labelDock === "top"
+                            ? "bottom-[calc(100%+0.5rem)] left-1/2 -translate-x-1/2 text-center"
+                            : "left-1/2 top-[calc(100%+0.5rem)] -translate-x-1/2 text-center"
+                    }`}
+                  >
+                    <p
+                      className={`inline-flex max-w-[8.4rem] items-center rounded-full border px-2.5 py-1 font-sans text-[8px] font-black uppercase tracking-[0.11em] shadow-[0_10px_22px_rgba(9,7,20,0.24)] backdrop-blur-md sm:text-[9px] ${
+                        activeSlot ? "bg-[#f7ddaf]/18 text-[#fff5d9]" : "bg-[#171527]/70 text-[#fff0df]/76"
+                      }`}
+                      style={{
+                        borderColor: activeSlot ? "rgba(247,221,175,0.38)" : "rgba(241,184,201,0.22)",
+                      }}
+                    >
+                      <span className="mr-1.5 inline-grid h-4 w-4 shrink-0 place-items-center rounded-full bg-white/10 text-[8px] text-[#f7ddaf]">
+                        {index + 1}
+                      </span>
+                      <span className="truncate">{label}</span>
+                    </p>
+                    <p className="mt-1 hidden font-sans text-[8px] font-bold uppercase tracking-[0.14em] text-[#f1b8c9]/54 sm:block">
+                      {guide}
+                    </p>
+                  </div>
+
+                  <div className={`relative grid place-items-center ${lensNodeSizeClass(maxCards)}`}>
+                    <motion.div
+                      aria-hidden
+                      className="absolute inset-[-45%] rounded-full border"
+                      style={{
+                        borderColor: activeSlot ? "rgba(247,221,175,0.42)" : "rgba(241,184,201,0.13)",
+                        boxShadow: activeSlot
+                          ? "0 0 28px rgba(247,221,175,0.16), inset 0 0 24px rgba(241,184,201,0.08)"
+                          : "inset 0 0 18px rgba(255,255,255,0.03)",
+                      }}
+                      animate={activeSlot ? { opacity: [0.36, 0.86, 0.36], scale: [0.92, 1.14, 0.92] } : { opacity: 0.48 }}
+                      transition={{ duration: 2.4, repeat: activeSlot ? Infinity : 0, ease: "easeInOut" }}
+                    />
                     {!selectedCard && (
                       <motion.div
-                        className="absolute inset-0 rounded-[11px] border border-dashed"
+                        className="absolute inset-0 rounded-full border"
                         style={{
-                          borderColor: activeSlot ? "rgba(151,116,255,0.82)" : "rgba(151,116,255,0.34)",
+                          borderColor: activeSlot ? "rgba(247,221,175,0.64)" : "rgba(241,184,201,0.24)",
                           background: activeSlot
-                            ? "rgba(111,85,255,0.10)"
-                            : "rgba(255,255,255,0.035)",
-                          boxShadow: activeSlot ? "0 0 26px rgba(112,87,255,0.24)" : "none",
+                            ? "radial-gradient(circle at 50% 42%, rgba(247,221,175,0.26), rgba(241,184,201,0.12) 46%, rgba(111,85,255,0.10))"
+                            : "radial-gradient(circle at 50% 42%, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+                          boxShadow: activeSlot ? "0 0 30px rgba(247,221,175,0.18)" : "none",
                         }}
-                        animate={activeSlot ? { opacity: [0.62, 1, 0.62], scale: [0.98, 1.03, 0.98] } : { opacity: 0.78 }}
+                        animate={activeSlot ? { opacity: [0.68, 1, 0.68], scale: [0.96, 1.06, 0.96] } : { opacity: 0.76 }}
                         transition={{ duration: 2.2, repeat: activeSlot ? Infinity : 0, ease: "easeInOut" }}
                       >
-                        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-sans text-[11px] font-black text-white/34">
-                          {index + 1}
-                        </span>
+                        <span className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f7ddaf]/64 shadow-[0_0_18px_rgba(247,221,175,0.42)]" />
+                        <span className="absolute left-1/2 top-1/2 h-[62%] w-px -translate-x-1/2 -translate-y-1/2 rotate-45 bg-[#fff2df]/12" />
+                        <span className="absolute left-1/2 top-1/2 h-[62%] w-px -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-[#fff2df]/12" />
                       </motion.div>
                     )}
                     {selectedCard && (
@@ -494,58 +700,57 @@ export function RibbonSpread({
                         layoutId={`draw-card-${selectedCard.visualId}`}
                         initial={
                           placingVisualId === selectedCard.visualId
-                            ? { opacity: 0, x: -86, y: -96, rotate: -16, scale: 1.28 }
+                            ? { opacity: 0, x: -90, y: -104, rotate: -18, scale: 1.34, filter: "brightness(1.45)" }
                             : { opacity: 0, y: 10, scale: 0.96 }
                         }
-                        animate={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 }}
-                        transition={{ type: "spring", stiffness: 155, damping: 22, mass: 0.9 }}
+                        animate={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1, filter: "brightness(1)" }}
+                        transition={{ type: "spring", stiffness: 135, damping: 19, mass: 0.96 }}
                         className="absolute inset-0 grid place-items-center"
                       >
+                        {placingVisualId === selectedCard.visualId && (
+                          <motion.span
+                            aria-hidden
+                            className="absolute -inset-6 rounded-full border border-[#f7ddaf]/46"
+                            initial={{ opacity: 0.88, scale: 0.72 }}
+                            animate={{ opacity: 0, scale: 1.38 }}
+                            transition={{ duration: 0.82, ease: "easeOut" }}
+                          />
+                        )}
+                        <span className="pointer-events-none absolute inset-[-18%] rounded-full bg-[radial-gradient(circle,rgba(247,221,175,0.18),transparent_64%)]" />
                         <TarotCardVisual
                           card={selectedCard}
                           compact
-                          faceDown={false}
-                          revealed
+                          faceDown
+                          revealed={false}
+                          active
                           backStyle={backStyle}
-                          cardArtId={cardArtId}
                           positionLabel={label}
                           showFrontCaption={false}
                           className={spreadSlotClass}
-                          ariaLabel={`${label}, ${selectedCard.name}`}
+                          ariaLabel={`${label}, chosen face-down card`}
                         />
+                        <span className="pointer-events-none absolute -bottom-5 left-1/2 -translate-x-1/2 rounded-full border border-[#f7ddaf]/22 bg-[#080615]/76 px-2 py-0.5 font-sans text-[7px] font-black uppercase tracking-[0.18em] text-[#f7ddaf]/72 backdrop-blur-sm">
+                          Sealed
+                        </span>
                       </motion.div>
                     )}
                   </div>
-                  <p className="hint-status-pill max-w-[5.8rem] truncate rounded-full border px-2.5 py-1 font-sans text-[8px] uppercase tracking-[0.12em] text-[#f3e2c4]/68 sm:max-w-[7rem] sm:text-[9px]">
-                    {selectedCard ? selectedCard.name : label}
-                  </p>
                 </div>
               );
             })}
           </div>
 
-          {allSelected ? (
-            <button
-              type="button"
-              onClick={onContinue}
-              className="hint-soft-button hint-tap-sparkle absolute bottom-[calc(var(--hint-safe-bottom)+1.25rem)] left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-[430px] -translate-x-1/2 items-center justify-center rounded-full px-5 py-4 font-sans text-[14px] font-black text-white shadow-[0_18px_46px_rgba(97,73,255,0.32)] active:scale-[0.99]"
-              style={{
-                background: "linear-gradient(135deg, #6f55ff, #8664ff)",
-              }}
-            >
-              Continue
-            </button>
-          ) : (
-            <div
-              role="status"
-              aria-live="polite"
-              className="absolute bottom-[calc(var(--hint-safe-bottom)+1.25rem)] left-1/2 z-50 flex min-h-14 w-[calc(100%-2rem)] max-w-[430px] -translate-x-1/2 items-center justify-center rounded-full border border-white/10 bg-white/10 px-5 py-3 font-sans text-[12px] font-bold leading-snug text-white/76 shadow-[0_18px_42px_rgba(40,28,125,0.18)] backdrop-blur-md"
-            >
-              {selectedCards.length === 0
-                ? "The wheel opens next. Swipe to choose; pinch or scroll up to zoom and see cards 1-78."
-                : `Placed ${selectedCards.length} of ${maxCards}. Opening card ${nextCardNumber}.`}
-            </div>
-          )}
+          <div
+            role="status"
+            aria-live="polite"
+            className="absolute bottom-[calc(var(--hint-safe-bottom)+1.25rem)] left-1/2 z-50 flex min-h-14 w-[calc(100%-2rem)] max-w-[430px] -translate-x-1/2 items-center justify-center rounded-full border border-[#f1b8c9]/20 bg-white/10 px-5 py-3 font-sans text-[12px] font-bold leading-snug text-white/82 shadow-[0_18px_42px_rgba(40,28,125,0.18)] backdrop-blur-md"
+          >
+            {allSelected
+              ? "All signals are sealed. Opening reveal..."
+              : selectedCards.length === 0
+                ? `Next: ${nextPositionLabel}. The wheel opens automatically; choose one face-down card.`
+                : `${selectedCards.length} sealed. Next lens: ${nextPositionLabel}.`}
+          </div>
         </motion.div>
       )}
 
@@ -558,8 +763,14 @@ export function RibbonSpread({
           transition={{ duration: 0.34, ease: "easeOut" }}
           className="absolute inset-0 z-20 overflow-hidden"
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_58%_30%,rgba(255,255,255,0.72),transparent_32%),linear-gradient(160deg,#fbf7ff_0%,#eee9fb_50%,#f7f2ff_100%)]" />
-          <div className="absolute inset-x-4 top-[calc(var(--hint-safe-top)+5.75rem)] z-40">
+          <div className="pointer-events-none absolute inset-0" style={{ background: pageOverlay }} />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_58%_30%,rgba(255,255,255,0.48),transparent_32%),linear-gradient(160deg,rgba(251,247,255,0.74)_0%,rgba(238,233,251,0.52)_50%,rgba(247,242,255,0.42)_100%)]" />
+          <div className={`pointer-events-none absolute inset-0 ${starClassName}`} />
+          <motion.div
+            className="absolute inset-x-4 top-[calc(var(--hint-safe-top)+5.75rem)] z-40"
+            animate={{ opacity: zoomed ? 0 : 1, y: zoomed ? -8 : 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
             <motion.p
               key={`${nextCardNumber}-${zoomed ? "zoomed" : "normal"}`}
               initial={{ opacity: 0, y: 4 }}
@@ -567,9 +778,12 @@ export function RibbonSpread({
               transition={{ duration: 0.32, ease: "easeOut" }}
               className="font-serif text-[24px] leading-tight text-[#332d45] md:text-[34px]"
             >
-              Card {nextCardNumber}
+              Lens {nextCardNumber}
             </motion.p>
-          </div>
+            <p className="mx-auto mt-2 max-w-[20rem] font-sans text-[12px] font-black uppercase tracking-[0.12em] text-[#6b5c86]/72">
+              {nextPositionLabel}
+            </p>
+          </motion.div>
 
           <div
             ref={fanRef}
@@ -612,13 +826,13 @@ export function RibbonSpread({
                     backgroundColor: "#25225a",
                     borderColor: "rgba(147,139,205,0.42)",
                     boxShadow: popping
-                      ? "0 24px 38px rgba(54,38,143,0.38), 0 0 34px rgba(122,96,255,0.40)"
+                      ? "0 30px 52px rgba(54,38,143,0.44), 0 0 42px rgba(122,96,255,0.48)"
                       : "0 12px 20px rgba(35,30,82,0.22)",
                     filter: popping ? "brightness(1.14)" : undefined,
                     transition: popping
-                      ? "transform 260ms cubic-bezier(0.18, 0.82, 0.18, 1), box-shadow 220ms ease, filter 220ms ease"
+                      ? "transform 500ms cubic-bezier(0.18, 0.82, 0.18, 1), box-shadow 420ms ease, filter 360ms ease"
                       : undefined,
-                    transform: `translate(${-cardWidth / 2}px, ${-cardHeight / 2}px) rotate(${layout.rotate}rad) scale(${popping ? 1.18 : layout.scale})`,
+                    transform: `translate(${-cardWidth / 2}px, ${-cardHeight / 2}px) rotate(${layout.rotate}rad) translateY(${popping ? "-24px" : "0px"}) scale(${popping ? 1.28 : layout.scale})`,
                   }}
                 >
                   <span className="pointer-events-none absolute inset-[8px] rounded-[8px] border border-white/10" />
@@ -650,16 +864,16 @@ export function RibbonSpread({
             })}
           </div>
 
-          <div className="pointer-events-none absolute inset-x-4 bottom-[calc(var(--hint-safe-bottom)+1.25rem)] z-50 mx-auto flex max-w-[430px] flex-col gap-2">
-            <div className="rounded-[18px] border border-[#d7d0eb]/70 bg-white/70 px-4 py-3 text-left font-sans text-[11px] font-bold leading-snug text-[#5d5476]/84 shadow-[0_18px_42px_rgba(70,54,142,0.16)] backdrop-blur-md">
-              {zoomed
-                ? "Zoom view: numbers show card positions 1-78. Pinch closed or scroll down to return."
-                : "Swipe the wheel to browse. Pinch open or scroll up to zoom; numbers appear in zoom view."}
+          {!zoomed && (
+            <div className="pointer-events-none absolute inset-x-4 bottom-[calc(var(--hint-safe-bottom)+1.25rem)] z-50 mx-auto flex max-w-[430px] flex-col gap-2">
+              <div className="rounded-[18px] border border-[#d7d0eb]/70 bg-white/70 px-4 py-3 text-left font-sans text-[11px] font-bold leading-snug text-[#5d5476]/84 shadow-[0_18px_42px_rgba(70,54,142,0.16)] backdrop-blur-md">
+                Open {nextPositionLabel}. Swipe the wheel to browse. Pinch open or scroll up to zoom; numbers appear above the cards.
+              </div>
+              <div className="rounded-full border border-[#d7d0eb]/70 bg-white/60 px-5 py-3 font-sans text-[13px] font-black text-[#5d5476]/66 shadow-[0_18px_42px_rgba(40,28,125,0.12)] backdrop-blur-md">
+                {nextPositionLabel} · {selectedCards.length} / {maxCards} sealed
+              </div>
             </div>
-            <div className="rounded-full border border-[#d7d0eb]/70 bg-white/60 px-5 py-3 font-sans text-[13px] font-black text-[#5d5476]/66 shadow-[0_18px_42px_rgba(40,28,125,0.12)] backdrop-blur-md">
-              {selectedCards.length} / {maxCards} selected
-            </div>
-          </div>
+          )}
         </motion.div>
       )}
     </section>

@@ -1,6 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Check, ChevronRight, Image, Layers, Palette, Shuffle, Sparkles } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  Check,
+  ChevronRight,
+  GraduationCap,
+  Heart,
+  Image,
+  Layers,
+  MessageCircle,
+  Palette,
+  RotateCcw,
+  Search,
+  Sparkles,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { Link } from "wouter";
 import {
   BACKGROUND_STYLES,
@@ -26,7 +41,6 @@ interface Props {
   initialSetup?: TarotRoomSetup;
 }
 
-const NEXT_STEP_KEYS = ["story", "question", "spread", "wash", "choose"] as const;
 const ADVANCED_SPREAD_IDS: readonly SpreadType[] = [
   "futureLover",
   "peachBlossom",
@@ -74,6 +88,92 @@ const READING_SHAPE_CHOICES = [
   badgeKey?: string;
 }>;
 
+type StudioTab = "deck" | "cards" | "room";
+type ScenarioGroup = {
+  id: string;
+  titleKey: string;
+  scenes: readonly ReadingScenario[];
+};
+type ReadingScenario = {
+  id: string;
+  icon: LucideIcon;
+  titleKey: string;
+  bodyKey: string;
+  questionKey: string;
+  spreadType: SpreadType;
+};
+
+const READING_SCENE_GROUPS: readonly ScenarioGroup[] = [
+  {
+    id: "love",
+    titleKey: "tarot.scenes.love",
+    scenes: [
+      {
+        id: "connection",
+        icon: Heart,
+        titleKey: "tarot.scene.connection.title",
+        bodyKey: "tarot.scene.connection.body",
+        questionKey: "tarot.scene.connection.question",
+        spreadType: "relationship",
+      },
+      {
+        id: "rightLove",
+        icon: Search,
+        titleKey: "tarot.scene.rightLove.title",
+        bodyKey: "tarot.scene.rightLove.body",
+        questionKey: "tarot.scene.rightLove.question",
+        spreadType: "peachBlossom",
+      },
+      {
+        id: "thoughts",
+        icon: MessageCircle,
+        titleKey: "tarot.scene.thoughts.title",
+        bodyKey: "tarot.scene.thoughts.body",
+        questionKey: "tarot.scene.thoughts.question",
+        spreadType: "trueHeart",
+      },
+      {
+        id: "reconcile",
+        icon: RotateCcw,
+        titleKey: "tarot.scene.reconcile.title",
+        bodyKey: "tarot.scene.reconcile.body",
+        questionKey: "tarot.scene.reconcile.question",
+        spreadType: "reconciliation",
+      },
+    ],
+  },
+  {
+    id: "life",
+    titleKey: "tarot.scenes.life",
+    scenes: [
+      {
+        id: "exam",
+        icon: GraduationCap,
+        titleKey: "tarot.scene.exam.title",
+        bodyKey: "tarot.scene.exam.body",
+        questionKey: "tarot.scene.exam.question",
+        spreadType: "three",
+      },
+      {
+        id: "people",
+        icon: Users,
+        titleKey: "tarot.scene.people.title",
+        bodyKey: "tarot.scene.people.body",
+        questionKey: "tarot.scene.people.question",
+        spreadType: "relationship",
+      },
+      {
+        id: "career",
+        icon: BriefcaseBusiness,
+        titleKey: "tarot.scene.career.title",
+        bodyKey: "tarot.scene.career.body",
+        questionKey: "tarot.scene.career.question",
+        spreadType: "three",
+      },
+    ],
+  },
+];
+
 function deckColorLabel(id: DeckStyleId): string {
   switch (id) {
     case "ivory":
@@ -95,7 +195,7 @@ function SetupSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-2">
+    <section className="space-y-1.5">
       <div className="flex items-center gap-2">
         <span style={{ color: GOLD.ink }}>{icon}</span>
         <p
@@ -125,7 +225,7 @@ function PresetButton({
     <button
       type="button"
       onClick={onClick}
-      className="min-h-[58px] rounded-[16px] border p-2 text-left transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
+      className="relative min-h-[46px] rounded-[14px] border px-2.5 py-2 text-left transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
       style={{
         borderColor: selected ? GOLD.edge : "var(--hint-border)",
         background: selected
@@ -134,20 +234,59 @@ function PresetButton({
         boxShadow: selected ? "0 0 24px rgba(228,198,138,0.12)" : "none",
       }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p
-            className="font-serif text-[14px] leading-tight sm:text-[17px]"
-            style={{ color: IVORY.strong, textShadow: TEXT_HALO.soft }}
-          >
-            {label}
-          </p>
-          <p className="mt-1 line-clamp-1 font-sans text-[10px] leading-snug sm:text-[11px]" style={{ color: IVORY.mute }}>
-            {description}
-          </p>
-        </div>
-        {selected && <Check size={16} style={{ color: GOLD.ink }} />}
-      </div>
+      {selected && (
+        <Check className="absolute right-1.5 top-1.5" size={12} style={{ color: GOLD.ink }} />
+      )}
+      <p
+        className="truncate pr-4 font-sans text-[10px] font-semibold leading-tight sm:text-[10.5px]"
+        style={{ color: IVORY.strong, textShadow: TEXT_HALO.soft }}
+      >
+        {label}
+      </p>
+      <p className="mt-1 line-clamp-1 font-sans text-[8px] leading-snug sm:text-[8.5px]" style={{ color: IVORY.mute }}>
+        {description}
+      </p>
+    </button>
+  );
+}
+
+function StudioTabButton({
+  icon,
+  label,
+  detail,
+  selected,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  detail: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-[14px] border px-1.5 py-2 text-center transition-[border-color,background,box-shadow,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
+      style={{
+        borderColor: selected ? GOLD.edge : "transparent",
+        background: selected
+          ? "linear-gradient(135deg, color-mix(in srgb, var(--hint-gold, #cba866) 18%, transparent), color-mix(in srgb, var(--hint-card-inner) 74%, transparent))"
+          : "transparent",
+        boxShadow: selected ? "0 0 20px rgba(228,198,138,0.12)" : "none",
+      }}
+    >
+      <span className="shrink-0" style={{ color: selected ? GOLD.ink : IVORY.dim }}>
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate font-sans text-[9px] font-semibold uppercase tracking-[0.12em]" style={{ color: selected ? IVORY.strong : IVORY.mute }}>
+          {label}
+        </span>
+        <span className="mt-0.5 block max-w-[82px] truncate font-sans text-[8px]" style={{ color: IVORY.dim }}>
+          {detail}
+        </span>
+      </span>
     </button>
   );
 }
@@ -169,7 +308,8 @@ function ChoiceButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[50px] items-center gap-2 rounded-[16px] border p-2 text-left transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
+      aria-label={`${label}. ${description}`}
+      className="relative flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-[14px] border p-1.5 text-center transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
       style={{
         borderColor: selected ? GOLD.edge : "var(--hint-border)",
         background: selected
@@ -179,22 +319,22 @@ function ChoiceButton({
       }}
     >
       <span
-        className="h-7 w-7 shrink-0 rounded-[10px] border"
+        className="h-9 w-9 shrink-0 rounded-[11px] border"
         style={{
           background: preview,
           borderColor: selected ? "rgba(228,198,138,0.5)" : "var(--hint-border)",
           boxShadow: selected ? "0 0 18px rgba(228,198,138,0.15)" : "none",
         }}
       />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-sans text-[11.5px] font-semibold" style={{ color: IVORY.strong }}>
+      <span className="min-w-0 max-w-full">
+        <span className="block truncate font-sans text-[10px] font-semibold leading-tight sm:text-[10.5px]" style={{ color: IVORY.strong }}>
           {label}
         </span>
-        <span className="hidden font-sans text-[10px] leading-snug" style={{ color: IVORY.dim }}>
+        <span className="sr-only">
           {description}
         </span>
       </span>
-      {selected && <Check className="shrink-0" size={13} style={{ color: GOLD.ink }} />}
+      {selected && <Check className="absolute right-1.5 top-1.5 shrink-0" size={12} style={{ color: GOLD.ink }} />}
     </button>
   );
 }
@@ -222,7 +362,8 @@ function CardFaceButton({
     <button
       type="button"
       onClick={onClick}
-      className="grid min-h-[78px] grid-cols-[64px_1fr] gap-2.5 rounded-[18px] border p-2 text-left transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
+      aria-label={`${label}. ${description}`}
+      className="relative flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-[15px] border p-1.5 text-center transition-[border-color,background,box-shadow,filter,transform] duration-300 hover:-translate-y-0.5 active:translate-y-0"
       style={{
         borderColor: selected ? GOLD.edge : "var(--hint-border)",
         background: selected
@@ -231,14 +372,14 @@ function CardFaceButton({
         boxShadow: selected ? "0 0 22px rgba(228,198,138,0.14)" : "none",
       }}
     >
-      <span className="relative h-[60px]">
+      {selected && <Check className="absolute right-1.5 top-1.5 z-10 shrink-0" size={12} style={{ color: GOLD.ink }} />}
+      <span className="relative h-[52px] w-[76px] shrink-0">
         {images.map((image, index) => (
           <span
             key={image}
-            className="absolute top-0 block h-[60px] w-[38px] overflow-hidden rounded-[9px] border shadow-[0_9px_18px_rgba(0,0,0,0.18)]"
+            className="absolute left-1/2 top-0.5 block h-[50px] w-[31px] overflow-hidden rounded-[7px] border shadow-[0_5px_10px_rgba(0,0,0,0.12)]"
             style={{
-              left: `${index * 12}px`,
-              transform: `rotate(${index === 0 ? -8 : index === 1 ? 0 : 8}deg)`,
+              transform: `translateX(calc(-50% + ${(index - 1) * 12}px)) rotate(${index === 0 ? -6 : index === 1 ? 0 : 6}deg)`,
               borderColor: selected
                 ? "color-mix(in srgb, var(--hint-gold, #cba866) 58%, var(--hint-liquid-border))"
                 : "color-mix(in srgb, var(--hint-liquid-border) 62%, transparent)",
@@ -250,15 +391,9 @@ function CardFaceButton({
           </span>
         ))}
       </span>
-      <span className="min-w-0">
-        <span className="flex items-start justify-between gap-2">
-          <span className="block font-sans text-[12.5px] font-semibold leading-tight" style={{ color: IVORY.strong }}>
-            {label}
-          </span>
-          {selected && <Check className="shrink-0" size={14} style={{ color: GOLD.ink }} />}
-        </span>
-        <span className="mt-1 block font-sans text-[10px] leading-snug" style={{ color: IVORY.dim }}>
-          {description}
+      <span className="min-w-0 max-w-full">
+        <span className="block truncate font-sans text-[10px] font-semibold leading-tight sm:text-[10.5px]" style={{ color: IVORY.strong }}>
+          {label}
         </span>
       </span>
     </button>
@@ -288,7 +423,7 @@ function RoomLivePreview({
 }) {
   return (
     <aside
-      className="hint-liquid-panel relative min-h-[230px] overflow-hidden rounded-[24px] border p-3 transition-[border-color,background,box-shadow] duration-300 sm:min-h-[258px] sm:p-3.5"
+      className="hint-liquid-panel relative overflow-hidden rounded-[24px] border p-3 transition-[border-color,background,box-shadow] duration-300"
       style={{
         borderColor: "var(--hint-liquid-border)",
         background: "var(--hint-liquid-panel-strong)",
@@ -305,31 +440,45 @@ function RoomLivePreview({
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(135deg, var(--hint-surface) 0%, var(--hint-card-inner) 100%)",
+            "linear-gradient(135deg, color-mix(in srgb, var(--hint-surface) 84%, transparent) 0%, color-mix(in srgb, var(--hint-card-inner) 92%, transparent) 100%)",
           backdropFilter: "blur(10px)",
         }}
       />
-      <div className="relative z-10 flex h-full min-h-[204px] flex-col gap-3 sm:min-h-[230px]">
-        <div className="min-w-0">
-          <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: GOLD.ink }}>
-            {previewLabel}
-          </p>
-          <p className="mt-1 font-serif text-[22px] leading-tight sm:text-[25px]" style={{ color: IVORY.strong, textShadow: TEXT_HALO.soft }}>
-            {title}
-          </p>
-          <p className="mt-1.5 font-sans text-[11px] leading-snug sm:text-[11.5px]" style={{ color: IVORY.mute }}>
-            {cardFaceLabel} · {deckLabel} back · {backgroundLabel} room
-          </p>
-          <p className="mt-2 line-clamp-2 font-sans text-[10.5px] leading-relaxed sm:text-[11px]" style={{ color: IVORY.dim }}>
-            {moodLine}
-          </p>
+      <div className="relative z-10">
+        <div className="mb-2.5 flex min-w-0 items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-sans text-[8.5px] font-semibold uppercase tracking-[0.17em]" style={{ color: GOLD.ink }}>
+              {previewLabel}
+            </p>
+            <p className="mt-0.5 line-clamp-1 font-serif text-[22px] leading-none sm:text-[24px]" style={{ color: IVORY.strong, textShadow: TEXT_HALO.soft }}>
+              {title}
+            </p>
+            <p className="mt-1 line-clamp-1 font-sans text-[9.5px] leading-snug sm:text-[10.5px]" style={{ color: IVORY.dim }}>
+              {moodLine}
+            </p>
+          </div>
+          <div className="flex max-w-[38%] flex-col items-end gap-1">
+            {[deckLabel, backgroundLabel].map((item) => (
+              <span
+                key={item}
+                className="max-w-full truncate rounded-full border px-1.5 py-0.5 font-sans text-[7.5px] font-semibold leading-none"
+                style={{
+                  color: IVORY.body,
+                  borderColor: "var(--hint-border)",
+                  background: "color-mix(in srgb, var(--hint-card-inner) 76%, transparent)",
+                }}
+              >
+                {item}
+              </span>
+            ))}
+          </div>
         </div>
         <div
-          className="relative min-h-0 flex-1 rounded-[8px] border"
+          className="relative h-[178px] min-w-0 overflow-hidden rounded-[20px] border sm:h-[188px]"
           style={{
             borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 18%, var(--hint-border))",
             background:
-              "radial-gradient(circle at 50% 58%, rgba(228,198,138,0.13), transparent 56%), var(--hint-card-inner)",
+              "radial-gradient(circle at 50% 58%, rgba(228,198,138,0.14), transparent 58%), var(--hint-card-inner)",
             boxShadow: "inset 0 0 0 1px var(--hint-border)",
           }}
         >
@@ -337,9 +486,9 @@ function RoomLivePreview({
             ? cardPreviewImages.slice(0, 3).map((image, index) => (
                 <span
                   key={image}
-                  className="absolute bottom-2 left-1/2 block h-[126px] w-[78px] overflow-hidden rounded-[14px] border shadow-[0_14px_24px_rgba(80,70,50,0.18)] transition-all duration-700 sm:h-[146px] sm:w-[90px]"
+                  className="absolute bottom-3 left-1/2 block h-[154px] w-[96px] overflow-hidden rounded-[14px] border shadow-[0_10px_18px_rgba(80,70,50,0.16)] transition-[transform,opacity] duration-500 sm:h-[164px] sm:w-[102px]"
                   style={{
-                    transform: `translateX(calc(-50% + ${(index - 1) * 72}px)) rotate(${index === 0 ? -9 : index === 1 ? 0 : 9}deg)`,
+                    transform: `translateX(calc(-50% + ${(index - 1) * 44}px)) rotate(${index === 0 ? -7 : index === 1 ? 0 : 7}deg)`,
                     borderColor: index === 0
                       ? "color-mix(in srgb, var(--hint-gold, #cba866) 42%, var(--hint-liquid-border))"
                       : "color-mix(in srgb, var(--hint-liquid-border) 82%, transparent)",
@@ -353,9 +502,9 @@ function RoomLivePreview({
             : [0, 1].map((index) => (
                 <span
                   key={index}
-                  className="absolute bottom-2 left-1/2 block h-[126px] w-[78px] rounded-[14px] border shadow-[0_14px_24px_rgba(80,70,50,0.18)] transition-all duration-700 sm:h-[146px] sm:w-[90px]"
+                  className="absolute bottom-3 left-1/2 block h-[154px] w-[96px] rounded-[14px] border shadow-[0_10px_18px_rgba(80,70,50,0.16)] transition-[transform,opacity] duration-500 sm:h-[164px] sm:w-[102px]"
                   style={{
-                    transform: `translateX(calc(-50% + ${(index - 0.5) * 76}px)) rotate(${index === 0 ? -7 : 7}deg)`,
+                    transform: `translateX(calc(-50% + ${(index - 0.5) * 48}px)) rotate(${index === 0 ? -7 : 7}deg)`,
                     background: deckPreview,
                     borderColor: index === 0
                       ? "color-mix(in srgb, var(--hint-gold, #cba866) 42%, var(--hint-liquid-border))"
@@ -364,6 +513,17 @@ function RoomLivePreview({
                   }}
                 />
               ))}
+          <div
+            className="absolute right-2 top-2 z-10 max-w-[62%] truncate rounded-full border px-2 py-1 font-sans text-[8px] font-semibold"
+            style={{
+              color: IVORY.body,
+              borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 22%, var(--hint-border))",
+              background: "color-mix(in srgb, var(--hint-card-inner) 74%, transparent)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            {cardFaceLabel}
+          </div>
         </div>
       </div>
     </aside>
@@ -652,6 +812,197 @@ function CollapsedSection({
   );
 }
 
+function StartReadingPanel({
+  question,
+  onQuestionChange,
+}: {
+  question: string;
+  onQuestionChange: (value: string) => void;
+}) {
+  const { t } = useLanguage();
+  const hasQuestion = question.trim().length > 0;
+
+  return (
+    <section
+      className="relative overflow-hidden rounded-[24px] border p-3"
+      style={{
+        borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 38%, var(--hint-liquid-border))",
+        background:
+          "radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--hint-gold, #cba866) 16%, transparent), transparent 34%), var(--hint-liquid-panel-strong)",
+        boxShadow: "var(--hint-liquid-shadow)",
+      }}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-px"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, color-mix(in srgb, var(--hint-gold, #cba866) 52%, transparent), transparent)",
+        }}
+      />
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: GOLD.ink }}>
+              {t("tarot.start.eyebrow")}
+            </p>
+            <h2 className="mt-1 font-serif text-[24px] leading-none sm:text-[27px]" style={{ color: IVORY.primary, textShadow: TEXT_HALO.strong }}>
+              {t("tarot.start.title")}
+            </h2>
+            <p className="mt-1.5 max-w-[24rem] font-sans text-[11px] leading-snug" style={{ color: IVORY.mute }}>
+              {t("tarot.start.body")}
+            </p>
+          </div>
+          <span
+            aria-hidden
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-[16px] border"
+            style={{
+              color: GOLD.ink,
+              borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 34%, var(--hint-border))",
+              background: "color-mix(in srgb, var(--hint-card-inner) 74%, transparent)",
+            }}
+          >
+            <Sparkles size={20} strokeWidth={1.6} />
+          </span>
+        </div>
+
+        <label className="mt-3 block">
+          <span className="mb-1.5 block font-sans text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: IVORY.dim }}>
+            {t("tarot.start.questionLabel")}
+          </span>
+          <textarea
+            value={question}
+            onChange={(event) => onQuestionChange(event.target.value)}
+            placeholder={t("tarot.start.placeholder")}
+            className="h-[78px] w-full resize-none rounded-[18px] border px-3 py-2.5 font-serif text-[14px] leading-snug outline-none transition"
+            style={{
+              color: IVORY.primary,
+              borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 22%, var(--hint-border))",
+              background: "color-mix(in srgb, var(--hint-card-inner) 76%, transparent)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
+            }}
+          />
+        </label>
+
+        <div className="mt-2.5">
+          <p className="min-w-0 font-sans text-[10px] leading-snug" style={{ color: IVORY.dim }}>
+            {hasQuestion ? t("tarot.start.readyHint") : t("tarot.start.emptyHint")}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ScenarioCard({
+  scene,
+  selected,
+  onSelect,
+}: {
+  scene: ReadingScenario;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const { t } = useLanguage();
+  const Icon = scene.icon;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className="hint-tap-sparkle flex min-h-[58px] w-full items-center gap-2.5 rounded-[14px] border px-2.5 py-2 text-left transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+      style={{
+        borderColor: selected ? GOLD.edge : "var(--hint-border)",
+        background: selected
+          ? "linear-gradient(135deg, color-mix(in srgb, var(--hint-gold, #cba866) 13%, transparent), color-mix(in srgb, var(--hint-rose, #cba6c4) 8%, transparent))"
+          : "color-mix(in srgb, var(--hint-card-surface-muted) 72%, transparent)",
+        boxShadow: selected ? "0 0 18px rgba(228,198,138,0.12)" : "none",
+      }}
+    >
+      <span
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-[11px] border"
+        style={{
+          color: selected ? GOLD.ink : IVORY.mute,
+          borderColor: selected ? GOLD.edge : "var(--hint-border)",
+          background: "color-mix(in srgb, var(--hint-card-inner) 72%, transparent)",
+        }}
+      >
+        <Icon size={15} strokeWidth={1.8} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-serif text-[14px] leading-tight" style={{ color: IVORY.strong, textShadow: TEXT_HALO.soft }}>
+          {t(scene.titleKey)}
+        </span>
+        <span className="mt-0.5 block truncate font-sans text-[10px] leading-snug" style={{ color: IVORY.mute }}>
+          {t(scene.bodyKey)}
+        </span>
+      </span>
+      <span
+        className="grid h-7 w-7 shrink-0 place-items-center rounded-full border"
+        style={{
+          color: selected ? GOLD.ink : IVORY.dim,
+          borderColor: selected ? GOLD.edge : "color-mix(in srgb, var(--hint-border) 76%, transparent)",
+          background: selected
+            ? "color-mix(in srgb, var(--hint-gold, #cba866) 14%, transparent)"
+            : "color-mix(in srgb, var(--hint-card-inner) 58%, transparent)",
+        }}
+      >
+        {selected ? <Check size={13} strokeWidth={1.9} /> : <ChevronRight size={13} strokeWidth={1.9} />}
+      </span>
+    </button>
+  );
+}
+
+function ScenarioGuide({
+  selectedQuestion,
+  onSelect,
+}: {
+  selectedQuestion: string;
+  onSelect: (scene: ReadingScenario) => void;
+}) {
+  const { t } = useLanguage();
+
+  return (
+    <section className="space-y-2">
+      <div className="flex items-end justify-between gap-3 px-0.5">
+        <div className="min-w-0">
+          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: GOLD.ink }}>
+            {t("tarot.scenes.eyebrow")}
+          </p>
+          <h2 className="mt-0.5 font-serif text-[20px] leading-none" style={{ color: IVORY.strong, textShadow: TEXT_HALO.soft }}>
+            {t("tarot.scenes.title")}
+          </h2>
+        </div>
+        <p className="hidden max-w-[11rem] text-right font-sans text-[10px] leading-snug sm:block" style={{ color: IVORY.dim }}>
+          {t("tarot.scenes.body")}
+        </p>
+      </div>
+
+      {READING_SCENE_GROUPS.map((group) => (
+        <div key={group.id} className="space-y-1.5">
+          <p className="px-0.5 font-sans text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: IVORY.dim }}>
+            {t(group.titleKey)}
+          </p>
+          <div className="space-y-1">
+            {group.scenes.map((scene) => {
+              const sceneQuestion = t(scene.questionKey);
+              return (
+                <ScenarioCard
+                  key={scene.id}
+                  scene={scene}
+                  selected={selectedQuestion.trim() === sceneQuestion.trim()}
+                  onSelect={() => onSelect(scene)}
+                />
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function translatedList(value: string): string[] {
   return value
     .split("|")
@@ -681,6 +1032,8 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
   }));
   const [showAdvancedSpreads, setShowAdvancedSpreads] = useState(false);
   const [showAllPositions, setShowAllPositions] = useState(false);
+  const [showRoomStyle, setShowRoomStyle] = useState(false);
+  const [activeStudioTab, setActiveStudioTab] = useState<StudioTab>("cards");
 
   const readingShapeChoices = useMemo(
     () =>
@@ -735,7 +1088,13 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
   }, []);
 
   const choosePreset = (preset: RoomPreset) => {
-    setSetup(preset.setup);
+    setSetup((current) => ({
+      ...preset.setup,
+      spreadType: current.spreadType,
+      story: current.story,
+      question: current.question,
+      focusLabel: current.focusLabel,
+    }));
     setShowAllPositions(false);
   };
 
@@ -760,16 +1119,34 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
     setShowAllPositions(false);
   };
 
+  const updateQuestion = (question: string) => {
+    setSetup((current) => ({ ...current, question }));
+  };
+
+  const chooseScenario = (scene: ReadingScenario) => {
+    setSetup((current) => ({
+      ...current,
+      question: t(scene.questionKey),
+      spreadType: scene.spreadType,
+      focusLabel: t(scene.titleKey),
+    }));
+    setShowAllPositions(false);
+    if (ADVANCED_SPREAD_IDS.includes(scene.spreadType)) {
+      setShowAdvancedSpreads(true);
+    }
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 1.2, ease: "easeOut" }}
-      className="flex h-full w-full max-w-[430px] flex-col justify-center px-3 py-5 sm:px-4 sm:py-4"
+      className="flex h-full w-full max-w-[430px] flex-col justify-center px-3 py-2.5 sm:px-4"
     >
       <div
-        className="hint-liquid-panel relative flex max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[28px] border"
+        className="hint-liquid-panel relative flex max-h-[calc(100vh-1rem)] flex-col overflow-hidden rounded-[28px] border"
         style={{
           background: "var(--hint-liquid-panel)",
           borderColor: "var(--hint-liquid-border)",
@@ -785,8 +1162,8 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
           }}
         />
 
-        <div ref={scrollRef} className="relative flex-1 space-y-2.5 overflow-y-auto p-3 pb-2.5 sm:p-3.5 sm:pb-3">
-          <header className="flex flex-col gap-2">
+        <div ref={scrollRef} className="relative flex-1 space-y-2 overflow-y-auto p-2.5 pb-3 sm:p-3">
+          <header className="min-w-0">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Sparkles size={16} strokeWidth={1.7} style={{ color: GOLD.ink }} />
@@ -798,150 +1175,136 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
                 </p>
               </div>
               <h1
-                className="mt-1 font-serif text-[25px] leading-none sm:text-[31px]"
+                className="mt-0.5 font-serif text-[24px] leading-none sm:text-[28px]"
                 style={{ color: IVORY.primary, textShadow: TEXT_HALO.strong }}
               >
                 {t("tarot.setup.title")}
               </h1>
-              <p className="mt-1.5 max-w-xl font-sans text-[11.5px] leading-relaxed" style={{ color: IVORY.mute }}>
+              <p className="mt-1 line-clamp-1 max-w-xl font-sans text-[10.5px] leading-snug" style={{ color: IVORY.mute }}>
                 {t("tarot.setup.body")}
               </p>
             </div>
-            <div
-              className="inline-flex w-fit max-w-full rounded-full border px-2.5 py-1 font-sans text-[9.5px] uppercase tracking-[0.16em]"
-              style={{
-                color: GOLD.ink,
-                borderColor: "rgba(228,198,138,0.22)",
-                background: "rgba(228,198,138,0.08)",
-              }}
-            >
-              {t(`tarot.cardFace.${selectedCardFace.id}.label`)} · {t(`tarot.deck.${selectedDeck.id}.label`)}
-            </div>
           </header>
 
-          <SetupSection icon={<Sparkles size={15} />} title={t("tarot.setup.presets")}>
-            <div className="grid gap-2">
-              {ROOM_PRESETS.map((preset) => (
-                <PresetButton
-                  key={preset.id}
-                  label={t(`tarot.preset.${preset.id}.label`)}
-                  description={t(`tarot.preset.${preset.id}.description`)}
-                  selected={setup.presetId === preset.id && presetStillMatches}
-                  onClick={() => choosePreset(preset)}
-                />
-              ))}
-            </div>
-          </SetupSection>
+          <StartReadingPanel
+            question={setup.question ?? ""}
+            onQuestionChange={updateQuestion}
+          />
 
-          <div className="grid gap-2.5">
-            <div className="min-w-0 space-y-2.5">
-              <SetupSection icon={<Palette size={15} />} title={t("tarot.setup.deck")}>
-                <div className="grid gap-2">
-                  {DECK_STYLES.map((deck) => (
-                    <ChoiceButton
-                      key={deck.id}
-                      label={t(`tarot.deck.${deck.id}.label`)}
-                      description={t(`tarot.deck.${deck.id}.description`)}
-                      preview={deck.preview}
-                      selected={setup.deckStyleId === deck.id}
-                      onClick={() => chooseDeck(deck.id)}
+          <ScenarioGuide
+            selectedQuestion={setup.question ?? ""}
+            onSelect={chooseScenario}
+          />
+
+          <CollapsedSection
+            icon={<Palette size={15} />}
+            title={t("tarot.style.title")}
+            subtitle={t("tarot.style.subtitle")}
+            openLabel={t("tarot.style.open")}
+            closeLabel={t("tarot.style.close")}
+            open={showRoomStyle}
+            onToggle={() => setShowRoomStyle((open) => !open)}
+          >
+            <div className="space-y-2">
+              <RoomLivePreview
+                title={presetStillMatches ? t(`tarot.preset.${selectedPreset.id}.label`) : t("tarot.setup.customPreviewTitle")}
+                moodLine={presetStillMatches ? t(`tarot.presetMood.${selectedPreset.id}`) : t("tarot.setup.customPreviewMood")}
+                previewLabel={t("tarot.setup.previewLabel")}
+                deckLabel={t(`tarot.deck.${selectedDeck.id}.label`)}
+                deckPreview={selectedDeck.preview}
+                cardFaceLabel={t(`tarot.cardFace.${selectedCardFace.id}.label`)}
+                cardPreviewImages={selectedCardPreviewImages}
+                backgroundLabel={t(`tarot.background.${selectedBackground.id}.label`)}
+                backgroundPreview={selectedBackground.preview}
+              />
+
+              <SetupSection icon={<Sparkles size={15} />} title={t("tarot.setup.presets")}>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {ROOM_PRESETS.map((preset) => (
+                    <PresetButton
+                      key={preset.id}
+                      label={t(`tarot.preset.${preset.id}.label`)}
+                      description={t(`tarot.preset.${preset.id}.description`)}
+                      selected={setup.presetId === preset.id && presetStillMatches}
+                      onClick={() => choosePreset(preset)}
                     />
                   ))}
                 </div>
               </SetupSection>
 
-              <SetupSection icon={<Image size={15} />} title={t("tarot.setup.background")}>
-                <div className="grid gap-2">
-                  {BACKGROUND_STYLES.map((background) => (
-                    <ChoiceButton
-                      key={background.id}
-                      label={t(`tarot.background.${background.id}.label`)}
-                      description={t(`tarot.background.${background.id}.description`)}
-                      preview={background.preview}
-                      selected={setup.backgroundId === background.id}
-                      onClick={() => chooseBackground(background.id)}
-                    />
-                  ))}
+              <section
+                className="rounded-[20px] border p-2"
+                style={{
+                  borderColor: "var(--hint-border)",
+                  background:
+                    "linear-gradient(180deg, color-mix(in srgb, var(--hint-card-surface-muted) 94%, transparent), color-mix(in srgb, var(--hint-card-inner) 78%, transparent))",
+                }}
+              >
+                <div className="grid grid-cols-3 gap-1 rounded-[17px] border p-1" style={{ borderColor: "var(--hint-border)", background: "color-mix(in srgb, var(--hint-card-inner) 74%, transparent)" }}>
+                  <StudioTabButton
+                    icon={<Palette size={14} />}
+                    label={t("tarot.studio.deck")}
+                    detail={t(`tarot.deck.${selectedDeck.id}.label`)}
+                    selected={activeStudioTab === "deck"}
+                    onClick={() => setActiveStudioTab("deck")}
+                  />
+                  <StudioTabButton
+                    icon={<Layers size={14} />}
+                    label={t("tarot.studio.cards")}
+                    detail={t(`tarot.cardFace.${selectedCardFace.id}.label`)}
+                    selected={activeStudioTab === "cards"}
+                    onClick={() => setActiveStudioTab("cards")}
+                  />
+                  <StudioTabButton
+                    icon={<Image size={14} />}
+                    label={t("tarot.studio.room")}
+                    detail={t(`tarot.background.${selectedBackground.id}.label`)}
+                    selected={activeStudioTab === "room"}
+                    onClick={() => setActiveStudioTab("room")}
+                  />
                 </div>
-              </SetupSection>
-            </div>
 
-            <div className="min-w-0 space-y-2.5">
-              <SetupSection icon={<Layers size={15} />} title={t("tarot.setup.cardArt")}>
-                <div className="grid gap-2">
-                  {CARD_FACE_STYLES.map((cardFace) => (
-                    <CardFaceButton
-                      key={cardFace.id}
-                      label={t(`tarot.cardFace.${cardFace.id}.label`)}
-                      description={t(`tarot.cardFace.${cardFace.id}.description`)}
-                      cardArtId={cardFace.id}
-                      previewCards={cardFace.previewCards}
-                      selected={setup.cardFaceId === cardFace.id}
-                      onClick={() => chooseCardFace(cardFace.id)}
-                    />
-                  ))}
-                </div>
-              </SetupSection>
+                <div className="mt-2 grid grid-cols-3 gap-1.5">
+                  {activeStudioTab === "deck" &&
+                    DECK_STYLES.map((deck) => (
+                      <ChoiceButton
+                        key={deck.id}
+                        label={t(`tarot.deck.${deck.id}.label`)}
+                        description={t(`tarot.deck.${deck.id}.description`)}
+                        preview={deck.preview}
+                        selected={setup.deckStyleId === deck.id}
+                        onClick={() => chooseDeck(deck.id)}
+                      />
+                    ))}
 
-              <section className="rounded-[18px] border px-3 py-3" style={{
-                borderColor: "var(--hint-border)",
-                background: "var(--hint-card-surface-muted)",
-              }}>
-                <div className="mb-2 flex items-center gap-2">
-                  <Shuffle size={13} strokeWidth={1.7} style={{ color: GOLD.ink }} />
-                  <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: IVORY.mute }}>
-                    {t("tarot.next.title")}
-                  </p>
+                  {activeStudioTab === "cards" &&
+                    CARD_FACE_STYLES.map((cardFace) => (
+                      <CardFaceButton
+                        key={cardFace.id}
+                        label={t(`tarot.cardFace.${cardFace.id}.label`)}
+                        description={t(`tarot.cardFace.${cardFace.id}.description`)}
+                        cardArtId={cardFace.id}
+                        previewCards={cardFace.previewCards}
+                        selected={setup.cardFaceId === cardFace.id}
+                        onClick={() => chooseCardFace(cardFace.id)}
+                      />
+                    ))}
+
+                  {activeStudioTab === "room" &&
+                    BACKGROUND_STYLES.map((background) => (
+                      <ChoiceButton
+                        key={background.id}
+                        label={t(`tarot.background.${background.id}.label`)}
+                        description={t(`tarot.background.${background.id}.description`)}
+                        preview={background.preview}
+                        selected={setup.backgroundId === background.id}
+                        onClick={() => chooseBackground(background.id)}
+                      />
+                    ))}
                 </div>
-                <ol className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {NEXT_STEP_KEYS.map((step, index) => (
-                    <li
-                      key={step}
-                      className="flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5"
-                      style={{
-                        borderColor: "var(--hint-border)",
-                        background: "color-mix(in srgb, var(--hint-card-inner) 80%, transparent)",
-                        color: IVORY.body,
-                      }}
-                    >
-                      <span className="font-sans text-[9px] font-semibold leading-none" style={{ color: GOLD.ink }}>
-                        {index + 1}
-                      </span>
-                      <span className="whitespace-nowrap font-sans text-[10.5px] leading-none" style={{ color: IVORY.mute }}>
-                        {t(`tarot.next.${step}`)}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
               </section>
             </div>
-          </div>
-
-          <SetupSection icon={<Sparkles size={15} />} title={t("tarot.setup.preview")}>
-            <RoomLivePreview
-              title={presetStillMatches ? t(`tarot.preset.${selectedPreset.id}.label`) : t("tarot.setup.customPreviewTitle")}
-              moodLine={presetStillMatches ? t(`tarot.presetMood.${selectedPreset.id}`) : t("tarot.setup.customPreviewMood")}
-              previewLabel={t("tarot.setup.previewLabel")}
-              deckLabel={t(`tarot.deck.${selectedDeck.id}.label`)}
-              deckPreview={selectedDeck.preview}
-              cardFaceLabel={t(`tarot.cardFace.${selectedCardFace.id}.label`)}
-              cardPreviewImages={selectedCardPreviewImages}
-              backgroundLabel={t(`tarot.background.${selectedBackground.id}.label`)}
-              backgroundPreview={selectedBackground.preview}
-            />
-          </SetupSection>
-        </div>
-
-        <div
-          className="relative z-10 shrink-0 border-t px-4 py-1.5 text-center font-serif text-[12px] italic"
-          style={{
-            color: IVORY.mute,
-            borderColor: "var(--hint-border)",
-            background: "color-mix(in srgb, var(--hint-surface) 78%, transparent)",
-            backdropFilter: "blur(18px)",
-          }}
-        >
-          {t("tarot.setup.ritualLine")}
+          </CollapsedSection>
         </div>
 
         <footer
@@ -973,7 +1336,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
               color: "var(--hint-special-action-text)",
             }}
           >
-            {t("tarot.setup.continue")}
+            {t("tarot.start.button")}
             <ChevronRight size={15} />
           </button>
         </footer>

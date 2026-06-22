@@ -29,7 +29,6 @@ import {
   toggleRitualTask,
   type RitualProgressSnapshot,
 } from "../data/localRitualProgress";
-import { ModuleGrid } from "./ModuleGrid";
 import { FeedCards } from "./FeedCards";
 import { CardSigil } from "../../hold/components/CardSigil";
 import { getTarotCardImage } from "../../tarot/logic/cardImageMap";
@@ -46,14 +45,35 @@ import { LuckyIllustration } from "./LuckyIllustration";
 import { SkyEvidence } from "../../../components/tarot/SkyEvidence";
 import { SafeImage } from "../../../shared/ui/SafeImage";
 
-type PortalCardData = {
+type RoomShortcutData = {
   title: string;
-  label: string;
   body: string;
   href: string;
   icon: LucideIcon;
   color: string;
+  tint: string;
 };
+
+const LOCALE_BY_LANGUAGE: Record<string, string> = {
+  en: "en-US",
+  zh: "zh-CN",
+  es: "es-ES",
+  ja: "ja-JP",
+  ko: "ko-KR",
+};
+
+function formatAppDate(date: string, language: string) {
+  return new Intl.DateTimeFormat(LOCALE_BY_LANGUAGE[language] ?? "en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(`${date}T12:00:00`));
+}
+
+function profileInitial(name?: string | null) {
+  const trimmed = name?.trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : "H";
+}
 
 function TodayShineLayer({ wide = false }: { wide?: boolean }) {
   return (
@@ -485,7 +505,8 @@ function OverallScoreBadge({
   );
 }
 
-function SkyCardRevealEffects({ revealed }: { revealed: boolean }) {
+function SkyCardRevealEffects({ revealed, revealing = false }: { revealed: boolean; revealing?: boolean }) {
+  const active = revealed || revealing;
   const sparks = [
     { x: "-42%", y: "8%", delay: 0.04, color: "rgba(255,229,172,0.96)" },
     { x: "118%", y: "15%", delay: 0.16, color: "rgba(255,205,224,0.92)" },
@@ -503,46 +524,46 @@ function SkyCardRevealEffects({ revealed }: { revealed: boolean }) {
             "radial-gradient(circle, rgba(255,207,220,0.20), rgba(203,168,102,0.14) 36%, rgba(168,216,208,0.08) 58%, transparent 72%)",
         }}
         animate={{
-          scale: revealed ? [0.78, 1.24, 1.03] : [0.92, 1.02, 0.92],
-          opacity: revealed ? [0.1, 0.72, 0.34] : [0.22, 0.38, 0.22],
+          scale: active ? [0.72, 1.32, 1.03] : [0.92, 1.02, 0.92],
+          opacity: active ? [0.06, 0.78, 0.34] : [0.22, 0.38, 0.22],
         }}
-        transition={{ duration: revealed ? 1.12 : 4.2, repeat: revealed ? 0 : Infinity, ease: "easeInOut" }}
+        transition={{ duration: active ? 1.12 : 4.2, repeat: active ? 0 : Infinity, ease: "easeInOut" }}
       />
       {[0, 1].map((ring) => (
         <motion.span
-          key={`sky-ring-${ring}-${revealed ? "open" : "wait"}`}
+          key={`sky-ring-${ring}-${active ? "open" : "wait"}`}
           className="absolute inset-[12%] rounded-full border"
           style={{
             borderColor: ring === 0 ? "rgba(255,225,166,0.50)" : "rgba(168,216,208,0.26)",
             boxShadow: ring === 0 ? "0 0 26px rgba(255,225,166,0.14)" : "0 0 24px rgba(168,216,208,0.10)",
           }}
           animate={
-            revealed
+            active
               ? { scale: [0.58, 1.7], opacity: [0.62, 0] }
               : { scale: [0.98, 1.05, 0.98], opacity: [0.18, 0.34, 0.18] }
           }
           transition={{
-            duration: revealed ? 1.05 : 4.8,
+            duration: active ? 1.05 : 4.8,
             delay: ring * 0.16,
-            repeat: revealed ? 0 : Infinity,
+            repeat: active ? 0 : Infinity,
             ease: "easeOut",
           }}
         />
       ))}
       {sparks.map((spark, index) => (
         <motion.span
-          key={`sky-spark-${index}-${revealed ? "open" : "idle"}`}
+          key={`sky-spark-${index}-${active ? "open" : "idle"}`}
           className="absolute grid size-4 place-items-center"
           style={{ left: spark.x, top: spark.y, color: spark.color }}
           animate={
-            revealed
-              ? { scale: [0.2, 1.18, 0.72], rotate: [0, 38, 80], opacity: [0, 1, 0] }
+            active
+              ? { scale: [0.15, 1.24, 0.68], rotate: [0, 38, 92], opacity: [0, 1, 0] }
               : { scale: [0.6, 1, 0.6], opacity: [0.18, 0.72, 0.18] }
           }
           transition={{
-            duration: revealed ? 1.05 : 3.2,
+            duration: active ? 1.05 : 3.2,
             delay: spark.delay,
-            repeat: revealed ? 0 : Infinity,
+            repeat: active ? 0 : Infinity,
             repeatDelay: index * 0.18,
             ease: "easeInOut",
           }}
@@ -557,9 +578,11 @@ function SkyCardRevealEffects({ revealed }: { revealed: boolean }) {
 function ThemeAwareDailyCard({
   report,
   revealed,
+  revealing = false,
 }: {
   report: DailyReport;
   revealed: boolean;
+  revealing?: boolean;
 }) {
   const revealedCardImage =
     getTarotCardImage(report.card.cardId, "original") ??
@@ -567,23 +590,45 @@ function ThemeAwareDailyCard({
 
   return (
     <div className="relative mx-auto w-fit">
-      <SkyCardRevealEffects revealed={revealed} />
+      <SkyCardRevealEffects revealed={revealed} revealing={revealing} />
+      {revealing && (
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute inset-[-18%] z-30 rounded-full"
+          style={{
+            background:
+              "conic-gradient(from 18deg, transparent 0deg, rgba(255,229,172,0.26) 42deg, transparent 78deg, rgba(151,232,224,0.18) 132deg, transparent 176deg, rgba(255,205,224,0.22) 238deg, transparent 300deg)",
+            filter: "blur(10px)",
+            mixBlendMode: "screen",
+          }}
+          initial={{ opacity: 0, rotate: -18, scale: 0.76 }}
+          animate={{ opacity: [0, 0.72, 0], rotate: 44, scale: [0.76, 1.12, 1.26] }}
+          transition={{ duration: 0.86, ease: "easeOut" }}
+        />
+      )}
       <motion.span
         aria-hidden
         className="pointer-events-none absolute inset-x-[18%] top-[-8%] z-10 h-8 -skew-x-12 rounded-full blur-md"
         style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.54), transparent)" }}
-        animate={{ x: revealed ? ["-120%", "250%"] : ["-80%", "190%"], opacity: [0, 0.84, 0] }}
-        transition={{ duration: revealed ? 1.18 : 3.8, repeat: revealed ? 0 : Infinity, repeatDelay: 2.2, ease: "easeInOut" }}
+        animate={{ x: revealed || revealing ? ["-120%", "250%"] : ["-80%", "190%"], opacity: [0, 0.84, 0] }}
+        transition={{ duration: revealed || revealing ? 1.18 : 3.8, repeat: revealed || revealing ? 0 : Infinity, repeatDelay: 2.2, ease: "easeInOut" }}
       />
       <div
-        className="tarot-flip relative z-20 aspect-[46/71] w-[142px] max-w-full sm:w-[166px]"
+        className={[
+          "tarot-flip relative z-20 aspect-[46/71] max-w-full",
+          revealed ? "w-[136px] sm:w-[150px]" : "w-[142px] sm:w-[166px]",
+        ].join(" ")}
         style={{
           filter: "drop-shadow(0 24px 38px rgba(31, 25, 34, 0.24)) drop-shadow(0 0 26px rgba(203,168,102,0.14))",
         }}
       >
       <motion.div
         className="tarot-flip-inner"
-        animate={{ rotateY: revealed ? 180 : 0, scale: revealed ? [0.98, 1.035, 1] : 1 }}
+        animate={{
+          rotateY: revealed ? 180 : 0,
+          y: revealing && !revealed ? [0, -10, 0] : 0,
+          scale: revealed ? [0.98, 1.035, 1] : revealing ? [1, 1.045, 1] : 1,
+        }}
         transition={{ duration: 0.92, ease: [0.45, 0, 0.2, 1] }}
       >
         <div
@@ -757,10 +802,9 @@ function DailyScoreCapsule({ report, revealed, compact = false }: { report: Dail
     <div
       className={["relative overflow-hidden rounded-[24px] border", compact ? "p-2.5" : "p-3"].join(" ")}
       style={{
-        background:
-          "linear-gradient(145deg, color-mix(in srgb, var(--hint-surface) 84%, transparent), color-mix(in srgb, var(--hint-rose, #f7c7d7) 8%, var(--hint-input-bg) 74%))",
-        borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 24%, var(--hint-border))",
-        boxShadow: "0 18px 44px rgba(31,25,34,0.10), inset 0 1px 0 rgba(255,255,255,0.20)",
+        background: "var(--hint-liquid-panel)",
+        borderColor: "color-mix(in srgb, var(--hint-rose, #cf4f92) 24%, var(--hint-liquid-border))",
+        boxShadow: "var(--hint-liquid-shadow)",
       }}
     >
       <div
@@ -768,30 +812,30 @@ function DailyScoreCapsule({ report, revealed, compact = false }: { report: Dail
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 24% 12%, rgba(255,207,220,0.18), transparent 34%), radial-gradient(circle at 86% 18%, rgba(168,216,208,0.09), transparent 36%), radial-gradient(circle at 54% 92%, rgba(203,168,102,0.10), transparent 44%)",
+            "linear-gradient(128deg, rgba(255,255,255,0.22), transparent 36%, color-mix(in srgb, var(--hint-aqua, #4a9f9d) 10%, transparent) 70%, transparent), radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--hint-rose, #cf4f92) 13%, transparent), transparent 34%), radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--hint-aqua, #4a9f9d) 10%, transparent), transparent 36%)",
         }}
       />
       {revealed ? (
         <div className="relative">
           <div className="flex items-center justify-between gap-2.5">
             <div className="min-w-0">
-              <p className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ACCENT.gold }}>
-                Today aura
+              <p className="font-sans text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--hint-rose)" }}>
+                Aura
               </p>
-              <div className="mt-1 flex items-end gap-2">
+              <div className="mt-0.5 flex items-end gap-1.5">
                 <p
-                  className={["font-serif leading-none tabular-nums", compact ? "text-[43px]" : "text-[54px]"].join(" ")}
+                  className={["font-serif leading-none tabular-nums", compact ? "text-[34px]" : "text-[54px]"].join(" ")}
                   style={{ color: "var(--hint-score-ink)", textShadow: "var(--hint-score-shadow)" }}
                 >
                   {report.overallScore}
                 </p>
-                <p className="pb-2 font-sans text-[11px] font-semibold leading-none" style={{ color: "var(--hint-muted)" }}>
+                <p className="pb-1.5 font-sans text-[10px] font-semibold leading-none" style={{ color: "var(--hint-muted)" }}>
                   overall
                 </p>
               </div>
             </div>
             <motion.div
-              className={["grid shrink-0 place-items-center rounded-full p-[3px]", compact ? "size-[54px]" : "size-[68px]"].join(" ")}
+              className={["grid shrink-0 place-items-center rounded-full p-[3px]", compact ? "size-[44px]" : "size-[68px]"].join(" ")}
               style={{
                 background: `conic-gradient(var(--hint-score-ink) ${report.overallScore * 3.6}deg, color-mix(in srgb, var(--hint-border) 58%, transparent) 0deg)`,
                 boxShadow: "0 0 28px color-mix(in srgb, var(--hint-score-ink) 18%, transparent)",
@@ -804,11 +848,11 @@ function DailyScoreCapsule({ report, revealed, compact = false }: { report: Dail
                 className="grid size-full place-items-center rounded-full"
                 style={{ background: "color-mix(in srgb, var(--hint-input-bg) 90%, transparent)" }}
               >
-                <Sparkles className="size-5" aria-hidden style={{ color: "var(--hint-gold, #cba866)" }} />
+                <Sparkles className="size-5" aria-hidden style={{ color: "var(--hint-rose, #cf4f92)" }} />
               </div>
             </motion.div>
           </div>
-          <div className={["mt-3 grid grid-cols-2", compact ? "gap-1.5" : "gap-2"].join(" ")}>
+          <div className={["mt-2.5 grid grid-cols-2", compact ? "gap-1.5" : "gap-2"].join(" ")}>
             {report.scores.map((score, index) => (
               <motion.div
                 key={score.key}
@@ -828,11 +872,11 @@ function DailyScoreCapsule({ report, revealed, compact = false }: { report: Dail
             className="mx-auto grid size-16 place-items-center rounded-full border"
             style={{
               background: "color-mix(in srgb, var(--hint-surface-soft) 86%, transparent)",
-              borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 24%, var(--hint-border))",
-              boxShadow: "0 0 28px rgba(255,207,220,0.14)",
+              borderColor: "color-mix(in srgb, var(--hint-rose, #cf4f92) 28%, var(--hint-border))",
+              boxShadow: "0 0 28px color-mix(in srgb, var(--hint-rose, #cf4f92) 14%, transparent)",
             }}
           >
-            <Sparkles className="size-5" aria-hidden style={{ color: "var(--hint-gold, #cba866)" }} />
+            <Sparkles className="size-5" aria-hidden style={{ color: "var(--hint-rose, #cf4f92)" }} />
           </div>
           <p className="mt-3 font-serif text-[23px] leading-tight" style={{ color: "var(--hint-text)" }}>
             Aura score is sealed.
@@ -855,14 +899,14 @@ function DailyHintSection({
 }: {
   report: DailyReport;
   revealed: boolean;
-  onReveal: () => void;
+  onReveal: () => void | Promise<void>;
   birthPersonalized: boolean;
   lockNotice?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [holdProgress, setHoldProgress] = useState(0);
-  const holdTimeoutRef = useRef<number | null>(null);
-  const holdIntervalRef = useRef<number | null>(null);
+  const [revealing, setRevealing] = useState(false);
+  const revealStartedRef = useRef(false);
+  const revealTimerRef = useRef<number | null>(null);
   const memory = useMemo(() => memoryInsight(report.card.cardName), [report.card.cardName, revealed]);
   const skyReading = useMemo(
     () =>
@@ -878,61 +922,40 @@ function DailyHintSection({
     [report.card.cardId, report.card.cardName, report.card.skyGuided, report.card.whisper],
   );
 
-  function clearHoldTimers() {
-    if (holdTimeoutRef.current !== null) window.clearTimeout(holdTimeoutRef.current);
-    if (holdIntervalRef.current !== null) window.clearInterval(holdIntervalRef.current);
-    holdTimeoutRef.current = null;
-    holdIntervalRef.current = null;
-  }
-
-  function cancelHold() {
-    clearHoldTimers();
-    if (!revealed) setHoldProgress(0);
-  }
-
   function revealDailyCard() {
-    clearHoldTimers();
-    setHoldProgress(1);
-    if (!revealed) onReveal();
-  }
-
-  function beginHoldReveal() {
-    if (revealed) return;
-    clearHoldTimers();
-    const holdMs = 620;
-    const startedAt = window.performance.now();
-    setHoldProgress(0.08);
-    holdIntervalRef.current = window.setInterval(() => {
-      const elapsed = window.performance.now() - startedAt;
-      setHoldProgress(Math.min(1, elapsed / holdMs));
-    }, 48);
-    holdTimeoutRef.current = window.setTimeout(revealDailyCard, holdMs);
-  }
-
-  function revealFromKeyboard(event: React.KeyboardEvent<HTMLButtonElement>) {
-    if (revealed) return;
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    revealDailyCard();
+    if (revealed || revealStartedRef.current) return;
+    revealStartedRef.current = true;
+    setRevealing(true);
+    revealTimerRef.current = window.setTimeout(() => {
+      revealTimerRef.current = null;
+      Promise.resolve(onReveal()).finally(() => {
+        revealStartedRef.current = false;
+        setRevealing(false);
+      });
+    }, 620);
   }
 
   useEffect(() => {
     if (!revealed) setExpanded(false);
   }, [revealed]);
 
-  useEffect(() => clearHoldTimers, []);
+  useEffect(() => {
+    return () => {
+      if (revealTimerRef.current !== null) window.clearTimeout(revealTimerRef.current);
+    };
+  }, []);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.16, duration: 0.76, ease: "easeOut" }}
-      className="relative overflow-hidden rounded-[18px] border px-3 py-3.5 sm:rounded-[24px] sm:px-4 sm:py-5"
+      className="hint-liquid-panel relative overflow-hidden rounded-[28px] px-3.5 py-3.5 sm:px-4 sm:py-4"
       style={{
-        background:
-          "linear-gradient(135deg, color-mix(in srgb, var(--hint-surface) 90%, transparent), color-mix(in srgb, var(--hint-rose, #f7c7d7) 8%, var(--hint-input-bg) 78%))",
-        borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 22%, var(--hint-border))",
-        boxShadow: "0 24px 70px rgba(31,25,34,0.14), inset 0 1px 0 rgba(255,255,255,0.18)",
+        background: "var(--hint-liquid-panel-strong)",
+        borderColor: "color-mix(in srgb, var(--hint-rose, #cf4f92) 34%, var(--hint-liquid-border))",
+        boxShadow:
+          "var(--hint-liquid-shadow), 0 18px 58px color-mix(in srgb, var(--hint-rose, #cf4f92) 12%, transparent)",
       }}
     >
       <div
@@ -940,84 +963,79 @@ function DailyHintSection({
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(560px 380px at 18% 28%, rgba(255,207,220,0.15), transparent 68%), radial-gradient(520px 340px at 86% 8%, rgba(168,216,208,0.08), transparent 68%), radial-gradient(360px 240px at 54% 84%, rgba(255,244,214,0.09), transparent 70%)",
+            "linear-gradient(128deg, rgba(255,255,255,0.24), transparent 34%, color-mix(in srgb, var(--hint-aqua, #4a9f9d) 12%, transparent) 70%, transparent), radial-gradient(560px 380px at 18% 28%, color-mix(in srgb, var(--hint-rose, #cf4f92) 12%, transparent), transparent 68%), radial-gradient(520px 340px at 86% 8%, color-mix(in srgb, var(--hint-aqua, #4a9f9d) 10%, transparent), transparent 68%)",
         }}
       />
       <TodayShineLayer />
 
       <div className="relative">
-        <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: ACCENT.gold }}>
-              Today's Tarot Score
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--hint-rose)" }}>
+              Today's card signal
             </p>
-            <h2 className="mt-1 font-serif text-[28px] leading-none sm:text-[34px]" style={{ color: "var(--hint-text)" }}>
-              Draw your sky card
+            <h2 className="mt-1 font-serif text-[23px] leading-none sm:text-[27px]" style={{ color: "var(--hint-text)" }}>
+              {revealed ? "Sky card" : "Draw your sky card"}
             </h2>
           </div>
-            {revealed && (
-              <button
-                type="button"
-                onClick={() => setExpanded((value) => !value)}
-                className="rounded-full border px-3 py-2 font-sans text-[11px] font-semibold uppercase tracking-[0.12em] transition hover:translate-y-[-1px]"
-                style={{
-                  color: "var(--hint-text)",
-                  background: "color-mix(in srgb, var(--hint-surface-soft) 88%, rgba(255,207,220,0.10))",
-                  borderColor: "var(--hint-border-strong)",
-                }}
-              >
-                {expanded ? "Less" : "More"}
-              </button>
-            )}
+          {revealed && (
+            <button
+              type="button"
+              onClick={() => setExpanded((value) => !value)}
+              className="rounded-full border px-2.5 py-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.12em] transition hover:translate-y-[-1px]"
+              style={{
+                color: "var(--hint-text)",
+                background: "color-mix(in srgb, var(--hint-surface-soft) 72%, var(--hint-rose, #cf4f92) 18%)",
+                borderColor: "color-mix(in srgb, var(--hint-rose, #cf4f92) 28%, var(--hint-border-strong))",
+              }}
+            >
+              {expanded ? "Less" : "More"}
+            </button>
+          )}
         </div>
 
-        <div className={revealed ? "grid gap-3 min-[390px]:grid-cols-[minmax(132px,0.86fr)_minmax(0,1.14fr)] min-[390px]:items-start" : "grid gap-4"}>
+        <div className={revealed ? "grid gap-3 min-[390px]:grid-cols-[minmax(132px,0.68fr)_minmax(0,1.32fr)] min-[390px]:items-start" : "grid gap-4"}>
           <div className="min-w-0 text-center">
             <button
               type="button"
-              onPointerDown={beginHoldReveal}
-              onPointerUp={cancelHold}
-              onPointerLeave={cancelHold}
-              onPointerCancel={cancelHold}
-              onKeyDown={revealFromKeyboard}
+              onPointerDown={revealDailyCard}
+              onClick={revealDailyCard}
+              disabled={revealed || revealing}
               className="mx-auto block rounded-[20px] outline-none transition-transform duration-200 hover:translate-y-[-2px] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--hint-aqua)_80%,white)]"
-              aria-label={revealed ? `Daily tarot card: ${report.card.cardName}` : "Press and hold to draw today's sky card"}
+              aria-label={revealed ? `Daily tarot card: ${report.card.cardName}` : "Tap to open today's sky card"}
             >
-              <ThemeAwareDailyCard report={report} revealed={revealed} />
+              <ThemeAwareDailyCard report={report} revealed={revealed} revealing={revealing} />
             </button>
-            <button
-              type="button"
-              onPointerDown={beginHoldReveal}
-              onPointerUp={cancelHold}
-              onPointerLeave={cancelHold}
-              onPointerCancel={cancelHold}
-              onKeyDown={revealFromKeyboard}
-              className="relative mt-4 inline-flex h-10 w-full max-w-[16rem] items-center justify-center overflow-hidden rounded-full border px-4 font-sans text-[11px] font-semibold uppercase tracking-[0.14em] sm:w-auto"
-              style={{
-                color: "var(--hint-text)",
-                borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 38%, var(--hint-border-strong))",
-                background:
-                  "linear-gradient(135deg, color-mix(in srgb, var(--hint-surface) 78%, transparent), color-mix(in srgb, var(--hint-rose, #f7c7d7) 12%, transparent))",
-                boxShadow: revealed
-                  ? "0 0 22px rgba(255,207,220,0.12)"
-                  : "0 14px 28px rgba(31,25,34,0.10)",
-              }}
-              aria-label={revealed ? "Daily sky card revealed" : "Press and hold to draw today's sky card"}
-            >
-              {!revealed && (
-                <span
-                  aria-hidden
-                  className="absolute inset-y-0 left-0 transition-transform duration-75"
-                  style={{
-                    width: "100%",
-                    background: "linear-gradient(90deg, rgba(255,207,220,0.22), rgba(203,168,102,0.18), rgba(168,216,208,0.12))",
-                    transform: `scaleX(${holdProgress})`,
-                    transformOrigin: "left center",
-                  }}
-                />
-              )}
-              <span className="relative">{revealed ? "Card revealed" : "Hold to draw"}</span>
-            </button>
+
+            {!revealed && (
+              <button
+                type="button"
+                onPointerDown={revealDailyCard}
+                onClick={revealDailyCard}
+                disabled={revealing}
+                className="relative mt-3 inline-flex h-9 w-full max-w-[16rem] items-center justify-center overflow-hidden rounded-full border px-4 font-sans text-[10.5px] font-semibold uppercase tracking-[0.14em] sm:w-auto"
+                style={{
+                  color: "var(--hint-text)",
+                  borderColor: "color-mix(in srgb, var(--hint-rose, #cf4f92) 34%, var(--hint-border-strong))",
+                  background:
+                    "linear-gradient(135deg, color-mix(in srgb, var(--hint-surface) 82%, transparent), color-mix(in srgb, var(--hint-rose, #cf4f92) 14%, transparent))",
+                  boxShadow: "0 14px 28px rgba(31,25,34,0.10)",
+                }}
+                aria-label="Tap to open today's sky card"
+              >
+                {revealing && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, transparent, color-mix(in srgb, var(--hint-rose, #cf4f92) 24%, transparent), color-mix(in srgb, var(--hint-lavender, #7563bf) 18%, transparent), color-mix(in srgb, var(--hint-aqua, #4a9f9d) 16%, transparent), transparent)",
+                    }}
+                  />
+                )}
+                <span className="relative">{revealing ? "Revealing" : "Tap to open"}</span>
+              </button>
+            )}
             {!birthPersonalized && (
               <Link
                 href="/app/profile"
@@ -1025,27 +1043,76 @@ function DailyHintSection({
                 style={{
                   color: "var(--hint-text)",
                   background: "color-mix(in srgb, var(--hint-surface-soft) 88%, transparent)",
-                  borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 34%, var(--hint-border))",
+                  borderColor: "color-mix(in srgb, var(--hint-rose, #cf4f92) 26%, var(--hint-border))",
                 }}
               >
                 Add birth details
               </Link>
-            )}
-            {revealed && report.card.skyGuided && (
-              <div className="mx-auto mt-3 w-full max-w-[16rem]">
-                <SkyEvidence
-                  signals={report.card.skyGuided.evidence}
-                  themes={report.card.skyGuided.themes}
-                  why={skyReading?.whyThisCard.join(" ")}
-                  compact
-                />
-              </div>
             )}
           </div>
 
           <div className="grid min-w-0 gap-3">
             <DailyScoreCapsule report={report} revealed={revealed} compact={revealed} />
           </div>
+
+          {revealed && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.42, ease: "easeOut" }}
+              className="min-w-0 rounded-[22px] border px-3.5 py-3 text-left min-[390px]:col-span-2"
+              style={{
+                color: "var(--hint-text)",
+                borderColor: "color-mix(in srgb, var(--hint-rose, #cf4f92) 30%, var(--hint-border-strong))",
+                background: "var(--hint-liquid-panel)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.24), 0 12px 32px color-mix(in srgb, var(--hint-rose, #cf4f92) 12%, transparent)",
+              }}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  aria-hidden
+                  className="grid size-9 shrink-0 place-items-center rounded-[15px] border"
+                  style={{
+                    color: "var(--hint-rose)",
+                    background: "color-mix(in srgb, var(--hint-rose, #cf4f92) 14%, var(--hint-surface-soft))",
+                    borderColor: "color-mix(in srgb, var(--hint-rose, #cf4f92) 30%, var(--hint-border))",
+                  }}
+                >
+                  <Sparkles size={16} strokeWidth={1.8} />
+                </span>
+                <div className="min-w-0">
+                  <p className="font-sans text-[8.5px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--hint-rose)" }}>
+                    Card revealed
+                  </p>
+                  <p className="mt-0.5 whitespace-normal break-words font-serif text-[19px] leading-tight" style={{ color: "var(--hint-text)" }}>
+                    {report.card.cardName}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {revealed && report.card.skyGuided && (
+            <div className="mx-auto w-full min-[390px]:hidden">
+              <SkyEvidence
+                signals={report.card.skyGuided.evidence}
+                themes={report.card.skyGuided.themes}
+                why={skyReading?.whyThisCard.join(" ")}
+                compact
+              />
+            </div>
+          )}
+
+          {revealed && report.card.skyGuided && (
+            <div className="hidden min-w-0 min-[390px]:col-span-2 min-[390px]:block">
+              <SkyEvidence
+                signals={report.card.skyGuided.evidence}
+                themes={report.card.skyGuided.themes}
+                why={skyReading?.whyThisCard.join(" ")}
+                compact
+              />
+            </div>
+          )}
         </div>
 
         {(!revealed || expanded) && (
@@ -1062,7 +1129,7 @@ function DailyHintSection({
               Tarot interpretation
             </p>
             <h3 className="mt-1 font-serif text-[24px] leading-none" style={{ color: "var(--hint-text)" }}>
-              {revealed ? report.card.cardName : "Waiting for the reveal"}
+              {revealed ? "What it points to" : "Waiting for the reveal"}
             </h3>
             <p className="mt-2 font-sans text-[13px] leading-relaxed" style={{ color: "var(--hint-muted)" }}>
               {revealed
@@ -1132,9 +1199,11 @@ function DailyHintSection({
               {report.lucky.map((item) => (
                 <div
                   key={item.key}
-                  className="flex min-h-[124px] flex-col items-center justify-center rounded-[8px] p-3 text-center"
+                  className="flex min-h-[124px] flex-col items-center justify-center rounded-[22px] border p-3 text-center"
                   style={{
                     background: "var(--hint-lucky-tile-bg)",
+                    borderColor: "var(--hint-border)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.20)",
                   }}
                 >
                   <LuckyIllustration item={item} size={50} />
@@ -1212,42 +1281,42 @@ function RitualStreakPanel({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.35 }}
       transition={{ duration: 0.72, ease: "easeOut" }}
-      className="relative scroll-mt-28 overflow-hidden rounded-[22px] border px-4 py-5 sm:rounded-[28px] sm:px-5 sm:py-6"
+      className="hint-liquid-panel relative scroll-mt-28 overflow-hidden rounded-[22px] px-3 py-3 sm:px-3.5"
       style={{
-        background:
-          "linear-gradient(115deg, color-mix(in srgb, var(--hint-surface) 86%, transparent), color-mix(in srgb, var(--hint-input-bg) 70%, transparent))",
-        borderColor: "var(--hint-border)",
-        boxShadow: "var(--hint-elevated-shadow)",
+        background: "var(--hint-liquid-panel)",
+        borderColor: "color-mix(in srgb, var(--hint-rose, #f7c7d7) 22%, var(--hint-border))",
       }}
     >
-      <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
-          <h2 className="font-serif text-[32px] leading-none sm:text-[44px]" style={{ color: "var(--hint-text)" }}>
+      <div className="mb-2.5 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--hint-rose)" }}>
+            Ritual
+          </p>
+          <h2 className="mt-0.5 font-serif text-[21px] leading-none" style={{ color: "var(--hint-text)" }}>
             Energy tasks
           </h2>
-          <p className="font-serif text-[15px] italic sm:text-[18px]" style={{ color: "var(--hint-muted)" }}>
-            complete three small check-ins to finish today's ritual
+          <p className="mt-1 truncate font-sans text-[12px] font-semibold" style={{ color: "var(--hint-muted)" }}>
+            {ritualStatus}
           </p>
         </div>
         <Link
           href="/app/profile"
-          className="font-sans text-[12px] font-semibold uppercase tracking-[0.22em]"
-          style={{ color: "var(--hint-faint)" }}
+          className="hint-status-pill shrink-0 rounded-full px-2.5 py-1.5 font-sans text-[9px] font-black uppercase tracking-[0.1em]"
         >
-          All rewards →
+          Rewards
         </Link>
       </div>
 
-      <div className="grid gap-5">
+      <div className="grid gap-2.5">
         <div>
           <div
-            className="rounded-[18px] border p-3 sm:p-4"
+            className="rounded-[17px] border p-1.5"
             style={{
               background: "color-mix(in srgb, var(--hint-input-bg) 80%, transparent)",
               borderColor: "var(--hint-border)",
             }}
           >
-            <div className="grid gap-1">
+            <div className="grid gap-0.5">
               {tasks.slice(0, 3).map((task, index) => {
                 const checked = ritual.todayTaskCompletions.includes(index);
                 return (
@@ -1255,21 +1324,21 @@ function RitualStreakPanel({
                     key={task.text}
                     type="button"
                     onClick={() => onToggleTask(index)}
-                    className="grid grid-cols-[38px_1fr] items-center gap-3 rounded-[12px] px-2 py-3 text-left transition hover:bg-white/5"
+                    className="grid min-h-[44px] grid-cols-[30px_1fr] items-center gap-2 rounded-[13px] px-1.5 py-1.5 text-left transition active:scale-[0.99]"
                   >
                     <span
-                      className="grid size-7 place-items-center rounded-[8px] border"
+                      className="grid size-6 place-items-center rounded-[9px] border"
                       style={{
                         background: checked ? "linear-gradient(135deg, #f0c3d5, #dfbf82)" : "rgba(255,255,255,0.08)",
                         borderColor: checked ? "rgba(240,195,213,0.58)" : "color-mix(in srgb, var(--hint-border-strong) 78%, transparent)",
                         color: checked ? "#172422" : "var(--hint-faint)",
                       }}
                     >
-                      {checked ? <Check size={17} strokeWidth={2.5} /> : null}
+                      {checked ? <Check size={15} strokeWidth={2.5} /> : null}
                     </span>
                     <span className="min-w-0">
                       <span
-                        className="font-serif text-[17px] leading-snug sm:text-[20px]"
+                        className="block truncate font-serif text-[15px] leading-tight"
                         style={{
                           color: checked ? "var(--hint-faint)" : "var(--hint-text)",
                           textDecoration: checked ? "line-through" : "none",
@@ -1278,8 +1347,8 @@ function RitualStreakPanel({
                       >
                         {task.text}
                       </span>
-                      <span className="ml-2 font-sans text-[12px] font-semibold" style={{ color: "var(--hint-faint)" }}>
-                        ({task.reason})
+                      <span className="block truncate font-sans text-[10px] font-semibold" style={{ color: "var(--hint-faint)" }}>
+                        {task.reason}
                       </span>
                     </span>
                   </button>
@@ -1288,13 +1357,13 @@ function RitualStreakPanel({
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-7 items-start gap-2">
+          <div className="mt-2.5 grid grid-cols-7 items-start gap-1">
             {ritual.week.map((day, index) => {
               const done = day.completed;
               return (
                 <div key={day.date} className="text-center">
                   <motion.div
-                    className="mx-auto grid size-8 place-items-center rounded-full sm:size-10"
+                    className="mx-auto grid size-6 place-items-center rounded-full"
                     style={{
                       background: done
                         ? "linear-gradient(135deg, #d7a874, #d894aa)"
@@ -1316,9 +1385,9 @@ function RitualStreakPanel({
                     viewport={{ once: true }}
                     transition={{ delay: index * 0.05, duration: 0.38, ease: "easeOut" }}
                   >
-                    {done ? <Check size={16} /> : <Sparkles size={16} />}
+                    {done ? <Check size={12} /> : <Sparkles size={11} />}
                   </motion.div>
-                  <p className="mt-2 font-sans text-[10px] font-semibold sm:text-[11px]" style={{ color: "var(--hint-muted)" }}>
+                  <p className="mt-1 font-sans text-[8.5px] font-semibold" style={{ color: "var(--hint-muted)" }}>
                     {day.label}
                   </p>
                 </div>
@@ -1326,16 +1395,16 @@ function RitualStreakPanel({
             })}
           </div>
 
-          <div className="mt-5">
-            <div className="mb-3 flex items-center justify-between gap-4">
-              <p className="font-sans text-[13px] sm:text-[14px]" style={{ color: "var(--hint-text)" }}>
+          <div className="mt-2.5">
+            <div className="mb-1.5 flex items-center justify-between gap-4">
+              <p className="truncate font-sans text-[11px] font-semibold" style={{ color: "var(--hint-text)" }}>
                 {rewardText}
               </p>
-              <p className="font-sans text-[13px]" style={{ color: "var(--hint-faint)" }}>
+              <p className="font-sans text-[11px] font-semibold" style={{ color: "var(--hint-faint)" }}>
                 {progress}%
               </p>
             </div>
-            <div className="h-2 overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--hint-border) 52%, transparent)" }}>
+            <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--hint-border) 52%, transparent)" }}>
               <motion.div
                 className="h-full rounded-full"
                 style={{ background: "linear-gradient(90deg, #d7a874, #d894aa, #a98bc1)" }}
@@ -1348,25 +1417,10 @@ function RitualStreakPanel({
           </div>
         </div>
 
-        <div className="grid gap-3">
+        <div className="grid grid-cols-3 gap-1.5">
           <RewardStat icon={Star} value={`${ritual.starLevel}`} label="Star level" />
           <RewardStat icon={Gift} value={`${ritual.readingCredits}`} label="Credits" />
           <RewardStat icon={Sparkles} value={`${ritual.currentStreak}`} label="Day streak" />
-          <div
-            className="rounded-[18px] border p-4"
-            style={{
-              background: "var(--hint-me-plus-surface)",
-              borderColor: "var(--hint-me-plus-border)",
-              boxShadow: "var(--hint-me-plus-shadow)",
-            }}
-          >
-            <p className="font-serif text-[21px] leading-tight" style={{ color: "var(--hint-text)" }}>
-              Weekly reward
-            </p>
-            <p className="mt-2 font-sans text-[12px] leading-relaxed sm:text-[13px]" style={{ color: "var(--hint-muted)" }}>
-              Complete all three tasks each day. Seven completed days unlock 10 credits; a 30-day streak raises your star level by one.
-            </p>
-          </div>
         </div>
       </div>
     </motion.section>
@@ -1384,23 +1438,21 @@ function RewardStat({
 }) {
   return (
     <div
-      className="flex items-center gap-3 rounded-[16px] border p-3.5"
+      className="min-w-0 rounded-[14px] border px-1.5 py-2 text-center"
       style={{
         background: "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)",
         borderColor: "var(--hint-border)",
       }}
     >
-      <div className="grid size-10 place-items-center rounded-[12px]" style={{ background: "rgba(228, 198, 138, 0.16)", color: ACCENT.gold }}>
-        <Icon size={16} />
+      <div className="mx-auto grid size-6 place-items-center rounded-[10px]" style={{ background: "rgba(228, 198, 138, 0.16)", color: ACCENT.gold }}>
+        <Icon size={13} />
       </div>
-      <div>
-        <p className="font-serif text-[24px] leading-none" style={{ color: "var(--hint-text)" }}>
-          {value}
-        </p>
-        <p className="font-sans text-[12px]" style={{ color: "var(--hint-muted)" }}>
-          {label}
-        </p>
-      </div>
+      <p className="mt-1 font-serif text-[17px] leading-none tabular-nums" style={{ color: "var(--hint-text)" }}>
+        {value}
+      </p>
+      <p className="mt-0.5 truncate font-sans text-[8px] font-black uppercase tracking-[0.06em]" style={{ color: "var(--hint-muted)" }}>
+        {label}
+      </p>
     </div>
   );
 }
@@ -1588,58 +1640,137 @@ function SecondaryLink({
   );
 }
 
-function PortalCard({
+function RoomShortcutCard({
   card,
   index,
 }: {
-  card: PortalCardData;
+  card: RoomShortcutData;
   index: number;
 }) {
   const Icon = card.icon;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.36 + index * 0.08, duration: 0.58, ease: "easeOut" }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.35 }}
+      transition={{ delay: 0.08 + index * 0.05, duration: 0.48, ease: "easeOut" }}
     >
       <Link href={card.href} className="block h-full">
         <div
-          className="group relative flex h-full min-h-[188px] flex-col justify-between overflow-hidden rounded-[14px] border p-4"
+          className="group relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[24px] border p-4 transition-transform active:scale-[0.985]"
           style={{
-            background: "var(--hint-card-surface)",
-            borderColor: "var(--hint-border)",
-            boxShadow: "var(--hint-elevated-shadow)",
+            background:
+              "linear-gradient(145deg, color-mix(in srgb, var(--hint-surface-strong) 72%, white), color-mix(in srgb, var(--hint-rose, #f7c7d7) 7%, var(--hint-surface-soft) 86%))",
+            borderColor: "color-mix(in srgb, var(--hint-border) 80%, transparent)",
+            boxShadow: "0 18px 44px rgba(64,45,72,0.10), inset 0 1px 0 rgba(255,255,255,0.34)",
           }}
         >
           <div
-            className="absolute inset-[9px] rounded-[9px] border opacity-60"
-            style={{ borderColor: card.color }}
+            aria-hidden
+            className="absolute inset-0 opacity-80"
+            style={{
+              background: `radial-gradient(circle at 18% 18%, ${card.tint}, transparent 38%), linear-gradient(120deg, rgba(255,255,255,0.24), transparent 46%)`,
+            }}
           />
-          <div className="relative flex items-center justify-between">
+          <div className="relative">
             <span
-              className="font-sans text-[10px] font-medium uppercase tracking-[0.12em]"
-              style={{ color: card.color }}
+              className="grid size-[48px] place-items-center rounded-[16px] border"
+              style={{
+                color: card.color,
+                background: "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)",
+                borderColor: `color-mix(in srgb, ${card.color} 24%, var(--hint-border))`,
+                boxShadow: `0 10px 24px color-mix(in srgb, ${card.color} 10%, transparent)`,
+              }}
             >
-              {card.label}
-            </span>
-            <span
-              className="flex h-10 w-10 items-center justify-center rounded-full"
-              style={{ color: card.color, background: "var(--hint-surface-soft)" }}
-            >
-              <Icon size={18} strokeWidth={1.7} />
+              <Icon size={20} strokeWidth={1.75} />
             </span>
           </div>
           <div className="relative">
-            <h3 className="font-serif text-[22px] leading-tight" style={{ color: "var(--hint-text)" }}>
+            <h3 className="font-serif text-[24px] leading-none" style={{ color: "var(--hint-text)" }}>
               {card.title}
             </h3>
-            <p className="mt-2 font-sans text-[12.5px] leading-relaxed" style={{ color: "var(--hint-muted)" }}>
+            <p className="mt-2 font-sans text-[12px] font-semibold leading-snug" style={{ color: "var(--hint-muted)" }}>
               {card.body}
             </p>
           </div>
         </div>
       </Link>
     </motion.div>
+  );
+}
+
+function AstrologyPreviewCard() {
+  return (
+    <Link href="/app/astrology" className="block">
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 0.52, ease: "easeOut" }}
+        className="relative overflow-hidden rounded-[28px] border p-5"
+        style={{
+          background:
+            "linear-gradient(150deg, color-mix(in srgb, var(--hint-surface-strong) 72%, white), color-mix(in srgb, var(--hint-rose, #f7c7d7) 10%, var(--hint-surface-soft) 86%))",
+          borderColor: "color-mix(in srgb, var(--hint-border) 72%, transparent)",
+          boxShadow: "0 22px 56px rgba(64,45,72,0.10), inset 0 1px 0 rgba(255,255,255,0.34)",
+        }}
+      >
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(255,214,229,0.20),transparent_36%),radial-gradient(circle_at_78%_72%,rgba(134,214,199,0.10),transparent_34%)]" />
+        <div className="relative mx-auto grid w-full max-w-[280px] place-items-center">
+          <svg viewBox="0 0 220 220" className="h-[190px] w-[190px]" aria-hidden>
+            <circle cx="110" cy="110" r="92" fill="none" stroke="color-mix(in srgb, var(--hint-gold) 42%, transparent)" strokeWidth="1.6" />
+            <circle cx="110" cy="110" r="66" fill="none" stroke="color-mix(in srgb, var(--hint-border) 76%, transparent)" strokeWidth="1.5" />
+            <circle cx="110" cy="110" r="34" fill="none" stroke="color-mix(in srgb, var(--hint-border) 82%, transparent)" strokeWidth="1.5" />
+            {Array.from({ length: 12 }, (_, index) => {
+              const angle = (index / 12) * Math.PI * 2 - Math.PI / 2;
+              const x1 = 110 + Math.cos(angle) * 78;
+              const y1 = 110 + Math.sin(angle) * 78;
+              const x2 = 110 + Math.cos(angle) * 92;
+              const y2 = 110 + Math.sin(angle) * 92;
+              return <line key={index} x1={x1} y1={y1} x2={x2} y2={y2} stroke="color-mix(in srgb, var(--hint-gold) 38%, transparent)" strokeWidth="1.4" />;
+            })}
+            <polyline points="58,74 86,142 152,152 166,68" fill="none" stroke="color-mix(in srgb, var(--hint-gold) 30%, transparent)" strokeWidth="1.5" />
+            {([
+              [58, 74, "#90A8EF"],
+              [86, 142, "#EF84BD"],
+              [152, 152, "#B298D8"],
+              [166, 68, "#86D6C7"],
+              [104, 72, "#CBA866"],
+            ] satisfies Array<[number, number, string]>).map(([cx, cy, fill]) => (
+              <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="5.5" fill={fill} />
+            ))}
+            <g transform="translate(110 110)" fill="none" stroke="var(--hint-gold)" strokeWidth="2.4">
+              <path d="M0 -25 16 0 0 25 -16 0Z" />
+              <path d="M0 -12 8 0 0 12 -8 0Z" />
+              <circle cx="0" cy="0" r="2.6" fill="var(--hint-gold)" />
+            </g>
+          </svg>
+        </div>
+        <div className="relative mt-2 grid grid-cols-3 gap-2">
+          {[
+            ["Sun", "Chart"],
+            ["Moon", "Transit"],
+            ["Rising", "Profile"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-[16px] border px-2 py-3 text-center"
+              style={{
+                background: "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)",
+                borderColor: "color-mix(in srgb, var(--hint-border) 86%, transparent)",
+              }}
+            >
+              <p className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--hint-faint)" }}>
+                {label}
+              </p>
+              <p className="mt-1 truncate font-serif text-[18px] leading-none" style={{ color: "var(--hint-text)" }}>
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+    </Link>
   );
 }
 
@@ -1675,7 +1806,7 @@ function PatternPanel() {
         ].map(([label, value]) => (
           <div
             key={label}
-            className="rounded-[10px] border px-3 py-3 text-center"
+            className="rounded-[18px] border px-3 py-3 text-center"
             style={{
               background: "var(--hint-stat-bg)",
               borderColor: "var(--hint-border)",
@@ -1719,6 +1850,94 @@ function SectionHeader({
   );
 }
 
+function TodayAppHeader({
+  title,
+  date,
+  language,
+  profileName,
+}: {
+  title: string;
+  date: string;
+  language: string;
+  profileName?: string | null;
+}) {
+  return (
+    <motion.header
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.42, ease: "easeOut" }}
+      className="mb-2 flex min-h-11 items-center justify-between gap-3 px-1"
+    >
+      <div className="min-w-0">
+        <p
+          className="truncate font-sans text-[9.5px] font-semibold uppercase tracking-[0.14em]"
+          style={{ color: "var(--hint-rose)" }}
+        >
+          {formatAppDate(date, language)}
+        </p>
+        <h1 className="mt-0.5 font-serif text-[28px] leading-none" style={{ color: "var(--hint-text)" }}>
+          {title}
+        </h1>
+      </div>
+      <Link
+        href="/app/profile"
+        aria-label="Open profile"
+        className="hint-liquid-panel grid size-10 shrink-0 place-items-center rounded-full font-serif text-[17px] leading-none active:scale-95"
+        style={{ color: "var(--hint-text)" }}
+      >
+        {profileInitial(profileName)}
+      </Link>
+    </motion.header>
+  );
+}
+
+function AppActionList({ cards }: { cards: RoomShortcutData[] }) {
+  return (
+    <section className="mb-4">
+      <div className="mb-2 flex items-center justify-between px-1">
+        <p className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: "var(--hint-rose)" }}>
+          Rooms
+        </p>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {cards.map((card, index) => {
+          const Icon = card.icon;
+          return (
+            <motion.div
+              key={card.title}
+              initial={{ opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.45 }}
+              transition={{ delay: index * 0.045, duration: 0.36, ease: "easeOut" }}
+            >
+              <Link href={card.href} className="hint-liquid-panel flex min-h-[92px] flex-col justify-between rounded-[22px] px-2.5 py-3 active:scale-[0.97]">
+                  <span
+                    className="grid size-9 shrink-0 place-items-center rounded-[15px] border"
+                    style={{
+                      color: card.color,
+                      background: `radial-gradient(circle at 30% 10%, ${card.tint}, transparent 58%), color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)`,
+                      borderColor: `color-mix(in srgb, ${card.color} 26%, var(--hint-border))`,
+                    }}
+                  >
+                    <Icon size={17} strokeWidth={1.9} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-sans text-[13px] font-semibold leading-tight" style={{ color: "var(--hint-text)" }}>
+                      {card.title}
+                    </p>
+                    <p className="mt-1 font-sans text-[10.5px] font-semibold leading-snug" style={{ color: "var(--hint-muted)" }}>
+                      {card.body}
+                    </p>
+                  </div>
+              </Link>
+            </motion.div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function HomeDashboard() {
   const { language, t } = useLanguage();
   const { profile } = useProfile();
@@ -1751,7 +1970,10 @@ export function HomeDashboard() {
       if (!dailyReceipt?.assignedCardId) return baseReport;
       return {
         ...baseReport,
-        card: getDailyPullById(dailyReceipt.assignedCardId, language),
+        card: {
+          ...getDailyPullById(dailyReceipt.assignedCardId, language),
+          skyGuided: baseReport.card.skyGuided,
+        },
       };
     },
     [
@@ -1810,63 +2032,46 @@ export function HomeDashboard() {
     setRitual(toggleRitualTask(index, report.date));
   }
 
-  const startCards = [
+  const roomShortcuts: RoomShortcutData[] = [
     {
-      title: t("home.card.tarot.title"),
-      label: t("home.card.tarot.label"),
-      body: t("home.card.tarot.body"),
+      title: "Tarot Room",
+      body: "Ask a question, pull a spread",
       href: "/app/tarot",
       icon: Sparkles,
       color: ACCENT.gold,
+      tint: "rgba(203,168,102,0.14)",
     },
     {
-      title: t("home.card.ask.title"),
-      label: t("home.card.ask.label"),
-      body: t("home.card.ask.body"),
-      href: "/app/ask",
-      icon: MessageCircle,
-      color: ACCENT.aqua,
-    },
-    {
-      title: t("home.card.daily.title"),
-      label: t("home.card.daily.label"),
-      body: t("home.card.daily.body"),
-      href: "/app/daily",
+      title: "Astrology",
+      body: "Your chart and tonight's transits",
+      href: "/app/astrology",
       icon: Moon,
       color: ACCENT.lavender,
+      tint: "rgba(178,152,179,0.14)",
+    },
+    {
+      title: "Collection",
+      body: "Cards and readings you've kept",
+      href: "/app/collection",
+      icon: Library,
+      color: ACCENT.aqua,
+      tint: "rgba(134,214,199,0.12)",
     },
   ];
+  const profileName = profile?.name ?? birthProfile?.name;
 
   return (
     <div className="relative h-full w-full overflow-y-auto overscroll-none pb-[calc(7rem+var(--hint-safe-bottom))]">
       <TodayShineLayer wide />
-      <div className={`relative z-10 mx-auto w-full max-w-[430px] px-3 sm:px-4 ${dailyCardRevealed ? "pt-[5.75rem]" : "pt-[6.25rem]"}`}>
-        <motion.section
-          id="today"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08, duration: 0.75, ease: "easeOut" }}
-          className={`relative scroll-mt-24 overflow-visible pt-2 ${dailyCardRevealed ? "mb-3" : "mb-5"}`}
-        >
-          <div className={`${dailyCardRevealed ? "py-2" : "py-3"}`}>
-            <div className="relative z-10">
-              <p className="font-sans text-[10px] font-medium uppercase tracking-[0.12em]" style={{ color: ACCENT.gold }}>
-                {t("home.eyebrow")}
-              </p>
-              <h1
-                className={`mt-2 max-w-4xl font-serif leading-[0.98] ${dailyCardRevealed ? "text-[24px]" : "text-[32px]"}`}
-                style={{ color: "var(--hint-text)", textShadow: "0 0 32px rgba(228,198,138,0.12)" }}
-              >
-                {t("home.title")}
-              </h1>
-              <p className={`max-w-2xl font-sans leading-relaxed ${dailyCardRevealed ? "mt-2 line-clamp-1 text-[11px]" : "mt-3 text-[12px]"}`} style={{ color: "var(--hint-muted)" }}>
-                {t("home.subtitle")}
-              </p>
-            </div>
-          </div>
-        </motion.section>
+      <div className="relative z-10 mx-auto w-full max-w-[430px] px-3 pt-[calc(0.75rem+var(--hint-safe-top))] sm:px-4">
+        <TodayAppHeader
+          title={t("nav.today")}
+          date={report.date}
+          language={language}
+          profileName={profileName}
+        />
 
-        <section id="your-card" className="mb-7 scroll-mt-28">
+        <section id="your-card" className="mb-3 scroll-mt-28">
           <DailyHintSection
             report={report}
             revealed={dailyCardRevealed}
@@ -1880,7 +2085,9 @@ export function HomeDashboard() {
           />
         </section>
 
-        <div className="mb-10">
+        <AppActionList cards={roomShortcuts} />
+
+        <div className="mb-5">
           <RitualStreakPanel
             ritual={ritual}
             tasks={report.tasks}
@@ -1888,20 +2095,7 @@ export function HomeDashboard() {
           />
         </div>
 
-        <section className="mb-7">
-          <div className="grid gap-3">
-            {startCards.map((card, index) => (
-              <PortalCard key={card.title} card={card} index={index} />
-            ))}
-          </div>
-        </section>
-
         <section className="mb-8">
-          <SectionHeader title={t("home.chooseRoom")} action={{ href: "/app/rooms", label: t("home.allRooms") }} />
-          <ModuleGrid delay={0.05} />
-        </section>
-
-        <section className="mb-10">
           <SectionHeader title={t("home.notes")} />
           <FeedCards dailyCardRevealed={dailyCardRevealed} />
         </section>

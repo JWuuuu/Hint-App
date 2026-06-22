@@ -455,9 +455,9 @@ export function AnimalTarotView() {
           <Sparkles size={17} />
           <span>Draw in Tarot Room</span>
         </Link>
-        <Link href="/app/sky-deck" className="animal-action-card hint-tap-sparkle hint-card-lift">
+        <Link href="/app/daily" className="animal-action-card hint-tap-sparkle hint-card-lift">
           <Moon size={17} />
-          <span>Open Sky Deck</span>
+          <span>Open Daily Draw</span>
         </Link>
         <Link href="/app/collection" className="animal-action-card hint-tap-sparkle hint-card-lift">
           <Bookmark size={17} />

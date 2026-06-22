@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { APP_IVORY, ACCENT, GLASS } from "../../hold/atmosphere";
+import { APP_IVORY, ACCENT } from "../../hold/atmosphere";
 import { getFeedCopy } from "../data/feedCopy";
 import { getDailyPull } from "../data/dailyPulls";
 import { ReactNode } from "react";
@@ -21,19 +21,17 @@ function FeedCardBase({ children, href, index = 0 }: { children: ReactNode; href
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "0px 0px -10% 0px" }}
       transition={{ duration: 0.6, delay: index * 0.09, ease: "easeOut" }}
-      className="w-full rounded-[8px] p-5 mb-3 flex flex-col justify-between overflow-hidden relative group"
-      style={{
-        background: "var(--hint-surface-soft)",
-        border: "1px solid var(--hint-border)",
-        boxShadow: "0 12px 28px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.05)",
-      }}
+      className="hint-liquid-panel relative mb-2.5 flex min-h-[104px] w-full flex-col justify-between overflow-hidden rounded-[22px] px-4 py-3.5"
     >
-      {/* Soft gradient hover effect */}
       <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-        style={{ background: "linear-gradient(120deg, rgba(100,156,158,0.08), transparent 55%)" }}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-70"
+        style={{
+          background:
+            "radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--hint-rose, #f0b6cf) 12%, transparent), transparent 38%), radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--hint-lavender, #c9b9f0) 10%, transparent), transparent 34%)",
+        }}
       />
-      {children}
+      <div className="relative">{children}</div>
     </motion.div>
   );
 
@@ -42,7 +40,7 @@ function FeedCardBase({ children, href, index = 0 }: { children: ReactNode; href
 
 function Eyebrow({ label, color }: { label: string; color: string }) {
   return (
-    <span className="font-serif text-[11px] uppercase tracking-widest" style={{ color }}>
+    <span className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color }}>
       {label}
     </span>
   );
@@ -50,7 +48,7 @@ function Eyebrow({ label, color }: { label: string; color: string }) {
 
 function Cta({ label, color }: { label: string; color: string }) {
   return (
-    <span className="font-sans text-[11px] uppercase font-bold" style={{ color }}>
+    <span className="rounded-full px-2 py-1 font-sans text-[9px] font-black uppercase tracking-[0.1em]" style={{ color, background: "color-mix(in srgb, var(--hint-surface-soft) 74%, transparent)" }}>
       {label}
     </span>
   );
@@ -59,8 +57,8 @@ function Cta({ label, color }: { label: string; color: string }) {
 function Title({ children, italic }: { children: ReactNode; italic?: boolean }) {
   return (
     <h3
-      className={`font-serif text-[20px] leading-snug mb-1 ${italic ? "italic" : ""}`}
-      style={{ color: APP_IVORY.bg }}
+      className={`mb-1 font-serif text-[19px] leading-snug ${italic ? "italic" : ""}`}
+      style={{ color: "var(--hint-text)" }}
     >
       {children}
     </h3>
@@ -69,7 +67,7 @@ function Title({ children, italic }: { children: ReactNode; italic?: boolean }) 
 
 function Sub({ children }: { children: ReactNode }) {
   return (
-    <p className="font-sans text-[13px] leading-relaxed" style={{ color: GLASS.muted }}>
+    <p className="line-clamp-2 font-sans text-[12.5px] leading-relaxed" style={{ color: "var(--hint-muted)" }}>
       {children}
     </p>
   );
@@ -84,7 +82,7 @@ export function FeedCards({ dailyCardRevealed }: { dailyCardRevealed: boolean })
     <div className="flex flex-col">
       {/* Tonight's Pull — live, opens the tarot room */}
       <FeedCardBase href={dailyCardRevealed ? "/daily" : "#your-card"} index={0}>
-        <div className="flex justify-between items-start mb-3">
+        <div className="mb-2.5 flex items-start justify-between gap-3">
           <Eyebrow label={t("feed.tonightPull")} color={ACCENT.gold} />
           <Cta label={t("feed.turn")} color={ACCENT.aqua} />
         </div>
@@ -103,7 +101,7 @@ export function FeedCards({ dailyCardRevealed }: { dailyCardRevealed: boolean })
 
       {/* Relationship Energy */}
       <FeedCardBase index={1}>
-        <div className="flex justify-between items-start mb-3">
+        <div className="mb-2.5 flex items-start justify-between gap-3">
           <Eyebrow label={t("feed.relationshipEnergy")} color={ACCENT.lavender} />
           <Cta label={t("module.status.soon")} color={APP_IVORY.muted} />
         </div>
@@ -113,7 +111,7 @@ export function FeedCards({ dailyCardRevealed }: { dailyCardRevealed: boolean })
 
       {/* One Thought Lingering */}
       <FeedCardBase index={2}>
-        <div className="flex justify-between items-start mb-3">
+        <div className="mb-2.5 flex items-start justify-between gap-3">
           <Eyebrow label={t("feed.oneThought")} color={APP_IVORY.bg} />
           <Cta label={t("module.status.soon")} color={APP_IVORY.muted} />
         </div>
@@ -123,7 +121,7 @@ export function FeedCards({ dailyCardRevealed }: { dailyCardRevealed: boolean })
 
       {/* Dream Fragment */}
       <FeedCardBase index={3}>
-        <div className="flex justify-between items-start mb-3">
+        <div className="mb-2.5 flex items-start justify-between gap-3">
           <Eyebrow label={t("feed.dreamFragment")} color={ACCENT.aqua} />
           <Cta label={t("module.status.soon")} color={APP_IVORY.muted} />
         </div>
@@ -133,7 +131,7 @@ export function FeedCards({ dailyCardRevealed }: { dailyCardRevealed: boolean })
 
       {/* Small Step Tonight */}
       <FeedCardBase index={4}>
-        <div className="flex justify-between items-start mb-3">
+        <div className="mb-2.5 flex items-start justify-between gap-3">
           <Eyebrow label={t("feed.smallStep")} color={ACCENT.gold} />
           <Cta label={t("module.status.soon")} color={APP_IVORY.muted} />
         </div>
@@ -143,7 +141,7 @@ export function FeedCards({ dailyCardRevealed }: { dailyCardRevealed: boolean })
 
       {/* Weekly Reflection — live, opens the ask room with tonight's prompt */}
       <FeedCardBase href="/app/ask" index={5}>
-        <div className="flex justify-between items-start mb-3">
+        <div className="mb-2.5 flex items-start justify-between gap-3">
           <Eyebrow label={t("feed.weeklyReflection")} color={ACCENT.lavender} />
           <Cta label={t("feed.ask")} color={ACCENT.aqua} />
         </div>

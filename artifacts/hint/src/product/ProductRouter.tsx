@@ -15,8 +15,6 @@ import {
 import { RedirectTo } from "../shared/navigation/RedirectTo";
 import { AnimalTarotView } from "./animal-tarot/AnimalTarotView";
 import { CardCollectionView } from "./collection/CardCollectionView";
-import { SettingsView } from "./settings/SettingsView";
-import { SkyDeckView } from "./skydeck/SkyDeckView";
 import { TarotRoomApp } from "./tarot/TarotRoomApp";
 
 function currentSuffix() {
@@ -52,14 +50,21 @@ export function ProductRouter() {
       <Route path="/app/tarot/:rest*" component={TarotRoomApp} />
       <Route path="/app/animal-tarot" component={AnimalTarotView} />
       <Route path="/app/animal-tarot/:rest*" component={AnimalTarotView} />
-      <Route path="/app/sky-deck" component={SkyDeckView} />
+      <Route path="/app/sky-deck">
+        <RedirectTo to="/app/daily" />
+      </Route>
+      <Route path="/app/sky-deck/:rest*">
+        <RedirectTo to="/app/daily" />
+      </Route>
       <Route path="/app/astrology" component={AstrologyView} />
       <Route path="/app/collection" component={CardCollectionView} />
       <Route path="/app/profile" component={MeView} />
       <Route path="/app/me">
         <RedirectTo to="/app/profile" />
       </Route>
-      <Route path="/app/settings" component={SettingsView} />
+      <Route path="/app/settings">
+        <RedirectTo to="/app/profile" />
+      </Route>
       <Route path="/app/ask" component={AskHint} />
       <Route path="/app/rooms" component={RoomsLibrary} />
       <Route path="/app/readings/:id" component={ReadingDetailView} />
@@ -81,7 +86,10 @@ export function ProductRouter() {
       <Route path="/animal-tarot" component={LegacyAnimalTarotRedirect} />
       <Route path="/animal-tarot/:rest*" component={LegacyAnimalTarotRedirect} />
       <Route path="/sky-deck">
-        <LegacyRedirect to="/app/sky-deck" />
+        <LegacyRedirect to="/app/daily" />
+      </Route>
+      <Route path="/sky-deck/:rest*">
+        <LegacyRedirect to="/app/daily" />
       </Route>
       <Route path="/astrology">
         <LegacyRedirect to="/app/astrology" />
@@ -96,7 +104,7 @@ export function ProductRouter() {
         <LegacyRedirect to="/app/profile" />
       </Route>
       <Route path="/settings">
-        <LegacyRedirect to="/app/settings" />
+        <LegacyRedirect to="/app/profile" />
       </Route>
       <Route path="/ask">
         <LegacyRedirect to="/app/ask" />

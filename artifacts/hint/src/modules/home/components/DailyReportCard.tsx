@@ -17,11 +17,13 @@ import { getAnonId, getLocalDateString } from "../../../lib/identity";
 import { getDailyReport } from "../data/dailyReport";
 import { localizeDailyPull } from "../data/dailyPulls";
 import { getRitualProgress } from "../data/localRitualProgress";
+import { getTarotCardImage } from "../../tarot/logic/cardImageMap";
 import type { DailyPull, DailyScore, DailyScoreKey } from "../types/home.types";
 import { useLanguage } from "../../../lib/i18n";
 import { useProfile } from "../../../lib/useProfile";
 import { readBirthProfile } from "../../../lib/astro/userBirthProfile";
 import { LuckyIllustration } from "./LuckyIllustration";
+import { SafeImage } from "../../../shared/ui/SafeImage";
 
 const SCORE_ICONS: Record<DailyScoreKey, typeof Heart> = {
   love: Heart,
@@ -43,17 +45,17 @@ function ScoreBar({ score }: { score: DailyScore }) {
 
   return (
     <div className="min-w-0">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 font-sans text-[11px]" style={{ color: "var(--hint-muted)" }}>
-          <Icon size={13} strokeWidth={1.8} style={{ color: score.tone }} />
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="inline-flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap font-sans text-[10px]" style={{ color: "var(--hint-muted)" }}>
+          <Icon size={12} strokeWidth={1.8} style={{ color: score.tone }} />
           {score.label}
         </span>
-        <span className="font-serif text-[17px] tabular-nums" style={{ color: "var(--hint-text)" }}>
+        <span className="font-serif text-[15px] tabular-nums" style={{ color: "var(--hint-text)" }}>
           {score.score}
         </span>
       </div>
       <div
-        className="h-2 overflow-hidden rounded-full"
+        className="h-1.5 overflow-hidden rounded-full"
         style={{ background: "var(--hint-card-inner)" }}
       >
         <motion.div
@@ -71,51 +73,72 @@ function ScoreBar({ score }: { score: DailyScore }) {
   );
 }
 
-function MiniDailyCard({ card }: { card: DailyPull }) {
+function MiniDailyCard({ card, interactive = true }: { card: DailyPull; interactive?: boolean }) {
   const { t } = useLanguage();
-
-  return (
-    <Link href="/app/daily" className="group block">
+  const cardImage =
+    getTarotCardImage(card.cardId, "original") ??
+    getTarotCardImage(card.cardId, "hint-classic");
+  const content = (
+    <div
+      className="relative grid grid-cols-[54px_1fr] items-center gap-2.5 rounded-[18px] border p-2.5 sm:grid-cols-[62px_1fr_auto] sm:gap-3"
+      style={{
+        background: "var(--hint-input-bg)",
+        borderColor: "var(--hint-border)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.20)",
+      }}
+    >
       <div
-        className="relative grid grid-cols-[74px_1fr] items-center gap-3 rounded-[12px] border p-3 sm:grid-cols-[72px_1fr_auto] sm:gap-4"
+        className="relative h-[82px] overflow-hidden rounded-[12px] sm:h-[92px]"
         style={{
-          background: "var(--hint-input-bg)",
-          borderColor: "var(--hint-border)",
+          background: "var(--hint-deck-card-bg)",
+          border: "1px solid color-mix(in srgb, var(--hint-gold) 34%, var(--hint-border))",
+          boxShadow: "0 14px 26px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.16)",
         }}
       >
-        <div
-          className="relative h-[104px] overflow-hidden rounded-[8px]"
-          style={{
-            background: "var(--hint-deck-card-bg)",
-            border: "1px solid rgba(206,178,110,0.34)",
-            boxShadow: "0 14px 26px rgba(0,0,0,0.22)",
-          }}
+        <SafeImage
+          src={cardImage}
+          alt={card.cardName}
+          loading="lazy"
+          className="h-full w-full object-cover"
+          fallbackClassName="rounded-[15px]"
+          fallbackLabel="Tarot card"
         >
-          <div className="absolute inset-[5px] rounded-[5px] border border-[rgba(206,178,110,0.34)]" />
           <CardSigil cardId={card.cardId} />
-        </div>
-        <div className="min-w-0">
-          <p
-            className="font-sans text-[9px] uppercase tracking-[0.22em] sm:text-[10px] sm:tracking-[0.24em]"
-            style={{ color: ACCENT.gold }}
-          >
-            {t("daily.card")}
-          </p>
-          <h3 className="mt-1 font-serif text-[20px] leading-tight sm:text-[21px]" style={{ color: "var(--hint-text)" }}>
-            {card.cardName}
-          </h3>
-          <p className="mt-1 line-clamp-2 font-sans text-[11px] leading-snug sm:mt-2 sm:text-[12px] sm:leading-relaxed" style={{ color: "var(--hint-muted)" }}>
-            {card.whisper}
-          </p>
-        </div>
+        </SafeImage>
+      </div>
+      <div className="min-w-0">
+        <p
+          className="font-sans text-[8px] uppercase tracking-[0.16em] sm:text-[9px] sm:tracking-[0.18em]"
+          style={{ color: ACCENT.gold }}
+        >
+          {t("daily.card")}
+        </p>
+        <h3 className="mt-0.5 font-serif text-[16px] leading-tight sm:text-[18px]" style={{ color: "var(--hint-text)" }}>
+          {card.cardName}
+        </h3>
+        <p className="mt-0.5 line-clamp-2 font-sans text-[10px] leading-snug sm:text-[11px]" style={{ color: "var(--hint-muted)" }}>
+          {card.whisper}
+        </p>
+      </div>
+      {interactive ? (
         <ArrowRight
           size={18}
           strokeWidth={1.8}
           className="hidden transition-transform group-hover:translate-x-0.5 sm:block"
           style={{ color: "var(--hint-faint)" }}
         />
-      </div>
-    </Link>
+      ) : null}
+    </div>
+  );
+
+  return (
+    interactive ? (
+      <Link href="/app/daily" className="group block">
+        {content}
+      </Link>
+    ) : (
+      content
+    )
   );
 }
 
@@ -259,7 +282,7 @@ export function DailyReportCard({
       transition={{ duration: 0.72, ease: "easeOut" }}
       className={`relative overflow-hidden rounded-[18px] border ${className}`}
       style={{
-        background: "var(--hint-surface-strong)",
+        background: "var(--hint-liquid-panel-strong)",
         borderColor: "var(--hint-border)",
         boxShadow: "var(--hint-elevated-shadow)",
       }}
@@ -269,15 +292,15 @@ export function DailyReportCard({
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(360px 260px at 18% 8%, rgba(100,156,158,0.18), transparent 70%), radial-gradient(300px 260px at 90% 16%, rgba(196,169,98,0.16), transparent 72%)",
+            "radial-gradient(360px 260px at 18% 8%, rgba(244,175,203,0.18), transparent 70%), radial-gradient(300px 260px at 90% 16%, rgba(213,194,242,0.15), transparent 72%), radial-gradient(300px 220px at 55% 0%, rgba(227,200,137,0.12), transparent 72%)",
         }}
       />
-      <div className="relative p-4 sm:p-5 lg:p-6">
-        <div className="mb-4 lg:hidden">
-          <MiniDailyCard card={card} />
+      <div className="relative p-3.5 sm:p-4 lg:p-5">
+        <div className="mb-2.5 lg:hidden">
+          <MiniDailyCard card={card} interactive={!detailed} />
         </div>
 
-        <header className="mb-4 flex items-start justify-between gap-4 lg:mb-5">
+        <header className="mb-2.5 flex items-start justify-between gap-4 lg:mb-4">
           <div>
             <p
               className="font-serif text-[9px] uppercase tracking-[0.22em] lg:text-[11px] lg:tracking-[0.34em]"
@@ -297,7 +320,7 @@ export function DailyReportCard({
                 {birthProfileLabel}
               </span>
             ) : null}
-            <h2 className="mt-1 max-w-[13ch] font-serif text-[20px] leading-tight sm:max-w-[24ch] sm:text-[24px] lg:mt-2 lg:max-w-none lg:text-[38px] lg:leading-none" style={{ color: "var(--hint-text)" }}>
+            <h2 className="mt-1 max-w-[14ch] font-serif text-[18px] leading-tight sm:max-w-[24ch] sm:text-[21px] lg:mt-2 lg:max-w-none lg:text-[34px] lg:leading-none" style={{ color: "var(--hint-text)" }}>
               {report.title}
             </h2>
           </div>
@@ -315,11 +338,11 @@ export function DailyReportCard({
           </Link>
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr] lg:gap-5">
+        <div className="grid gap-3 min-[360px]:grid-cols-[0.8fr_1.2fr] min-[360px]:items-start lg:grid-cols-[0.95fr_1.05fr] lg:gap-5">
           <div className="min-w-0">
-            <div className="mb-3 flex items-end gap-2 lg:mb-7">
+            <div className="mb-2 flex items-end gap-2 lg:mb-5">
               <span
-                className="font-serif text-[52px] leading-[0.9] tabular-nums sm:text-[60px] lg:text-[88px]"
+                className="font-serif text-[42px] leading-[0.9] tabular-nums sm:text-[52px] lg:text-[76px]"
                 style={{
                   color: "var(--hint-score-ink)",
                   textShadow: "var(--hint-score-shadow)",
@@ -327,11 +350,11 @@ export function DailyReportCard({
               >
                 {report.overallScore}
               </span>
-              <span className="pb-2 font-serif text-[16px] lg:pb-3 lg:text-[22px]" style={{ color: "var(--hint-score-ink)" }}>
+              <span className="pb-1.5 font-serif text-[14px] lg:pb-2.5 lg:text-[20px]" style={{ color: "var(--hint-score-ink)" }}>
                 {t("daily.score")}
               </span>
             </div>
-            <p className="line-clamp-2 font-sans text-[12px] leading-snug lg:line-clamp-none lg:text-[14px] lg:leading-relaxed" style={{ color: "var(--hint-muted)" }}>
+            <p className="line-clamp-5 font-sans text-[11px] leading-snug min-[360px]:line-clamp-4 lg:line-clamp-none lg:text-[14px] lg:leading-relaxed" style={{ color: "var(--hint-muted)" }}>
               {report.summary}
             </p>
             <div className="mt-3 hidden grid-cols-2 gap-3 lg:grid">
@@ -354,36 +377,38 @@ export function DailyReportCard({
             </div>
           </div>
 
-          <div className="grid gap-2 lg:gap-3">
+          <div className="grid gap-x-2 gap-y-2 min-[360px]:grid-cols-2 lg:grid-cols-1 lg:gap-3">
             {report.scores.map((score) => (
               <ScoreBar key={score.key} score={score} />
             ))}
           </div>
         </div>
 
-        <div className="mt-5 hidden lg:block">
-          <MiniDailyCard card={card} />
+        <div className="mt-4 hidden lg:block">
+          <MiniDailyCard card={card} interactive={!detailed} />
         </div>
 
         {detailed && <CardGuidanceGrid card={card} />}
 
-        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <div className="mt-4 grid grid-cols-3 gap-2">
           {report.lucky.map((item) => (
             <div
               key={item.key}
-              className="min-h-[152px] rounded-[8px] px-3 py-4 text-center"
+              className="min-h-[118px] rounded-[22px] border px-2 py-3 text-center"
               style={{
                 background: "var(--hint-lucky-tile-bg-strong)",
+                borderColor: "var(--hint-border)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)",
               }}
             >
-              <LuckyIllustration item={item} size={54} />
-              <p className="mt-3 font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--hint-faint)" }}>
+              <LuckyIllustration item={item} size={42} />
+              <p className="mt-2 font-sans text-[8px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--hint-faint)" }}>
                 {item.label}
               </p>
-              <p className="mt-1 truncate font-serif text-[18px] leading-tight" style={{ color: "var(--hint-text)" }}>
+              <p className="mt-1 truncate font-serif text-[15px] leading-tight" style={{ color: "var(--hint-text)" }}>
                 {item.value}
               </p>
-              <p className="mx-auto mt-2 max-w-[13rem] font-sans text-[11px] leading-snug" style={{ color: "var(--hint-muted)" }}>
+              <p className="mx-auto mt-1 line-clamp-2 max-w-[8rem] font-sans text-[9.5px] leading-snug" style={{ color: "var(--hint-muted)" }}>
                 {item.hint}
               </p>
             </div>
@@ -391,7 +416,7 @@ export function DailyReportCard({
         </div>
 
         {detailed && (
-          <div className="mt-5 rounded-[12px] border p-4" style={{ background: "var(--hint-input-bg)", borderColor: "var(--hint-border)" }}>
+          <div className="hint-liquid-panel mt-4 rounded-[24px] p-3" style={{ borderColor: "var(--hint-border)" }}>
             <div className="mb-3 flex items-center gap-2">
               <Sparkles size={15} style={{ color: ACCENT.gold }} />
               <h3 className="font-serif text-[18px]" style={{ color: "var(--hint-text)" }}>
@@ -408,14 +433,14 @@ export function DailyReportCard({
                       next.map((value, i) => (i === index ? !value : value)),
                     )
                   }
-                  className="grid grid-cols-[28px_1fr] gap-3 rounded-[10px] p-2 text-left transition-opacity hover:opacity-90"
+                  className="grid min-h-[48px] grid-cols-[28px_1fr] gap-3 rounded-[18px] p-2 text-left transition active:scale-[0.99]"
                 >
                   <span
-                    className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-[7px] border"
+                    className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-[10px] border"
                     style={{
                       color: checked[index] ? "#06201e" : "var(--hint-faint)",
                       background: checked[index]
-                        ? "linear-gradient(145deg, rgba(122,226,214,0.95), rgba(243,212,144,0.9))"
+                        ? "var(--hint-special-action-bg)"
                         : "var(--hint-surface-soft)",
                       borderColor: checked[index] ? "rgba(122,226,214,0.62)" : "var(--hint-border)",
                     }}

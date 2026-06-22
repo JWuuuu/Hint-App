@@ -1,36 +1,64 @@
 import { motion } from "framer-motion";
-import { Pencil } from "lucide-react";
+import {
+  CalendarDays,
+  MapPin,
+  Pencil,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 import { ACCENT, GLASS } from "../../hold/atmosphere";
 import { GlassPanel } from "../../../components/app/AppChrome";
 import { zodiacSign, initialsFrom } from "../utils";
 import type { Profile } from "@workspace/api-client-react";
-import type { UserStats } from "@workspace/api-client-react";
 import { useLanguage } from "../../../lib/i18n";
+import { useLocalAccount, type LocalAccount } from "../../../lib/auth";
 
-function Badge({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "gold" }) {
-  const gold = tone === "gold";
-  return (
-    <span
-      className="font-sans text-[11px] px-2.5 py-1 rounded-full whitespace-nowrap"
-      style={{
-        background: gold ? "rgba(196,169,98,0.14)" : GLASS.panel,
-        border: `1px solid ${gold ? "rgba(196,169,98,0.34)" : GLASS.border}`,
-        color: gold ? ACCENT.gold : GLASS.muted,
-      }}
-    >
-      {label}
-    </span>
-  );
+function accountLabel(account: LocalAccount) {
+  return account.email ?? account.phone ?? account.identifier;
 }
 
-function Stat({ value, label }: { value: number | string; label: string }) {
+function providerLabel(provider: LocalAccount["provider"]) {
+  if (provider === "email") return "Email";
+  if (provider === "phone") return "Phone";
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
+}
+
+function birthSummary(profile: Profile | null, fallback: string) {
+  if (!profile?.birthDate) return fallback;
+  return [profile.birthDate, profile.birthTime, profile.birthPlace]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function DetailLine({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
   return (
-    <div className="flex flex-col items-center flex-1">
-      <span className="font-serif text-[19px] tabular-nums" style={{ color: GLASS.text }}>
-        {value}
+    <div className="flex min-w-0 items-start gap-2.5">
+      <span
+        className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[9px]"
+        style={{
+          background: "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)",
+          border: `1px solid ${GLASS.border}`,
+        }}
+      >
+        <Icon size={14} color={ACCENT.aqua} />
       </span>
-      <span className="font-sans text-[11px] mt-0.5" style={{ color: GLASS.faint }}>
-        {label}
+      <span className="min-w-0">
+        <span className="block font-sans text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: GLASS.faint }}>
+          {label}
+        </span>
+        <span className="mt-0.5 block break-words font-sans text-[12.5px] leading-snug" style={{ color: GLASS.muted }}>
+          {value}
+        </span>
       </span>
     </div>
   );
@@ -38,55 +66,62 @@ function Stat({ value, label }: { value: number | string; label: string }) {
 
 export function ProfileCard({
   profile,
-  stats,
   onEdit,
 }: {
   profile: Profile | null;
-  stats?: UserStats;
   onEdit: () => void;
 }) {
   const { language, t } = useLanguage();
-  const name = profile?.name ?? t("me.guest");
-  const initials = initialsFrom(profile?.name);
+  const account = useLocalAccount();
+  const name = profile?.name ?? account?.name ?? t("me.guest");
+  const initials = initialsFrom(profile?.name ?? account?.name);
   const sign = zodiacSign(profile?.birthDate, language);
+  const accountDetail = account
+    ? `${providerLabel(account.provider)} · ${accountLabel(account)}`
+    : t("account.guestSession");
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+      transition={{ duration: 0.45, ease: "easeOut" }}
     >
-      <GlassPanel hero>
-        <div className="flex items-center gap-4">
+      <GlassPanel hero className="hint-shimmer-border">
+        <div className="flex items-start gap-3">
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center shrink-0"
+            className="grid size-16 shrink-0 place-items-center rounded-[22px]"
             style={{
               background: "var(--hint-me-avatar-bg)",
               border: `1px solid ${GLASS.borderStrong}`,
               boxShadow: "var(--hint-me-avatar-shadow)",
             }}
           >
-            <span className="font-serif text-[18px]" style={{ color: GLASS.text }}>
+            <span className="font-serif text-[22px]" style={{ color: GLASS.text }}>
               {initials}
             </span>
           </div>
 
-          <div className="min-w-0 flex-1">
-            <h2 className="font-serif text-[22px] leading-tight truncate" style={{ color: GLASS.text }}>
-              {name}
-            </h2>
-            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              {sign && <Badge label={sign} />}
-              <Badge label={t("me.nightUser")} />
-              <Badge label={t("me.free")} tone="gold" />
+          <div className="min-w-0 flex-1 pt-0.5">
+            <div className="flex min-w-0 items-center gap-2">
+              <h2 className="min-w-0 truncate font-serif text-[25px] leading-none" style={{ color: GLASS.text }}>
+                {name}
+              </h2>
+              {account ? <ShieldCheck size={16} color="var(--hint-rose)" className="shrink-0" /> : null}
             </div>
+            <p className="mt-2 break-words font-sans text-[12.5px] leading-snug" style={{ color: GLASS.muted }}>
+              {accountDetail}
+            </p>
           </div>
 
           <button
             type="button"
             onClick={onEdit}
-            className="shrink-0 w-9 h-9 rounded-[8px] flex items-center justify-center self-start"
-            style={{ background: GLASS.panel, border: `1px solid ${GLASS.border}` }}
+            className="hint-tap-sparkle grid size-10 shrink-0 place-items-center rounded-full border"
+            style={{
+              background: "color-mix(in srgb, var(--hint-surface-soft) 86%, transparent)",
+              borderColor: "color-mix(in srgb, var(--hint-gold) 24%, var(--hint-border))",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.24)",
+            }}
             aria-label={t("me.editProfile")}
             data-testid="button-edit-profile"
           >
@@ -94,30 +129,24 @@ export function ProfileCard({
           </button>
         </div>
 
-        {!profile?.birthDate && (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="mt-5 inline-flex w-full items-center justify-center rounded-[10px] border px-4 py-3 font-sans text-[12px] font-semibold"
-            style={{
-              background: "rgba(196,169,98,0.12)",
-              borderColor: "rgba(196,169,98,0.32)",
-              color: ACCENT.gold,
-            }}
-          >
-            Add birth details once for sharper daily and astrology signals
-          </button>
-        )}
-
-        <div
-          className="flex items-stretch mt-5 pt-5"
-          style={{ borderTop: `1px solid ${GLASS.border}` }}
-        >
-          <Stat value={stats?.readings ?? 0} label={t("me.saved")} />
-          <span className="w-px self-stretch" style={{ background: GLASS.border }} aria-hidden />
-          <Stat value={stats?.journals ?? 0} label={t("me.journals")} />
-          <span className="w-px self-stretch" style={{ background: GLASS.border }} aria-hidden />
-          <Stat value={stats?.pulls ?? 0} label={t("me.pulls")} />
+        <div className="mt-4 grid gap-3 rounded-[18px] border p-3" style={{ borderColor: GLASS.border, background: "color-mix(in srgb, var(--hint-surface-soft) 48%, transparent)" }}>
+          <DetailLine
+            icon={CalendarDays}
+            label={t("account.birthProfile")}
+            value={birthSummary(profile, t("account.birthMissing"))}
+          />
+          <div className="h-px" style={{ background: GLASS.border }} />
+          <DetailLine
+            icon={sign ? Sparkles : UserRound}
+            label={t("nav.astrology")}
+            value={sign ?? t("me.settings.profileDetailMissing")}
+          />
+          {profile?.birthPlace ? (
+            <>
+              <div className="h-px" style={{ background: GLASS.border }} />
+              <DetailLine icon={MapPin} label={t("birthProfile.place")} value={profile.birthPlace} />
+            </>
+          ) : null}
         </div>
       </GlassPanel>
     </motion.div>

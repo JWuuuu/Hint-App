@@ -279,7 +279,7 @@ export const DEFAULT_TAROT_ROOM_SETUP: TarotRoomSetup = {
   cardFaceId: "hint-classic",
   backgroundId: "stars",
   cardColor: "Deep navy with gold linework",
-  spreadType: "single",
+  spreadType: "trueHeart",
 };
 
 export const ROOM_PRESETS: readonly RoomPreset[] = [
@@ -496,7 +496,7 @@ export function useHoldFlow() {
   const { t } = useLanguage();
   const initialSavedRoomSetup = loadSavedTarotRoomSetup();
   const initialRoomSetup = initialSavedRoomSetup ?? DEFAULT_TAROT_ROOM_SETUP;
-  const [step, setStep] = useState<HoldStep>(() => (initialSavedRoomSetup && !isSetupForcedFromUrl() ? "territories" : "setup"));
+  const [step, setStep] = useState<HoldStep>("setup");
   const [territory, setTerritory] = useState<Territory | null>(null);
   const [session, setSession] = useState<ReadingSession | null>(null);
   const [intake, setIntake] = useState<TarotIntake | null>(null);
@@ -596,12 +596,18 @@ export function useHoldFlow() {
   );
 
   const startRoom = useCallback((next: TarotRoomSetup) => {
-    saveTarotRoomSetupPreference(next);
-    setRoomSetup(next);
+    const mergedSetup: TarotRoomSetup = {
+      ...next,
+      story: next.story ?? roomSetup.story,
+      question: next.question ?? roomSetup.question,
+      focusLabel: next.focusLabel ?? roomSetup.focusLabel,
+    };
+    saveTarotRoomSetupPreference(mergedSetup);
+    setRoomSetup(mergedSetup);
     setErrorMessage(null);
     clearSetupUrlFlag();
-    setStep("territories");
-  }, []);
+    setStep("ritual");
+  }, [roomSetup.focusLabel, roomSetup.question, roomSetup.story]);
 
   const submitRoomIntake = useCallback(
     (next: TarotIntake) => {
@@ -631,7 +637,7 @@ export function useHoldFlow() {
       setRoomSetup(nextRoomSetup);
       setPendingReading(null);
       setErrorMessage(null);
-      setStep("ritual");
+      setStep("setup");
     },
     [roomSetup, t]
   );
@@ -674,7 +680,7 @@ export function useHoldFlow() {
 
   const reset = useCallback(() => {
     const savedRoomSetup = loadSavedTarotRoomSetup();
-    setStep(savedRoomSetup ? "territories" : "setup");
+    setStep("setup");
     setTerritory(null);
     setIntake(null);
     setSession(null);

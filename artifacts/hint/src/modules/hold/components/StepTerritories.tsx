@@ -22,6 +22,16 @@ interface Props {
 type IntakePanel = "context" | "spread";
 type DictationField = "context" | "question";
 
+interface QuestionPrompt {
+  text: string;
+  focusId: Territory["id"];
+}
+
+interface QuestionPromptGroup {
+  label: string;
+  prompts: readonly QuestionPrompt[];
+}
+
 interface GuidedSpreadChoice {
   id: "quick" | "simple" | "between" | "deep";
   spreadType: SpreadType;
@@ -412,7 +422,15 @@ function normalizeForRecommendation(value: string): string {
 }
 
 function includesAny(value: string, terms: readonly string[]): boolean {
-  return terms.some((term) => value.includes(term));
+  const paddedValue = ` ${value} `;
+  return terms.some((term) => {
+    const normalizedTerm = normalizeForRecommendation(term).trim();
+    if (!normalizedTerm) return false;
+    if (/^[a-z0-9]{1,3}$/i.test(normalizedTerm)) {
+      return paddedValue.includes(` ${normalizedTerm} `);
+    }
+    return value.includes(normalizedTerm);
+  });
 }
 
 function recommendSpreadType({
@@ -425,21 +443,69 @@ function recommendSpreadType({
   question: string;
 }): SpreadRecommendation {
   const text = normalizeForRecommendation(`${focus.id} ${context} ${question}`);
+  const relationshipText = includesAny(text, [
+    "relationship",
+    "connection",
+    "between us",
+    "partner",
+    "boyfriend",
+    "girlfriend",
+    "husband",
+    "wife",
+    "dating",
+    "crush",
+    "love",
+    "romance",
+    "marriage",
+    "friend",
+    "friendship",
+    "family",
+    "mother",
+    "father",
+    "parent",
+    "child",
+    "sibling",
+    "coworker",
+    "boss",
+    "client",
+    "them",
+    "him",
+    "her",
+    "we",
+    "关系",
+    "感情",
+    "对象",
+    "伴侣",
+    "喜欢",
+    "暧昧",
+    "朋友",
+    "家人",
+    "同事",
+    "老板",
+    "他",
+    "她",
+  ]);
+
+  const reconciliationText = includesAny(text, [
+    "ex",
+    "break up",
+    "breakup",
+    "broke up",
+    "broken",
+    "come back",
+    "get back together",
+    "reconcile",
+    "reconciliation",
+    "restart with them",
+    "复合",
+    "前任",
+    "分手",
+    "复联",
+  ]);
 
   if (
-    includesAny(text, [
-      "ex",
-      "break up",
-      "breakup",
-      "broke up",
-      "broken",
-      "come back",
-      "reconcile",
-      "reconciliation",
-      "again",
-      "复合",
-      "前任",
-    ])
+    reconciliationText &&
+    (relationshipText || includesAny(text, ["ex", "reconcile", "reconciliation", "复合", "前任", "复联"]))
   ) {
     return { spreadType: "reconciliation", reasonKey: "tarot.spreadRecommendation.reason.reconciliation" };
   }
@@ -454,13 +520,17 @@ function recommendSpreadType({
       "coming in",
       "when will i find",
       "桃花",
-      "未来",
+      "未来对象",
+      "未来伴侣",
+      "新恋情",
+      "脱单",
     ])
   ) {
     return { spreadType: "futureLover", reasonKey: "tarot.spreadRecommendation.reason.futureLover" };
   }
 
   if (
+    relationshipText &&
     includesAny(text, [
       "crush",
       "attraction",
@@ -478,15 +548,18 @@ function recommendSpreadType({
   }
 
   if (
+    relationshipText &&
     includesAny(text, [
-      "feel",
+      "do they feel",
       "feeling",
       "feelings",
+      "their feeling",
       "think of me",
+      "what do they think",
       "true heart",
       "honest",
-      "inside",
-      "really",
+      "inner feeling",
+      "really feel",
       "真心",
       "感觉",
       "想法",
@@ -496,6 +569,7 @@ function recommendSpreadType({
   }
 
   if (
+    relationshipText &&
     includesAny(text, [
       "complicated",
       "pattern",
@@ -513,11 +587,82 @@ function recommendSpreadType({
     return { spreadType: "loveTree", reasonKey: "tarot.spreadRecommendation.reason.loveTree" };
   }
 
-  if (focus.id === "someone" || includesAny(text, ["relationship", "connection", "between us", "we", "them", "him", "her", "关系"])) {
+  if (relationshipText || focus.id === "someone") {
     return { spreadType: "relationship", reasonKey: "tarot.spreadRecommendation.reason.relationship" };
   }
 
-  if (focus.id === "avoiding" || includesAny(text, ["decision", "choose", "choice", "should i", "next step", "what now", "决定", "选择"])) {
+  if (
+    includesAny(text, [
+      "job",
+      "career",
+      "work",
+      "interview",
+      "offer",
+      "hire",
+      "salary",
+      "money",
+      "finance",
+      "business",
+      "project",
+      "school",
+      "study",
+      "exam",
+      "move",
+      "relocate",
+      "city",
+      "home",
+      "travel",
+      "health",
+      "wellbeing",
+      "legal",
+      "contract",
+      "decision",
+      "choose",
+      "choice",
+      "should i",
+      "next step",
+      "what now",
+      "工作",
+      "事业",
+      "面试",
+      "钱",
+      "财务",
+      "学业",
+      "考试",
+      "搬家",
+      "城市",
+      "健康",
+      "法律",
+      "合同",
+      "决定",
+      "选择",
+    ])
+  ) {
+    return { spreadType: "three", reasonKey: "tarot.spreadRecommendation.reason.three" };
+  }
+
+  if (
+    includesAny(text, [
+      "pattern",
+      "cycle",
+      "repeat",
+      "stuck",
+      "blocked",
+      "worry",
+      "anxiety",
+      "fear",
+      "habit",
+      "shadow",
+      "release",
+      "let go",
+      "模式",
+      "循环",
+      "卡住",
+      "焦虑",
+      "害怕",
+      "放下",
+    ])
+  ) {
     return { spreadType: "three", reasonKey: "tarot.spreadRecommendation.reason.three" };
   }
 
@@ -615,17 +760,332 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-const DEFAULT_TAROT_QUESTION = "What do I need to see clearly right now?";
+const DEFAULT_TAROT_QUESTION = "";
+const FALLBACK_TAROT_QUESTION = "What do I need to see clearly right now?";
+
+const QUESTION_PROMPT_GROUPS: readonly QuestionPromptGroup[] = [
+  {
+    label: "Love and connection",
+    prompts: [
+      {
+        text: "What is this connection trying to show me?",
+        focusId: "someone",
+      },
+      {
+        text: "What do they feel but not say?",
+        focusId: "someone",
+      },
+      {
+        text: "Is this connection still good for me?",
+        focusId: "someone",
+      },
+      {
+        text: "What is the next honest move between us?",
+        focusId: "someone",
+      },
+    ],
+  },
+  {
+    label: "Work, school, and money",
+    prompts: [
+      {
+        text: "How do I find the right job now?",
+        focusId: "avoiding",
+      },
+      {
+        text: "What should I fix before my next interview?",
+        focusId: "avoiding",
+      },
+      {
+        text: "Is this project worth my full attention?",
+        focusId: "avoiding",
+      },
+      {
+        text: "What money choice needs my attention?",
+        focusId: "avoiding",
+      },
+    ],
+  },
+  {
+    label: "Choices and timing",
+    prompts: [
+      {
+        text: "Which path is healthier for me now?",
+        focusId: "avoiding",
+      },
+      {
+        text: "Should I wait, move, or choose something else?",
+        focusId: "avoiding",
+      },
+      {
+        text: "What am I not seeing about this decision?",
+        focusId: "avoiding",
+      },
+      {
+        text: "What is the next step I can actually take?",
+        focusId: "avoiding",
+      },
+    ],
+  },
+  {
+    label: "Patterns and healing",
+    prompts: [
+      {
+        text: "What pattern am I repeating?",
+        focusId: "unnamed",
+      },
+      {
+        text: "What should I stop carrying alone?",
+        focusId: "unnamed",
+      },
+      {
+        text: "What is this anxiety trying to protect?",
+        focusId: "unnamed",
+      },
+      {
+        text: "What do I need to release from the past?",
+        focusId: "lost",
+      },
+    ],
+  },
+  {
+    label: "Family and friendship",
+    prompts: [
+      {
+        text: "What boundary would make this relationship clearer?",
+        focusId: "someone",
+      },
+      {
+        text: "What should I understand about this friendship?",
+        focusId: "someone",
+      },
+      {
+        text: "How do I handle this family tension?",
+        focusId: "someone",
+      },
+      {
+        text: "What part of this conflict belongs to me?",
+        focusId: "someone",
+      },
+    ],
+  },
+  {
+    label: "Moving, home, and direction",
+    prompts: [
+      {
+        text: "Which city or path helps me grow?",
+        focusId: "avoiding",
+      },
+      {
+        text: "What should I know before I move?",
+        focusId: "avoiding",
+      },
+      {
+        text: "What would make home feel safer now?",
+        focusId: "lost",
+      },
+      {
+        text: "Where is my energy being pulled next?",
+        focusId: "unknown",
+      },
+    ],
+  },
+  {
+    label: "Self, intuition, and purpose",
+    prompts: [
+      {
+        text: "What is my intuition already noticing?",
+        focusId: "unknown",
+      },
+      {
+        text: "What part of myself wants more space?",
+        focusId: "unknown",
+      },
+      {
+        text: "What would help me trust myself again?",
+        focusId: "lost",
+      },
+      {
+        text: "What am I ready to become honest about?",
+        focusId: "unnamed",
+      },
+    ],
+  },
+  {
+    label: "When it feels unclear",
+    prompts: [
+      {
+        text: "I do not know what to ask. What do I need to see?",
+        focusId: "unknown",
+      },
+      {
+        text: "What is the real question underneath this feeling?",
+        focusId: "unknown",
+      },
+      {
+        text: "What should I pay attention to first?",
+        focusId: "unknown",
+      },
+      {
+        text: "What is the simplest truth available right now?",
+        focusId: "unknown",
+      },
+    ],
+  },
+] as const;
+
+function territoryById(id: Territory["id"]): Territory | null {
+  return TERRITORIES.find((item) => item.id === id) ?? null;
+}
+
+function inferTerritoryFromQuestion(value: string): Territory | null {
+  const text = normalizeForRecommendation(value);
+  if (!text.trim()) return null;
+
+  if (
+    includesAny(text, [
+      "relationship",
+      "connection",
+      "partner",
+      "boyfriend",
+      "girlfriend",
+      "husband",
+      "wife",
+      "dating",
+      "crush",
+      "love",
+      "romance",
+      "marriage",
+      "friend",
+      "friendship",
+      "family",
+      "mother",
+      "father",
+      "parent",
+      "sibling",
+      "coworker",
+      "boss",
+      "client",
+      "them",
+      "him",
+      "her",
+      "关系",
+      "感情",
+      "对象",
+      "伴侣",
+      "朋友",
+      "家人",
+      "同事",
+      "老板",
+      "他",
+      "她",
+    ])
+  ) {
+    return territoryById("someone");
+  }
+
+  if (
+    includesAny(text, [
+      "ended",
+      "ending",
+      "lost",
+      "grief",
+      "release",
+      "past",
+      "let go",
+      "changed",
+      "closed",
+      "结束",
+      "失去",
+      "过去",
+      "放下",
+      "改变",
+    ])
+  ) {
+    return territoryById("lost");
+  }
+
+  if (
+    includesAny(text, [
+      "pattern",
+      "cycle",
+      "repeat",
+      "stuck",
+      "blocked",
+      "anxiety",
+      "worry",
+      "fear",
+      "habit",
+      "shadow",
+      "模式",
+      "循环",
+      "卡住",
+      "焦虑",
+      "担心",
+      "害怕",
+    ])
+  ) {
+    return territoryById("unnamed");
+  }
+
+  if (
+    includesAny(text, [
+      "job",
+      "career",
+      "work",
+      "interview",
+      "offer",
+      "money",
+      "finance",
+      "business",
+      "project",
+      "school",
+      "study",
+      "exam",
+      "move",
+      "city",
+      "home",
+      "legal",
+      "contract",
+      "decision",
+      "choose",
+      "choice",
+      "should i",
+      "next step",
+      "工作",
+      "事业",
+      "面试",
+      "钱",
+      "财务",
+      "学业",
+      "考试",
+      "搬家",
+      "城市",
+      "合同",
+      "决定",
+      "选择",
+    ])
+  ) {
+    return territoryById("avoiding");
+  }
+
+  return territoryById("unknown");
+}
 
 export function StepTerritories({ roomSetup, onSubmit }: Props) {
   const initialFocus = TERRITORIES[TERRITORIES.length - 1]!;
+  const initialQuestion = roomSetup?.question?.trim() ?? DEFAULT_TAROT_QUESTION;
+  const initialContext = roomSetup?.story?.trim() ?? "";
+  const initialRoomFocus = initialQuestion
+    ? inferTerritoryFromQuestion(initialQuestion) ?? initialFocus
+    : initialFocus;
   const { language, t } = useLanguage();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [panel, setPanel] = useState<IntakePanel>("context");
-  const [focus, setFocus] = useState<Territory>(initialFocus);
-  const [context, setContext] = useState("");
-  const [question, setQuestion] = useState(DEFAULT_TAROT_QUESTION);
+  const [focus, setFocus] = useState<Territory>(initialRoomFocus);
+  const [context, setContext] = useState(initialContext);
+  const [question, setQuestion] = useState(initialQuestion);
   const [spreadType, setSpreadType] = useState<SpreadType>(
     roomSetup?.spreadType === "xRelationship" ? "loveTree" : roomSetup?.spreadType ?? initialFocus.spreadType
   );
@@ -635,6 +1095,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [showAllPositions, setShowAllPositions] = useState(false);
   const [showAdvancedSpreads, setShowAdvancedSpreads] = useState(false);
+  const [promptSetIndex, setPromptSetIndex] = useState(0);
 
   const localizedSpreads = useMemo(
     () => SPREAD_CHOICES
@@ -658,9 +1119,10 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
       })),
     [t]
   );
+  const questionForReading = question.trim() || focus.questionSeed || FALLBACK_TAROT_QUESTION;
   const recommendedSpread = useMemo(
-    () => recommendSpreadType({ context, focus, question }),
-    [context, focus, question]
+    () => recommendSpreadType({ context, focus, question: questionForReading }),
+    [context, focus, questionForReading]
   );
   const recommendedSpreadChoice = useMemo(
     () => localizedSpreads.find((choice) => choice.id === recommendedSpread.spreadType) ?? localizedSpreads[0]!,
@@ -680,6 +1142,9 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
     : selectedSpread.positionLabels.slice(0, positionChipLimit);
   const hiddenPositionCount =
     selectedSpread.positionLabels.length - visiblePositionLabels.length;
+  const visibleQuestionGroup =
+    QUESTION_PROMPT_GROUPS[promptSetIndex % QUESTION_PROMPT_GROUPS.length] ?? QUESTION_PROMPT_GROUPS[0]!;
+  const visibleQuestionPrompts = visibleQuestionGroup.prompts;
 
   useEffect(() => {
     return () => recognitionRef.current?.abort();
@@ -706,12 +1171,33 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
     if (!spreadTouched) setSpreadType(next.spreadType);
   };
 
+  const applyQuestionText = (nextQuestion: string) => {
+    setQuestion(nextQuestion);
+    const inferredFocus = inferTerritoryFromQuestion(nextQuestion);
+    if (inferredFocus && inferredFocus.id !== focus.id) {
+      updateFocus(inferredFocus);
+    }
+  };
+
+  const useQuestionPrompt = (prompt: QuestionPrompt) => {
+    const promptFocus = territoryById(prompt.focusId) ?? initialFocus;
+    setQuestion(prompt.text);
+    updateFocus(promptFocus);
+  };
+
   const addSpeech = (field: DictationField, spoken: string) => {
     if (field === "context") {
       setContext((current) => appendText(current, spoken));
       return;
     }
-    setQuestion((current) => appendText(current, spoken));
+    setQuestion((current) => {
+      const nextQuestion = appendText(current, spoken);
+      const inferredFocus = inferTerritoryFromQuestion(nextQuestion);
+      if (inferredFocus && inferredFocus.id !== focus.id) {
+        updateFocus(inferredFocus);
+      }
+      return nextQuestion;
+    });
   };
 
   const toggleDictation = (field: DictationField) => {
@@ -770,7 +1256,10 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
 
   const goNext = () => {
     const i = panelIndex(panel);
-    if (i < STEP_ORDER.length - 1) setPanel(STEP_ORDER[i + 1]!);
+    if (i < STEP_ORDER.length - 1) {
+      if (!question.trim()) setQuestion(questionForReading);
+      setPanel(STEP_ORDER[i + 1]!);
+    }
   };
 
   const goBack = () => {
@@ -779,7 +1268,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
   };
 
   const submit = () => {
-    if (submitted || !question.trim()) return;
+    if (submitted) return;
     setSubmitted(true);
     recognitionRef.current?.abort();
     const finalSpreadType = spreadTouched ? spreadType : recommendedSpread.spreadType;
@@ -793,7 +1282,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
         onSubmit({
           focus: translatedFocus,
           context,
-          question,
+          question: questionForReading,
           spreadType: finalSpreadType,
           roomSetup: roomSetup ?? undefined,
         }),
@@ -863,48 +1352,110 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                   transition={{ duration: 0.45, ease: "easeOut" }}
                   className="space-y-5"
                 >
-                  <TarotIntakeArtwork />
+                  <div className="space-y-3 text-center">
+                    <p
+                      className="font-sans text-[10px] font-semibold uppercase tracking-[0.22em]"
+                      style={{ color: GOLD.ink }}
+                    >
+                      Hint question
+                    </p>
+                    <h1
+                      className="font-serif text-[30px] leading-tight sm:text-[36px]"
+                      style={{ color: IVORY.primary, textShadow: TEXT_HALO.strong }}
+                    >
+                      What do you want Hint to look into?
+                    </h1>
+                    <p className="mx-auto max-w-[21rem] font-sans text-[13px] leading-relaxed" style={{ color: IVORY.mute }}>
+                      Big, small, messy, or specific. Ask it in your own words; Hint will choose a reading shape from the question.
+                    </p>
+                  </div>
 
-                  <div className="space-y-3">
-                    <FieldLabel>What do you want the cards to look into?</FieldLabel>
-                    <div className="relative">
-                      <textarea
-                        value={question}
-                        onChange={(event) => {
-                          setQuestion(event.target.value);
-                        }}
-                        maxLength={1000}
-                        rows={4}
-                        placeholder="Ask about a person, a decision, a feeling, or something you can't stop thinking about."
-                        className="hint-ritual-input w-full resize-none rounded-[22px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none transition-[border-color,box-shadow,background] duration-300 focus:shadow-[var(--hint-chat-input-shadow-focus)]"
-                        style={{
-                          color: IVORY.strong,
-                          borderColor: question.trim()
-                            ? "rgba(228,198,138,0.34)"
-                            : "var(--hint-border)",
-                          background: "var(--hint-input-bg)",
-                          textShadow: TEXT_HALO.soft,
-                        }}
-                      />
-                      <VoiceButton
-                        active={listeningField === "question"}
-                        onClick={() => toggleDictation("question")}
-                        label={
-                          listeningField === "question"
-                            ? t("tarot.voice.stop")
-                            : t("tarot.voice.start")
-                        }
-                      />
-                    </div>
+                  <div
+                    className="relative overflow-hidden rounded-[24px] border p-3"
+                    style={{
+                      borderColor: question.trim()
+                        ? "color-mix(in srgb, var(--hint-gold, #cba866) 44%, var(--hint-border))"
+                        : "var(--hint-border)",
+                      background:
+                        "radial-gradient(circle at 18% 14%, color-mix(in srgb, var(--hint-rose, #f0b6cf) 16%, transparent), transparent 34%), color-mix(in srgb, var(--hint-input-bg) 92%, transparent)",
+                      boxShadow: question.trim() ? "0 18px 44px rgba(228,198,138,0.10)" : "none",
+                    }}
+                  >
+                    <textarea
+                      value={question}
+                      onChange={(event) => {
+                        applyQuestionText(event.target.value);
+                      }}
+                      maxLength={1000}
+                      rows={5}
+                      placeholder="Ask about a person, a choice, timing, work, money, family, or the feeling you cannot shake."
+                      className="hint-ritual-input min-h-[132px] w-full resize-none border-0 bg-transparent px-1 py-1 pr-14 font-sans text-[17px] leading-8 outline-none"
+                      style={{
+                        color: IVORY.strong,
+                        textShadow: TEXT_HALO.soft,
+                      }}
+                    />
+                    <VoiceButton
+                      active={listeningField === "question"}
+                      onClick={() => toggleDictation("question")}
+                      label={
+                        listeningField === "question"
+                          ? t("tarot.voice.stop")
+                          : t("tarot.voice.start")
+                      }
+                    />
                     {voiceNotice && (
-                      <p className="font-sans text-[12px] leading-relaxed" style={{ color: IVORY.mute }}>
+                      <p className="mt-2 font-sans text-[12px] leading-relaxed" style={{ color: IVORY.mute }}>
                         {voiceNotice}
                       </p>
                     )}
                   </div>
 
                   <div className="space-y-3">
-                    <FieldLabel>Where should we focus?</FieldLabel>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <FieldLabel>Try a question</FieldLabel>
+                        <p className="mt-1 font-sans text-[11px] leading-none" style={{ color: IVORY.dim }}>
+                          {visibleQuestionGroup.label}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPromptSetIndex((current) => current + 1)}
+                        className="rounded-full border px-3 py-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.14em] transition-opacity hover:opacity-80"
+                        style={{
+                          color: GOLD.ink,
+                          borderColor: "rgba(228,198,138,0.24)",
+                          background: "rgba(228,198,138,0.08)",
+                        }}
+                      >
+                        More
+                      </button>
+                    </div>
+                    <div className="grid gap-2">
+                      {visibleQuestionPrompts.map((prompt) => (
+                        <button
+                          key={prompt.text}
+                          type="button"
+                          onClick={() => useQuestionPrompt(prompt)}
+                          className="min-h-[48px] rounded-[16px] border px-3 py-2 text-left font-sans text-[13px] font-medium leading-snug transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+                          style={{
+                            color: question === prompt.text ? IVORY.primary : IVORY.body,
+                            borderColor: question === prompt.text ? GOLD.edge : "var(--hint-border)",
+                            background: question === prompt.text
+                              ? "linear-gradient(135deg, color-mix(in srgb, var(--hint-gold, #cba866) 16%, transparent), color-mix(in srgb, var(--hint-rose, #f0b6cf) 10%, transparent))"
+                              : "color-mix(in srgb, var(--hint-card-surface-muted) 88%, transparent)",
+                            boxShadow: question === prompt.text ? "0 0 20px rgba(228,198,138,0.10)" : "none",
+                          }}
+                        >
+                          {prompt.text}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <FieldLabel>What kind of question is it?</FieldLabel>
                     <div className="grid grid-cols-2 gap-2">
                       {TERRITORIES.map((item) => (
                         <Chip
@@ -915,33 +1466,6 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                           {t(`territory.${item.id}.label`)}
                         </Chip>
                       ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <FieldLabel>The question we'll read</FieldLabel>
-                    <p className="font-sans text-[12px] leading-relaxed" style={{ color: IVORY.mute }}>
-                      I'll keep the reading centered on this. You can edit it before we draw.
-                    </p>
-                    <div className="relative">
-                      <textarea
-                        value={question}
-                        onChange={(event) => {
-                          setQuestion(event.target.value);
-                        }}
-                        maxLength={1000}
-                        rows={3}
-                        placeholder={t("tarot.intake.questionPlaceholder")}
-                        className="hint-ritual-input w-full resize-none rounded-[22px] border bg-transparent px-4 py-3 pr-14 font-sans text-[15px] leading-7 outline-none transition-[border-color,box-shadow,background] duration-300 focus:shadow-[var(--hint-chat-input-shadow-focus)]"
-                        style={{
-                          color: IVORY.strong,
-                          borderColor: question.trim()
-                            ? "rgba(228,198,138,0.34)"
-                            : "var(--hint-border)",
-                          background: "var(--hint-input-bg)",
-                          textShadow: TEXT_HALO.soft,
-                        }}
-                      />
                     </div>
                   </div>
 
@@ -1328,7 +1852,7 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
                             {t("tarot.intake.summaryQuestion")}
                           </p>
                           <p className="mt-0.5 line-clamp-2 font-sans text-[12px] leading-relaxed" style={{ color: IVORY.strong }}>
-                            {truncate(question.trim(), 110)}
+                            {truncate(questionForReading, 110)}
                           </p>
                         </div>
                         {roomSetup && (
@@ -1374,16 +1898,16 @@ export function StepTerritories({ roomSetup, onSubmit }: Props) {
             </GhostButton>
 
             {panel === "spread" ? (
-              <PrimaryButton onClick={submit} disabled={!question.trim() || submitted}>
-                {submitted ? t("tarot.intake.starting") : t("tarot.intake.startReading")}
+              <PrimaryButton onClick={submit} disabled={submitted}>
+                {submitted ? t("tarot.intake.starting") : "Set the room"}
                 <Sparkles size={14} />
               </PrimaryButton>
             ) : (
               <PrimaryButton
                 onClick={goNext}
-                disabled={!question.trim() || submitted}
+                disabled={submitted}
               >
-                Begin the reading
+                Choose spread
                 <ChevronRight size={14} />
               </PrimaryButton>
             )}

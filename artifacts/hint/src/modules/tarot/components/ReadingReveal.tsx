@@ -5,6 +5,7 @@ import type { TarotCardArtId } from "../logic/cardImageMap";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { TarotCardVisual } from "./TarotCardVisual";
 import type { TarotCardBackStyle } from "./TarotCardVisual";
+import type { WashRitualTheme } from "./CardWashRitual";
 import { getSpreadPositionLabel } from "../logic/spreadLabels";
 
 type ReadingRevealProps = {
@@ -13,6 +14,7 @@ type ReadingRevealProps = {
   spread: SpreadChoice;
   backStyle?: TarotCardBackStyle;
   cardArtId?: TarotCardArtId;
+  theme?: Pick<WashRitualTheme, "chamberOverlay" | "starClassName" | "tableRingColor" | "secondaryRingColor">;
   autoReveal?: boolean;
   onContinue?: () => void;
   onReveal: (visualId: string) => void;
@@ -49,6 +51,7 @@ export function ReadingReveal({
   spread,
   backStyle = "nocturne",
   cardArtId = "original",
+  theme,
   autoReveal = false,
   onContinue,
   onReveal,
@@ -77,6 +80,8 @@ export function ReadingReveal({
   const gridClass = revealGridClass(selectedCards.length);
   const cardSizeClass = revealCardSizeClass(selectedCards.length);
   const cardShellClass = revealCardShellClass(selectedCards.length);
+  const pageOverlay = theme?.chamberOverlay ?? "var(--hint-page-bg)";
+  const starClassName = theme?.starClassName ?? "";
 
   useEffect(() => {
     setReadyToReveal(false);
@@ -96,7 +101,8 @@ export function ReadingReveal({
 
   return (
     <section className="relative h-full w-full overflow-y-auto overflow-x-hidden px-4 py-8 text-center sm:py-10">
-      <div className="absolute inset-0" style={{ background: "var(--hint-page-bg)" }} />
+      <div className="absolute inset-0" style={{ background: pageOverlay }} />
+      <div className={`pointer-events-none absolute inset-0 ${starClassName}`} />
       <div className="pointer-events-none absolute inset-x-0 top-[18%] mx-auto h-[58%] max-w-5xl rounded-full blur-3xl" style={{ background: "color-mix(in srgb, var(--hint-rose, #f0b6cf) 12%, transparent)" }} />
       <motion.div
         aria-hidden
@@ -206,9 +212,16 @@ export function ReadingReveal({
                   className={cardSizeClass}
                 />
               </motion.div>
-              <p className="hint-status-pill max-w-[11rem] truncate rounded-full border px-3 py-1.5 font-sans text-[10px] uppercase tracking-[0.14em] sm:text-[11px] sm:tracking-[0.18em]" style={{ color: "var(--hint-muted)" }}>
-                {revealed ? card.name : label}
-              </p>
+              <div className="grid justify-items-center gap-1.5">
+                <p className="hint-status-pill max-w-[11rem] truncate rounded-full border px-3 py-1.5 font-sans text-[10px] uppercase tracking-[0.14em] sm:text-[11px] sm:tracking-[0.18em]" style={{ color: "var(--hint-muted)" }}>
+                  {label}
+                </p>
+                {revealed && (
+                  <p className="max-w-[11rem] truncate font-serif text-[16px] leading-tight" style={{ color: "var(--hint-text)" }}>
+                    {card.name}
+                  </p>
+                )}
+              </div>
             </motion.div>
           );
         })}

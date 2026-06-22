@@ -39,6 +39,9 @@ function toAppPath(path: string) {
   if (path === "/daily-pull" || path.startsWith("/daily-pull?") || path.startsWith("/daily-pull#")) {
     return `/app/daily${path.slice("/daily-pull".length)}`;
   }
+  if (path === "/sky-deck" || path.startsWith("/sky-deck?") || path.startsWith("/sky-deck#")) {
+    return `/app/daily${path.slice("/sky-deck".length)}`;
+  }
   if (path === "/me" || path.startsWith("/me?") || path.startsWith("/me#")) {
     return `/app/profile${path.slice("/me".length)}`;
   }

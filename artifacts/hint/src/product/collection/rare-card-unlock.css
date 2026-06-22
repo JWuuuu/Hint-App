@@ -239,12 +239,12 @@
   overflow: hidden;
   margin-top: 18px;
   border-radius: 28px;
-  border: 1px solid rgba(230, 203, 142, 0.45);
+  border: 1px solid color-mix(in srgb, var(--hint-gold, #cba866) 30%, var(--hint-border));
   background:
-    radial-gradient(440px 320px at 82% 18%, rgba(230, 203, 142, 0.14), transparent 64%),
-    radial-gradient(360px 300px at 72% 80%, rgba(134, 214, 199, 0.1), transparent 66%),
-    rgba(18, 18, 28, 0.78);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+    radial-gradient(440px 320px at 82% 18%, color-mix(in srgb, var(--hint-gold, #cba866) 12%, transparent), transparent 64%),
+    radial-gradient(360px 300px at 72% 80%, color-mix(in srgb, var(--hint-aqua, #9dded9) 10%, transparent), transparent 66%),
+    var(--hint-surface-strong);
+  box-shadow: var(--hint-elevated-shadow);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: clamp(28px, 4vw, 48px);
@@ -520,6 +520,34 @@
   animation: rareRaysSpin 1.55s ease-out forwards;
 }
 
+@media (max-width: 480px) {
+  .rare-unlock-panel {
+    margin-top: 12px;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 24px;
+    border-radius: 24px;
+  }
+
+  .rare-unlock-stage {
+    min-height: 260px;
+  }
+
+  .rare-card-wrap {
+    width: min(168px, 52vw);
+  }
+
+  .rare-stage-ring-gold {
+    width: 210px;
+    height: 210px;
+  }
+
+  .rare-stage-ring-aqua {
+    width: 168px;
+    height: 168px;
+  }
+}
+
 .rare-popout-shards {
   inset: 0;
   display: grid;
@@ -643,7 +671,7 @@
   }
 
   .rare-unlock-stage {
-    min-height: 300px;
+    min-height: 260px;
   }
 
   .rare-popout-stage {

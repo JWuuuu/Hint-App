@@ -32,19 +32,23 @@ type ChamberDeckState = {
   ritualCards: RitualCard[];
 };
 
+const ENABLE_FULL_DECK_INTRO = false;
+const INITIAL_RITUAL_STAGE: RitualStage = ENABLE_FULL_DECK_INTRO ? "placed" : "washing";
+const INITIAL_WASH_SCORE = ENABLE_FULL_DECK_INTRO ? 0 : 10;
+
 const BACKGROUND_THEMES: Record<TarotRoomSetup["backgroundId"], Pick<WashRitualTheme, "chamberOverlay" | "starClassName" | "tableBackground" | "tableBorderColor" | "tableShadow" | "tableRingColor" | "secondaryRingColor">> = {
   stars: {
     chamberOverlay:
-      "radial-gradient(circle at 50% 42%, rgba(227,190,116,0.16), transparent 24%), radial-gradient(circle at 50% 50%, rgba(11,24,44,0.92), rgba(3,5,12,0.98) 62%, #010207 100%)",
+      "linear-gradient(180deg, rgba(255,237,246,0.12), rgba(12,8,26,0.04) 28%, rgba(220,196,255,0.08) 62%, rgba(4,3,12,0.98) 100%), radial-gradient(ellipse at 50% 36%, rgba(246,187,207,0.24), transparent 30%), radial-gradient(circle at 50% 52%, rgba(26,19,50,0.94), rgba(7,6,18,0.98) 65%, #020106 100%)",
     starClassName:
-      "opacity-40 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.85)_0_1px,transparent_1px),radial-gradient(circle_at_78%_16%,rgba(239,205,139,0.88)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(255,255,255,0.55)_0_1px,transparent_1px)] [background-size:132px_148px]",
+      "opacity-44 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,238,246,0.86)_0_1px,transparent_1px),radial-gradient(circle_at_78%_16%,rgba(248,214,152,0.82)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(219,199,255,0.66)_0_1px,transparent_1px)] [background-size:132px_148px]",
     tableBackground:
-      "radial-gradient(circle at 50% 50%, rgba(35,48,72,0.78), rgba(9,13,27,0.94) 55%, rgba(2,3,8,0.98) 100%)",
-    tableBorderColor: "rgba(216,186,114,0.22)",
+      "radial-gradient(circle at 48% 42%, rgba(255,236,244,0.18), transparent 30%), radial-gradient(circle at 50% 54%, rgba(45,37,78,0.82), rgba(14,11,30,0.95) 58%, rgba(4,3,12,0.99) 100%)",
+    tableBorderColor: "rgba(238,188,205,0.28)",
     tableShadow:
-      "0 35px 110px rgba(0,0,0,0.72), inset 0 0 92px rgba(226,190,116,0.12)",
-    tableRingColor: "rgba(227,195,122,0.18)",
-    secondaryRingColor: "rgba(148,222,218,0.10)",
+      "0 35px 110px rgba(0,0,0,0.68), 0 0 46px rgba(221,180,255,0.10), inset 0 0 92px rgba(246,187,207,0.13)",
+    tableRingColor: "rgba(246,187,207,0.22)",
+    secondaryRingColor: "rgba(248,214,152,0.14)",
   },
   dawn: {
     chamberOverlay:
@@ -138,6 +142,14 @@ function cutHiddenOrder(deck: readonly RitualCard[], ratio = 0.37): RitualCard[]
   return applyHiddenIdentitiesToFixedVisuals(deck, cut);
 }
 
+function createInitialChamberDeckState(): ChamberDeckState {
+  const hiddenDeckOrder = createHiddenDeck();
+  return {
+    hiddenDeckOrder,
+    ritualCards: ENABLE_FULL_DECK_INTRO ? hiddenDeckOrder : loosenDeckForWash(hiddenDeckOrder),
+  };
+}
+
 export function TarotRitualChamber({
   setup,
 }: {
@@ -149,16 +161,10 @@ export function TarotRitualChamber({
   const setupSpreadType = setup?.spreadType === "xRelationship" ? "loveTree" : setup?.spreadType;
   const selectedSpread = SPREAD_CHOICES.find((spread) => spread.id === setupSpreadType) ?? SPREAD_CHOICES[0]!;
   const maxSelectedCards = selectedSpread.cardCount;
-  const [deckState, setDeckState] = useState<ChamberDeckState>(() => {
-    const hiddenDeckOrder = createHiddenDeck();
-    return {
-      hiddenDeckOrder,
-      ritualCards: hiddenDeckOrder,
-    };
-  });
-  const [stage, setStage] = useState<RitualStage>("placed");
+  const [deckState, setDeckState] = useState<ChamberDeckState>(() => createInitialChamberDeckState());
+  const [stage, setStage] = useState<RitualStage>(INITIAL_RITUAL_STAGE);
   const [activeVisualIds, setActiveVisualIds] = useState<string[]>([]);
-  const [washScore, setWashScore] = useState(0);
+  const [washScore, setWashScore] = useState(INITIAL_WASH_SCORE);
   const [washDirection, setWashDirection] = useState<1 | -1>(1);
   const [selectedCards, setSelectedCards] = useState<RitualCard[]>([]);
   const [revealedIds, setRevealedIds] = useState<string[]>([]);
@@ -224,29 +230,43 @@ export function TarotRitualChamber({
   }
 
   function startCutDeck() {
+    const secondCutDirection: 1 | -1 = washDirection === 1 ? -1 : 1;
     setStage("cutting");
     setDeckState((current) => ({
       ...current,
       hiddenDeckOrder: cutHiddenOrder(current.hiddenDeckOrder, 0.42),
-      ritualCards: cutDeckIntoPackets(current.ritualCards, washDirection),
+      ritualCards: cutDeckIntoPackets(current.ritualCards, washDirection, 0),
     }));
     clearGatherTimers();
     gatherTimers.current = [
       window.setTimeout(() => {
         setDeckState((current) => ({
           ...current,
-          ritualCards: transferCutPacket(current.ritualCards, washDirection),
+          ritualCards: transferCutPacket(current.ritualCards, washDirection, 0),
         }));
-      }, 420),
+      }, 680),
+      window.setTimeout(() => {
+        setDeckState((current) => ({
+          ...current,
+          hiddenDeckOrder: cutHiddenOrder(current.hiddenDeckOrder, 0.58),
+          ritualCards: cutDeckIntoPackets(current.ritualCards, secondCutDirection, 1),
+        }));
+      }, 1320),
+      window.setTimeout(() => {
+        setDeckState((current) => ({
+          ...current,
+          ritualCards: transferCutPacket(current.ritualCards, secondCutDirection, 1),
+        }));
+      }, 2020),
       window.setTimeout(() => {
         setDeckState((current) => ({
           ...current,
           ritualCards: mergeCutDeckAtCenter(current.ritualCards),
         }));
-      }, 820),
+      }, 2700),
       window.setTimeout(() => {
         enterSelectCards();
-      }, 1180),
+      }, 3600),
     ];
   }
 
@@ -320,14 +340,10 @@ export function TarotRitualChamber({
   }, []);
 
   function restartRitual() {
-    const hiddenDeckOrder = createHiddenDeck();
-    setDeckState({
-      hiddenDeckOrder,
-      ritualCards: hiddenDeckOrder,
-    });
-    setStage("placed");
+    setDeckState(createInitialChamberDeckState());
+    setStage(INITIAL_RITUAL_STAGE);
     setActiveVisualIds([]);
-    setWashScore(0);
+    setWashScore(INITIAL_WASH_SCORE);
     setWashDirection(1);
     setSelectedCards([]);
     setRevealedIds([]);
@@ -340,10 +356,10 @@ export function TarotRitualChamber({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 1.1, ease: "easeOut" }}
-      className="absolute inset-0 overflow-hidden bg-[#010207] text-[#f7ead0]"
+      className="absolute inset-0 overflow-hidden text-[#f7ead0]"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(227,190,116,0.16),transparent_24%),radial-gradient(circle_at_50%_50%,rgba(11,24,44,0.92),rgba(3,5,12,0.98)_62%,#010207_100%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.85)_0_1px,transparent_1px),radial-gradient(circle_at_78%_16%,rgba(239,205,139,0.88)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(255,255,255,0.55)_0_1px,transparent_1px)] [background-size:132px_148px]" />
+      <div className="pointer-events-none absolute inset-0" style={{ background: theme.chamberOverlay }} />
+      <div className={`pointer-events-none absolute inset-0 ${theme.starClassName}`} />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-[radial-gradient(ellipse_at_50%_65%,rgba(222,178,95,0.12),transparent_48%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),transparent_22%,rgba(255,255,255,0.028))] opacity-60" />
 
@@ -380,6 +396,8 @@ export function TarotRitualChamber({
           onContinue={() => setStage("reveal")}
           backStyle={theme.cardBackStyle}
           cardArtId={cardArtId}
+          theme={theme}
+          question={setup?.question}
         />
       )}
 
@@ -394,6 +412,7 @@ export function TarotRitualChamber({
           onRestart={restartRitual}
           backStyle={theme.cardBackStyle}
           cardArtId={cardArtId}
+          theme={theme}
         />
       )}
 

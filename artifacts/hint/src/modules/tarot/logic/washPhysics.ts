@@ -378,33 +378,38 @@ export function squareDeckAtCenter(ritualCards: readonly RitualCard[]): RitualCa
 export function cutDeckIntoPackets(
   ritualCards: readonly RitualCard[],
   direction: 1 | -1 = 1,
+  pass = 0,
 ): RitualCard[] {
-  const firstCut = Math.floor(ritualCards.length * 0.34);
-  const secondCut = Math.floor(ritualCards.length * 0.68);
+  const cutRatio = pass % 2 === 0 ? 0.42 : 0.58;
+  const cutIndex = Math.floor(ritualCards.length * cutRatio);
 
   return ritualCards.map((card, index) => {
-    const packet = index < firstCut ? 0 : index < secondCut ? 1 : 2;
-    const packetStart = packet === 0 ? 0 : packet === 1 ? firstCut : secondCut;
+    const isLiftedPacket = index < cutIndex;
+    const packet = isLiftedPacket ? 0 : 1;
+    const packetStart = packet === 0 ? 0 : cutIndex;
     const packetIndex = index - packetStart;
-    const packetSize = packet === 0 ? firstCut : packet === 1 ? secondCut - firstCut : ritualCards.length - secondCut;
-    const packetProgress = packetSize <= 1 ? 0 : packetIndex / (packetSize - 1);
-    const packetSide = packet === 0 ? -direction : packet === 1 ? direction : direction * 0.18;
-    const row = packetIndex % 16;
-    const stack = Math.floor(packetIndex / 16);
-    const rotation = packetSide * (1.05 + (row % 6) * 0.065) + (packet - 1) * 0.42;
+    const packetSize = packet === 0 ? cutIndex : ritualCards.length - cutIndex;
+    const packetDepth = packetSize <= 1 ? 0 : packetIndex / (packetSize - 1);
+    const packetSide = isLiftedPacket ? direction : -direction;
+    const edge = packetIndex % 9;
+    const passLift = pass % 2 === 0 ? 1 : -1;
+    const thickness = packetDepth * (isLiftedPacket ? 5.0 : 4.2);
+    const packetBaseX = 50 + packetSide * (isLiftedPacket ? 8.6 : 3.8) + passLift * 0.9;
+    const packetBaseY = 52 + (isLiftedPacket ? -4.4 : 2.4) + (pass % 2) * 0.6;
+    const rotation = packetSide * (isLiftedPacket ? 1.45 : 0.42) + (edge - 4) * 0.014;
 
     return {
       ...card,
-      x: 50 + packetSide * (packet === 2 ? 4.6 : 12.8) + (row - 7.5) * 0.11,
-      y: 52 + (packet - 1) * 1.85 - stack * 0.15 + Math.sin(packetProgress * Math.PI) * 1.15,
+      x: packetBaseX + packetSide * packetDepth * 1.34 + (edge - 4) * 0.018,
+      y: packetBaseY + thickness + Math.sin(packetIndex * 0.64) * 0.05,
       rotate: rotation,
       rotation,
       velocityX: 0,
       velocityY: 0,
       velocityRotate: 0,
-      lift: 0,
-      gatherDelay: (packetIndex % 10) * 0.012 + packet * 0.025,
-      zIndex: packet * 90 + packetIndex,
+      lift: isLiftedPacket ? 1 : 0,
+      gatherDelay: packetIndex * 0.0014 + packet * 0.026 + pass * 0.018,
+      zIndex: isLiftedPacket ? 420 + pass * 90 + (packetSize - packetIndex) : 90 + (packetSize - packetIndex),
     };
   });
 }
@@ -412,51 +417,56 @@ export function cutDeckIntoPackets(
 export function transferCutPacket(
   ritualCards: readonly RitualCard[],
   direction: 1 | -1 = 1,
+  pass = 0,
 ): RitualCard[] {
-  const firstCut = Math.floor(ritualCards.length * 0.34);
-  const secondCut = Math.floor(ritualCards.length * 0.68);
+  const cutRatio = pass % 2 === 0 ? 0.42 : 0.58;
+  const cutIndex = Math.floor(ritualCards.length * cutRatio);
 
   return ritualCards.map((card, index) => {
-    const packet = index < firstCut ? 0 : index < secondCut ? 1 : 2;
-    const packetStart = packet === 0 ? 0 : packet === 1 ? firstCut : secondCut;
+    const lifted = index < cutIndex;
+    const packet = lifted ? 0 : 1;
+    const packetStart = packet === 0 ? 0 : cutIndex;
     const packetIndex = index - packetStart;
-    const row = packetIndex % 16;
-    const stack = Math.floor(packetIndex / 16);
-    const crossingSide = packet === 0 ? direction * 0.48 : packet === 1 ? -direction * 0.42 : -direction * 0.08;
-    const interleave = (packetIndex % 2 === 0 ? 1 : -1) * 0.58;
-    const rotation = crossingSide * (0.82 + (row % 6) * 0.045) + interleave * 0.38;
+    const packetSize = lifted ? cutIndex : ritualCards.length - cutIndex;
+    const edge = packetIndex % 9;
+    const depth = packetSize <= 1 ? 0 : packetIndex / (packetSize - 1);
+    const passLift = pass % 2 === 0 ? 1 : -1;
+    const liftedSlide = -direction * (3.2 + depth * 0.7) + passLift * 0.55;
+    const lowerSlide = direction * (3.4 + depth * 0.48) - passLift * 0.25;
+    const rotation = (lifted ? -direction * 0.58 : direction * 0.28) + (edge - 4) * 0.012;
 
     return {
       ...card,
-      x: 50 + crossingSide * 9.2 + (row - 7.5) * 0.07 + interleave,
-      y: 52 + (packet - 1) * 0.42 - stack * 0.13 - (row % 4) * 0.03,
+      x: 50 + (lifted ? liftedSlide : lowerSlide) + (edge - 4) * 0.018,
+      y: 52 + (lifted ? -1.35 : 1.35) + depth * (lifted ? 3.9 : 3.2) + pass * 0.38,
       rotate: rotation,
       rotation,
       velocityX: 0,
       velocityY: 0,
       velocityRotate: 0,
-      lift: 0,
-      gatherDelay: (packetIndex % 8) * 0.01 + packet * 0.018,
-      zIndex: packetIndex * 3 + (2 - packet),
+      lift: lifted ? 1 : 0,
+      gatherDelay: packetIndex * 0.0017 + (lifted ? 0.018 : 0) + pass * 0.016,
+      zIndex: lifted ? 520 + pass * 90 + (packetSize - packetIndex) : 120 + (packetSize - packetIndex),
     };
   });
 }
 
 export function mergeCutDeckAtCenter(ritualCards: readonly RitualCard[]): RitualCard[] {
   return ritualCards.map((card, index) => {
-    const rotation = (index % 7 - 3) * 0.18;
+    const rotation = (index % 7 - 3) * 0.08;
+    const depth = index / Math.max(1, ritualCards.length - 1);
 
     return {
       ...card,
-      x: 50 + (index % 10 - 5) * 0.04,
-      y: 52 - (index % 24) * 0.042,
+      x: 50 + (index % 8 - 3.5) * 0.022,
+      y: 52 - depth * 1.2,
       rotate: rotation,
       rotation,
       velocityX: 0,
       velocityY: 0,
       velocityRotate: 0,
       lift: 0,
-      gatherDelay: (index % 6) * 0.01,
+      gatherDelay: (index % 6) * 0.006,
       zIndex: index,
     };
   });

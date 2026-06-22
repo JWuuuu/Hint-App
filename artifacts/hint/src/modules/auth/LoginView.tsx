@@ -171,7 +171,7 @@ export function LoginView() {
     }
     setError(null);
     setNotice(null);
-    navigate("/profile");
+    navigate("/app/profile");
   }
 
   async function handleUseTesterAccount() {
@@ -186,7 +186,7 @@ export function LoginView() {
     saveBirthProfile({ ...ASTROLOGY_TESTER_ACCOUNT.birthProfile });
     setError(null);
     setNotice(t("login.notice.testerLoaded"));
-    navigate("/astrology?tab=birth");
+    navigate("/app/astrology?tab=birth");
   }
 
   function handleSignOut() {
@@ -225,11 +225,11 @@ export function LoginView() {
         title={account ? t("login.accountSaved") : t("login.title")}
         subtitle={t("login.subtitle")}
         sigil={account ? ShieldCheck : LogIn}
-        backHref="/profile"
-        backLabel={t("nav.me")}
+        backHref="/app/profile"
+        backLabel={t("me.settings")}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="flex flex-col gap-4">
         <GlassPanel hero>
           <div className="flex flex-wrap gap-2">
             {(["signup", "login"] as const).map((item) => (
@@ -252,56 +252,13 @@ export function LoginView() {
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={() => void handleUseTesterAccount()}
-            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-[8px] border font-serif text-[12px] uppercase tracking-[0.2em] transition-opacity hover:opacity-85"
-            style={{
-              background: "rgba(100,156,158,0.14)",
-              borderColor: "rgba(100,156,158,0.34)",
-              color: ACCENT.aqua,
-            }}
-            data-testid="button-use-tester-account"
-          >
-            <ShieldCheck size={15} />
-            {t("login.useTester")}
-          </button>
-
-          <section className="mt-6">
+          <div className="mt-5">
             <p className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
-              {t("login.continueWith")}
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-3">
-              {SOCIAL_PROVIDERS.map((provider) => (
-                <button
-                  key={provider.id}
-                  type="button"
-                  onClick={() => handleSocialProvider(provider.id)}
-                  className="flex h-11 items-center justify-center gap-2 rounded-[8px] border font-sans text-[12px] font-black transition-opacity hover:opacity-85"
-                  style={{
-                    background: "rgba(255,255,255,0.045)",
-                    borderColor: GLASS.border,
-                    color: GLASS.text,
-                  }}
-                >
-                  <span className="grid size-5 place-items-center rounded-full border text-[11px]" style={{ borderColor: GLASS.border }}>
-                    {provider.mark}
-                  </span>
-                  {provider.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <div className="my-6 flex items-center gap-3">
-            <span className="h-px flex-1" style={{ background: GLASS.border }} />
-            <span className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: GLASS.faint }}>
               {t("login.verifyDirectly")}
-            </span>
-            <span className="h-px flex-1" style={{ background: GLASS.border }} />
+            </p>
           </div>
 
-          <div className="mb-4 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             {(["email", "phone"] as const).map((item) => (
               <button
                 key={item}
@@ -320,7 +277,7 @@ export function LoginView() {
             ))}
           </div>
 
-          <form onSubmit={pending ? handleVerify : handleRequestCode} className="grid gap-4">
+          <form onSubmit={pending ? handleVerify : handleRequestCode} className="mt-4 grid gap-4">
             {mode === "signup" ? (
               <label className="block">
                 <span className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
@@ -338,7 +295,7 @@ export function LoginView() {
             ) : null}
 
             {mode === "signup" ? (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4">
                 <label className="block">
                   <span className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
                     {t("birthProfile.birthDate")}
@@ -366,7 +323,7 @@ export function LoginView() {
                     style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
                   />
                 </label>
-                <label className="block sm:col-span-2">
+                <label className="block">
                   <span className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
                     {t("birthProfile.birthPlace")}
                   </span>
@@ -475,6 +432,49 @@ export function LoginView() {
               {t("login.signOutOf").replace("{account}", accountLabel(account) ?? "")}
             </button>
           ) : null}
+
+          <div className="mt-5 grid gap-4 border-t pt-5" style={{ borderColor: GLASS.border }}>
+            <button
+              type="button"
+              onClick={() => void handleUseTesterAccount()}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border font-serif text-[11px] uppercase tracking-[0.16em] transition-opacity hover:opacity-85"
+              style={{
+                background: "rgba(100,156,158,0.12)",
+                borderColor: "rgba(100,156,158,0.3)",
+                color: ACCENT.aqua,
+              }}
+              data-testid="button-use-tester-account"
+            >
+              <ShieldCheck size={14} />
+              {t("login.useTester")}
+            </button>
+
+            <section>
+              <p className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
+                {t("login.continueWith")}
+              </p>
+              <div className="mt-3 grid gap-2">
+                {SOCIAL_PROVIDERS.map((provider) => (
+                  <button
+                    key={provider.id}
+                    type="button"
+                    onClick={() => handleSocialProvider(provider.id)}
+                    className="flex h-11 items-center justify-center gap-2 rounded-[8px] border font-sans text-[12px] font-black transition-opacity hover:opacity-85"
+                    style={{
+                      background: "rgba(255,255,255,0.045)",
+                      borderColor: GLASS.border,
+                      color: GLASS.text,
+                    }}
+                  >
+                    <span className="grid size-5 place-items-center rounded-full border text-[11px]" style={{ borderColor: GLASS.border }}>
+                      {provider.mark}
+                    </span>
+                    {provider.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
         </GlassPanel>
 
         <section>
