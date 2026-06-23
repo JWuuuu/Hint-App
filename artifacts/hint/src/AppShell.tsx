@@ -5,8 +5,8 @@ import {
   CalendarDays,
   History,
   Home,
-  Settings2,
   Sparkles,
+  UserRound,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -211,7 +211,7 @@ function AppNavigationChrome({
     { href: "/app/daily", label: t("nav.daily"), icon: CalendarDays },
     { href: "/app/ask", label: "Ask", icon: Sparkles, featured: true },
     { href: "/app/readings", label: t("nav.history"), icon: History },
-    { href: "/app/profile", label: t("me.settings"), icon: Settings2 },
+    { href: "/app/profile", label: t("me.settings"), icon: UserRound },
   ];
   return (
     <nav

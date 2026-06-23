@@ -1349,6 +1349,58 @@ function DataStatusRow({ hasProfile, hasSavedChart, natalResponse }: { hasProfil
   );
 }
 
+function ProviderReadinessStrip({ status }: { status: AstroProviderStatus | null }) {
+  const items = [
+    {
+      label: "Chart",
+      value: status ? status.astrology.configured ? "Live" : "Local" : "Checking",
+      ready: status?.astrology.configured ?? false,
+      icon: Orbit,
+    },
+    {
+      label: "Sky",
+      value: status ? status.nasa.configured ? "NASA" : "Local" : "Checking",
+      ready: status?.nasa.configured ?? false,
+      icon: Radar,
+    },
+    {
+      label: "Reports",
+      value: status ? status.gpt.configured ? "AI" : "Curated" : "Checking",
+      ready: status?.gpt.configured ?? false,
+      icon: FileText,
+    },
+  ];
+
+  return (
+    <section
+      aria-label="Astrology provider readiness"
+      className="rounded-[8px] border px-2.5 py-2"
+      style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}
+    >
+      <div className="grid grid-cols-3 gap-1.5">
+        {items.map(({ label, value, ready, icon: Icon }) => (
+          <div key={label} className="min-w-0 rounded-[8px] border px-2 py-2" style={{ background: ASTRO_TILE, borderColor: ASTRO_BORDER }}>
+            <div className="flex items-center gap-1.5">
+              <Icon size={12} style={{ color: ready ? ASTRO_AQUA : ASTRO_FAINT }} />
+              <p className="truncate text-[8px] font-black uppercase tracking-[0.1em]" style={{ color: ASTRO_FAINT }}>
+                {label}
+              </p>
+              <span
+                aria-hidden="true"
+                className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ background: status ? ready ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT : ASTRO_FAINT }}
+              />
+            </div>
+            <p className="mt-1 truncate text-[11px] font-black" style={{ color: ready ? ASTRO_TEXT_STRONG : ASTRO_MUTED }}>
+              {value}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function AstroFoldout({
   eyebrow,
   title,
@@ -3355,7 +3407,7 @@ export function AstrologyView() {
   const [reportRequestId, setReportRequestId] = useState(0);
   const autoNatalKeyRef = useRef<string | null>(null);
   const autoTransitKeyRef = useRef<string | null>(null);
-  useAstroBackendStatus();
+  const backendStatus = useAstroBackendStatus();
   const { relationship, reports } = useAstrologyData(profile);
   const activeChart = chart ?? savedNatalRecord?.chart ?? SAMPLE_CHART;
   const activeRelationship = relationship ?? SAMPLE_RELATIONSHIP;
@@ -3548,6 +3600,7 @@ export function AstrologyView() {
           onTabChange={handleTabChange}
         />
         {hasSavedChart ? <TopTabs activeTab={activeTab} onChange={handleTabChange} /> : null}
+        <ProviderReadinessStrip status={backendStatus} />
         {activeTab !== "chart" ? statusRow : null}
         <motion.div
           key={activeTab}
