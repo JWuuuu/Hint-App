@@ -157,6 +157,7 @@ export function SettingsList({
 
   return (
     <div className="grid gap-5">
+      <ProfileStatusGrid profile={profile} account={account} onEditProfile={onEditProfile} />
       <SettingsSection title={t("me.settings.groupProfile")} rows={profileRows} />
 
       <section>
@@ -224,20 +225,11 @@ export function SettingsList({
       </section>
 
       <SettingsSection title={t("me.settings.groupApp")} rows={appRows} />
-      <SettingsSection title={t("me.settings.groupSafety")} rows={supportRows} />
-
-      <div
-        className="flex items-start gap-3 rounded-[18px] border px-4 py-3.5"
-        style={{
-          background: "color-mix(in srgb, var(--hint-surface-soft) 54%, transparent)",
-          borderColor: GLASS.border,
-        }}
-      >
-        <ShieldAlert size={15} color={GLASS.faint} className="mt-0.5 shrink-0" />
-        <p className="font-sans text-[11.5px] leading-relaxed" style={{ color: GLASS.faint }}>
-          {t("me.disclaimer")}
-        </p>
-      </div>
+      <ExpandableSettingsSection
+        title={t("me.settings.groupSafety")}
+        detail={t("me.settings.privacySupportDetail")}
+        rows={supportRows}
+      />
     </div>
   );
 }
@@ -293,6 +285,119 @@ function SettingsSection({ title, rows }: { title: string; rows: Row[] }) {
   );
 }
 
+function ProfileStatusGrid({
+  profile,
+  account,
+  onEditProfile,
+}: {
+  profile: Profile | null;
+  account: LocalAccount | null;
+  onEditProfile: () => void;
+}) {
+  const { t } = useLanguage();
+  const profileName = profile?.name ?? account?.name ?? t("account.guest");
+  const accountHref = account ? "/app/login?mode=login" : "/app/login?mode=signup";
+  const items = [
+    {
+      id: "identity",
+      icon: UserRound,
+      label: t("account.briefProfile"),
+      value: profile?.name || account?.name ? profileName : t("account.guest"),
+      tone: ACCENT.aqua,
+      onClick: onEditProfile,
+    },
+    {
+      id: "birth",
+      icon: CalendarDays,
+      label: t("account.birthProfile"),
+      value: profile?.birthDate ? t("me.saved") : t("account.birthMissing"),
+      tone: ACCENT.gold,
+      onClick: onEditProfile,
+    },
+    {
+      id: "account",
+      icon: account ? ShieldCheck : KeyRound,
+      label: t("me.account"),
+      value: account ? t("account.verified") : t("account.notSignedIn"),
+      tone: account ? ACCENT.aqua : GLASS.faint,
+      href: accountHref,
+    },
+  ];
+
+  return (
+    <section>
+      <div className="grid grid-cols-3 gap-2">
+        {items.map(({ id, icon: Icon, label, value, tone, href, onClick }) => {
+          const content = (
+            <>
+              <span className="grid size-8 place-items-center rounded-[10px]" style={{ background: "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)", border: `1px solid ${GLASS.border}` }}>
+                <Icon size={15} color={tone} />
+              </span>
+              <span className="mt-2 block truncate font-sans text-[9px] font-black uppercase tracking-[0.11em]" style={{ color: GLASS.faint }}>
+                {label}
+              </span>
+              <span className="mt-1 block truncate font-serif text-[13px] leading-tight" style={{ color: GLASS.text }}>
+                {value}
+              </span>
+            </>
+          );
+          const className = "min-w-0 rounded-[18px] border px-2.5 py-3 text-left transition active:scale-[0.98]";
+          const style = {
+            background: "var(--hint-liquid-panel)",
+            borderColor: "var(--hint-liquid-border)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.20)",
+          };
+          return href ? (
+            <Link key={id} href={href} className={className} style={style}>
+              {content}
+            </Link>
+          ) : (
+            <button key={id} type="button" onClick={onClick} className={className} style={style}>
+              {content}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ExpandableSettingsSection({
+  title,
+  detail,
+  rows,
+}: {
+  title: string;
+  detail: string;
+  rows: Row[];
+}) {
+  return (
+    <section>
+      <details className="overflow-hidden rounded-[22px] border" style={groupStyle}>
+        <summary className="flex cursor-pointer list-none items-center gap-3.5 px-4 py-3.5">
+          <IconTile icon={ShieldAlert} />
+          <span className="min-w-0 flex-1">
+            <span className="block font-serif text-[15px] leading-tight" style={{ color: GLASS.text }}>
+              {title}
+            </span>
+            <span className="mt-0.5 line-clamp-1 block font-sans text-[11.5px] leading-snug" style={{ color: GLASS.faint }}>
+              {detail}
+            </span>
+          </span>
+          <span className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-black" style={{ borderColor: GLASS.border, color: GLASS.faint }}>
+            {rows.length}
+          </span>
+        </summary>
+        <div style={{ borderTop: `1px solid ${GLASS.border}` }}>
+          {rows.map((row, index) => (
+            <SettingsRow key={row.id} row={row} isFirst={index === 0} />
+          ))}
+        </div>
+      </details>
+    </section>
+  );
+}
+
 function SettingsRow({ row, isFirst }: { row: Row; isFirst: boolean }) {
   const content = (
     <>
@@ -304,7 +409,7 @@ function SettingsRow({ row, isFirst }: { row: Row; isFirst: boolean }) {
         <span className="block font-serif text-[15px] leading-tight">{row.label}</span>
         {row.detail && (
           <span
-            className="mt-0.5 line-clamp-2 block font-sans text-[11.5px] leading-snug"
+            className="mt-0.5 line-clamp-1 block font-sans text-[11.5px] leading-snug"
             style={{ color: row.danger ? "rgba(224,168,168,0.72)" : GLASS.faint }}
           >
             {row.detail}
@@ -357,7 +462,7 @@ function ControlRow({
         <span className="block font-serif text-[15px] leading-tight" style={{ color: GLASS.text }}>
           {label}
         </span>
-        <span className="mt-0.5 line-clamp-2 block font-sans text-[11.5px] leading-snug" style={{ color: GLASS.faint }}>
+        <span className="mt-0.5 line-clamp-1 block font-sans text-[11.5px] leading-snug" style={{ color: GLASS.faint }}>
           {detail}
         </span>
       </span>
