@@ -81,6 +81,19 @@ const SAMPLE_PLACES: Array<{ label: string; draft: BirthProfileDraft }> = [
   },
 ];
 
+function FieldLabel({ label, required, detail }: { label: string; required?: boolean; detail?: string }) {
+  return (
+    <div className="mb-1.5 flex items-center justify-between gap-2">
+      <span className="text-[10px] font-black uppercase tracking-[0.13em]" style={{ color: ASTRO_MUTED }}>
+        {label}
+      </span>
+      <span className="shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.11em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: required ? ASTRO_GOLD_BRIGHT : ASTRO_MUTED }}>
+        {required ? "Required" : detail ?? "Optional"}
+      </span>
+    </div>
+  );
+}
+
 export function BirthProfileForm({
   profile,
   title = "Add birth profile",
@@ -99,6 +112,12 @@ export function BirthProfileForm({
   const [placeMode, setPlaceMode] = useState<"live" | "fallback" | null>(null);
   const [placeError, setPlaceError] = useState("");
   const complete = draft.name.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(draft.birthDate) && draft.birthPlace.trim().length > 0;
+  const completionSteps = [
+    { label: "Name", ready: draft.name.trim().length > 0 },
+    { label: "Date", ready: /^\d{4}-\d{2}-\d{2}$/.test(draft.birthDate) },
+    { label: "Place", ready: draft.birthPlace.trim().length > 0 },
+    { label: "Time", ready: draft.birthTime.trim().length > 0 },
+  ];
 
   useEffect(() => {
     setDraft(draftFrom(profile));
@@ -174,19 +193,37 @@ export function BirthProfileForm({
           </p>
         </div>
       </div>
+      <div className="mt-3 grid gap-1.5" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+        {completionSteps.map((step) => (
+          <div key={step.label} className="rounded-[8px] border px-2 py-2 text-center" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
+            <p className="text-[8px] font-black uppercase tracking-[0.11em]" style={{ color: ASTRO_MUTED }}>{step.label}</p>
+            <p className="mt-1 text-[10px] font-black" style={{ color: step.ready ? "var(--astro-aqua)" : ASTRO_GOLD_BRIGHT }}>{step.ready ? "Ready" : step.label === "Time" ? "Sharper" : "Needed"}</p>
+          </div>
+        ))}
+      </div>
       <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-        <input aria-label={t("birthProfile.name")} className="astro-themed-input h-10 rounded-[8px] border px-3 text-[13px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder={t("birthProfile.name")} />
-        <input aria-label={t("birthProfile.birthDate")} type="date" className="astro-themed-input h-10 rounded-[8px] border px-3 text-[13px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.birthDate} onChange={(event) => update("birthDate", event.target.value)} placeholder={t("birthProfile.birthDate")} />
-        <input
-          aria-label={t("birthProfile.birthTime")}
-          className="astro-themed-input h-10 rounded-[8px] border px-3 text-[13px] font-semibold outline-none"
-          style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}
-          value={draft.birthTime}
-          onChange={(event) => update("birthTime", event.target.value)}
-          placeholder={t("birthProfile.birthTimeOptional")}
-          type="time"
-        />
+        <label>
+          <FieldLabel label={t("birthProfile.name")} required />
+          <input aria-label={t("birthProfile.name")} className="astro-themed-input h-10 w-full rounded-[8px] border px-3 text-[13px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.name} onChange={(event) => update("name", event.target.value)} placeholder={t("birthProfile.name")} />
+        </label>
+        <label>
+          <FieldLabel label={t("birthProfile.birthDate")} required />
+          <input aria-label={t("birthProfile.birthDate")} type="date" className="astro-themed-input h-10 w-full rounded-[8px] border px-3 text-[13px] font-semibold outline-none" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }} value={draft.birthDate} onChange={(event) => update("birthDate", event.target.value)} placeholder={t("birthProfile.birthDate")} />
+        </label>
+        <label>
+          <FieldLabel label={t("birthProfile.birthTime")} detail="Recommended" />
+          <input
+            aria-label={t("birthProfile.birthTime")}
+            className="astro-themed-input h-10 w-full rounded-[8px] border px-3 text-[13px] font-semibold outline-none"
+            style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}
+            value={draft.birthTime}
+            onChange={(event) => update("birthTime", event.target.value)}
+            placeholder={t("birthProfile.birthTimeOptional")}
+            type="time"
+          />
+        </label>
         <div className="sm:col-span-2">
+          <FieldLabel label={t("birthProfile.birthPlace")} required />
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
             <label className="flex h-10 items-center gap-2 rounded-[8px] border px-3" style={{ background: ASTRO_INPUT, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}>
               <MapPin size={14} style={{ color: ASTRO_GOLD_BRIGHT }} />

@@ -59,5 +59,7 @@ Thumbs.db
 .local/
 .codex/
 artifacts/local-run/
+artifacts/checkpoints/
+artifacts/logs/
 artifacts/checkpoints/*.txt
 artifacts/checkpoints/*.zip

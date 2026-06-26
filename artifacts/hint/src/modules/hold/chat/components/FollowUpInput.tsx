@@ -57,7 +57,7 @@ export const FollowUpInput = forwardRef<FollowUpInputHandle, Props>(
     const canSend = text.trim().length > 0 && !isThinking && !disabled;
 
     return (
-      <div className="px-5 pt-3 pb-5 relative">
+      <div className="relative shrink-0 px-5 pb-[calc(var(--hint-safe-bottom)+1rem)] pt-3">
         <div
           aria-hidden
           className="absolute inset-x-0 -top-10 h-10 pointer-events-none"

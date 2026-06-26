@@ -1,1 +1,1 @@
-export { HoldExperience as TarotRoom } from "../hold/HoldExperience";
+export { TarotRoomFlow as TarotRoom } from "./components/TarotRoomFlow";

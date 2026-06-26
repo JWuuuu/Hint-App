@@ -32,6 +32,7 @@ import {
   HINT_PREFERENCES_UPDATED_EVENT,
 } from "./lib/preferences";
 import { useLanguage } from "./lib/i18n";
+import { triggerFeedback } from "./lib/feedback";
 
 /** Full-screen flows own their navigation, so the global bottom nav is hidden there. */
 const NAV_HIDDEN_ROUTES = ["/tarot", "/ask", "/login", "/app/tarot", "/app/ask", "/app/login"];
@@ -284,7 +285,8 @@ function AppTab({ item, active, isDark }: { item: AppTabItem; active: boolean; i
       href={item.href}
       aria-current={active ? "page" : undefined}
       data-active={active ? "true" : "false"}
-      className="hint-app-tab hint-tap-sparkle relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[23px] px-1 text-center transition hover:-translate-y-0.5 active:scale-[0.98]"
+      onPointerDown={() => triggerFeedback(featured ? "select" : "tap")}
+      className="hint-app-tab hint-pressable hint-tap-sparkle relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[23px] px-1 text-center transition hover:-translate-y-0.5 active:scale-[0.98]"
       style={{
         color: featured
           ? "var(--hint-special-action-text)"
