@@ -29,10 +29,10 @@ export function AskHint() {
   const starters = [t("ask.starter.1"), t("ask.starter.2"), t("ask.starter.3")];
 
   return (
-    <div className="h-full w-full flex flex-col items-center">
-      <div className="w-full max-w-[42rem] flex flex-col h-full">
+    <div className="flex h-full min-h-0 w-full flex-col items-center">
+      <div className="flex h-full min-h-0 w-full max-w-[42rem] flex-col">
         {/* Header */}
-        <header className="flex items-center justify-between px-5 pt-5 pb-3">
+        <header className="flex shrink-0 items-center justify-between px-5 pb-3 pt-[calc(var(--hint-safe-top)+1rem)]">
           <Link
             href="/app"
             className="inline-flex h-9 items-center gap-2 rounded-[8px] border px-3 font-sans text-[11px] uppercase tracking-[0.18em] transition-colors duration-700"
@@ -53,7 +53,7 @@ export function AskHint() {
         {/* Scrollable thread */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-5 py-6 space-y-8 scroll-smooth"
+          className="hint-app-scroll flex-1 space-y-8 px-5 py-6 scroll-smooth"
         >
           {empty ? (
             <motion.div

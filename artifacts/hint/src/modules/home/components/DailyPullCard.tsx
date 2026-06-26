@@ -10,6 +10,7 @@ import { CardSigil } from "../../hold/components/CardSigil";
 import { FollowUpInput, type FollowUpInputHandle } from "../../hold/chat/components/FollowUpInput";
 import { ChatMessage } from "../../hold/chat/components/ChatMessage";
 import { useAskHintChat } from "../../ask/useAskHintChat";
+import { getDefaultTarotCardBackForStyle, getTarotCardBackImage } from "../../tarot/logic/cardBacks";
 import { getDailyPull, getDailyPullById } from "../data/dailyPulls";
 import { CornerOrnaments, EtchedBorder, StarlitDivider } from "./CardChrome";
 import { useLanguage } from "../../../lib/i18n";
@@ -22,6 +23,8 @@ import {
 } from "../../../lib/dailyReceipts";
 import { trackEvent } from "../../../lib/analytics";
 import { saveLocalDailyReading } from "../../readings/localDailyReadings";
+
+const SKY_DECK_CARD_BACK_IMAGE = getTarotCardBackImage(getDefaultTarotCardBackForStyle("nocturne"));
 
 /**
  * Tonight's Pull — a single major arcana card sitting beside the Emotional
@@ -181,7 +184,7 @@ export function DailyPullCard({ delay = 0, autoRevealKey = 0 }: Props = {}) {
           type="button"
           onClick={revealCard}
           className="relative w-[88px] h-[138px] shrink-0 [perspective:1200px] cursor-pointer"
-          style={{ filter: "drop-shadow(0 16px 24px rgba(0,0,0,0.6))" }}
+          style={{ filter: `drop-shadow(0 0 18px ${GOLD.bloom})` }}
           aria-label={
             flipped
               ? `${t("dailyPull.revealedAriaPrefix")} ${pull.cardName}`
@@ -195,37 +198,19 @@ export function DailyPullCard({ delay = 0, autoRevealKey = 0 }: Props = {}) {
           >
             {/* Back */}
             <div className="absolute inset-0 [backface-visibility:hidden] rounded-[6px] overflow-hidden">
+              <img
+                src={SKY_DECK_CARD_BACK_IMAGE}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full object-cover"
+                draggable={false}
+              />
               <div
                 className="absolute inset-0"
                 style={{
-                  background:
-                    "linear-gradient(155deg, #121012 0%, #0a0709 50%, #0d0a0c 100%)",
+                  boxShadow: `inset 0 0 0 1px ${GOLD.edge}`,
                 }}
               />
-              <div className="absolute inset-0 rounded-[6px] border border-white/10" />
-              <div
-                className="absolute inset-[4px] rounded-[3px]"
-                style={{
-                  border: `0.5px solid ${GOLD.edge}`,
-                  boxShadow: `inset 0 0 14px ${GOLD.bloom}`,
-                }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <motion.svg
-                  width="78%"
-                  height="78%"
-                  viewBox="-22 -34 44 68"
-                  fill="none"
-                  stroke={GOLD.stroke}
-                  strokeWidth="0.5"
-                  animate={!flipped ? { opacity: [0.55, 0.95, 0.55] } : { opacity: 0.5 }}
-                  transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <path d="M 0 -20 L 13 0 L 0 20 L -13 0 Z" />
-                  <path d="M 0 -11 L 7 0 L 0 11 L -7 0 Z" />
-                  <circle cx="0" cy="0" r="1.4" fill={GOLD.stroke} />
-                </motion.svg>
-              </div>
             </div>
 
             {/* Front */}

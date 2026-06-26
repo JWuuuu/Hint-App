@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { motion } from "framer-motion";
-import { SendHorizontal } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { History, Home, SendHorizontal } from "lucide-react";
+import { useLocation } from "wouter";
 import { useSendTarotChatMessage, type TarotCardDraw } from "@workspace/api-client-react";
 import { apiUrl } from "../../../lib/api";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
@@ -213,11 +214,15 @@ function newMessageId() {
 
 function trimReading(value: string, maxSentences = 2, maxChars = 280) {
   const clean = value.replace(/\s+/g, " ").trim();
-  if (clean.length <= maxChars) return clean;
+  if (!clean) return clean;
   const sentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((sentence) => sentence.trim()) ?? [clean];
   const clipped = sentences.slice(0, maxSentences).join(" ");
   if (clipped.length <= maxChars) return clipped;
   return `${clipped.slice(0, maxChars - 1).trim()}...`;
+}
+
+function compactSentence(value: string, maxChars = 150) {
+  return trimReading(value, 1, maxChars);
 }
 
 function getCardSuit(cardId: string) {
@@ -312,112 +317,82 @@ function getSignalLanguage(signalType: StructuredSignalType) {
     case "opening":
       return {
         label: "a very clear positive signal",
-        direction: "the cards are not asking you to step back; they are saying this can move forward if you act with steadiness instead of waiting for perfect certainty",
+        direction: "move forward, but do it steadily instead of waiting for perfect certainty",
       };
     case "soft_yes":
     case "clear_signal":
       return {
         label: "a positive signal with a clear direction",
-        direction: "the cards lean toward movement, but they want that movement to be clean, paced, and based on what is already visible",
+        direction: "there is movement here, but it needs one clean and paced next step",
       };
     case "blocked":
       return {
         label: "a heavy blocked signal",
-        direction: "the cards are not supporting a rushed push right now; they are asking you to stop feeding the part of this that is draining your judgment",
+        direction: "do not push this right now; protect your energy and stop feeding the loop",
       };
     case "soft_no":
       return {
         label: "a warning signal more than a green light",
-        direction: "the cards are not saying everything is closed, but they are telling you not to trust the surface version of this too quickly",
+        direction: "slow down and test what is real before trusting the surface signal",
       };
     case "mixed_signal":
     default:
       return {
         label: "a mixed signal",
-        direction: "the cards do not fully reject this, but they also do not give an easy yes; you can keep looking, but not blindly invest more before the pattern becomes clearer",
+        direction: "stay curious, but do not invest more until the pattern gets clearer",
       };
   }
 }
 
-function questionLead(question?: string) {
-  const clean = question?.trim();
-  return clean ? `For "${clean}", ` : "For this question, ";
+function questionLead() {
+  return "For this question, ";
 }
 
-function buildOverallReading(cards: RitualCard[], question?: string): { signalType: StructuredSignalType; text: string } {
+function buildOverallReading(cards: RitualCard[]): { signalType: StructuredSignalType; text: string } {
   const signalType = getReadingSignal(cards);
   const signal = getSignalLanguage(signalType);
-  const cardCountLabel = cards.length === 1 ? "this card" : `these ${cards.length} cards`;
   return {
     signalType,
-    text: `${questionLead(question)}${cardCountLabel} give ${signal.label}. ${signal.direction}.`,
+    text: `${questionLead()}the answer is: ${signal.direction}.`,
   };
-}
-
-function getPositionFrame(position: string, index: number, spread: SpreadChoice) {
-  const normalized = position.toLowerCase();
-  if (/past|before|root|break|cause/.test(normalized)) {
-    return "This shows what has been shaping the situation before this moment";
-  }
-  if (/present|now|outer|you|trunk|appears|signal/.test(normalized)) {
-    return "This shows the energy that is active right now";
-  }
-  if (/future|next|direction|trend|gain|crown|fruit|result/.test(normalized)) {
-    return "This points to where the pattern is likely to move if nothing important changes";
-  }
-  if (/block|barrier|challenge|obstacle/.test(normalized)) {
-    return "This names what is slowing the situation down";
-  }
-  if (/advice|approach|action/.test(normalized)) {
-    return "This is the card's direct guidance for how to move";
-  }
-  if (/them|feeling|other|between|connection|true view/.test(normalized)) {
-    return "This describes the relational thread showing up in this position";
-  }
-  if (spread.cardCount === 3 && index === 0) return "This shows the influence that brought you here";
-  if (spread.cardCount === 3 && index === 1) return "This shows the real pressure or energy in the present";
-  if (spread.cardCount === 3 && index === 2) return "This points to the next movement if the pattern continues";
-  return "This shows the specific part of the reading that wants attention here";
 }
 
 function buildCardMeaning(card: RitualCard, index: number, spread: SpreadChoice): StructuredCardMeaning {
   const position = getSpreadPositionLabel(spread, index);
-  const frame = getPositionFrame(position, index, spread);
   const orientation = card.orientation === "reversed" ? "reversed" : "upright";
   return {
     position,
     card_name: card.name,
     orientation,
-    meaning: `${frame}. ${getReadableCardMeaning(card).sentence}`,
+    meaning: compactSentence(getReadableCardMeaning(card).sentence, 145),
   };
 }
 
-function buildFinalGuidance(signalType: StructuredSignalType, question?: string, story?: string) {
-  const storyLine = story?.trim() ? "Because the story already has emotional weight, " : "";
+function buildFinalGuidance(signalType: StructuredSignalType) {
   switch (signalType) {
     case "opening":
     case "soft_yes":
     case "clear_signal":
-      return `${storyLine}your next move is to lean forward, but not all at once. Make one clear action that matches what you already know, and do not keep waiting for a perfect sign before you let the situation move.`;
+      return "Take one honest step forward and let the response show you what is real.";
     case "blocked":
-      return `${storyLine}your next move is to stop giving this situation unlimited access to your energy. Pull the focus back to what is real, what is repeated, and what you can act on without chasing reassurance.`;
+      return "Pause, protect your energy, and stop chasing the part that keeps looping.";
     case "soft_no":
-      return `${storyLine}your next move is to slow down and test the reality of what you are seeing. Do not build the whole choice on hope or on someone else's small reaction; ask what the pattern has already proven.`;
+      return "Slow down and check the pattern before you make a bigger move.";
     case "mixed_signal":
     default:
-      return `${storyLine}your next move is not to disappear and not to rush. Stay close enough to see what happens next, but put a clearer boundary around how much emotion, time, or trust you give before the signal becomes cleaner.`;
+      return "Stay close enough to notice the next signal, but do not overinvest yet.";
   }
 }
 
 function buildFollowUpInvitation(question?: string, focusLabel?: string) {
   const lower = `${question ?? ""} ${focusLabel ?? ""}`.toLowerCase();
   if (/love|relationship|dating|connection|reconcile|breakup|their|him|her|them/.test(lower)) {
-    return "If you want, tell me what has been happening between you two lately, and I can help you see more clearly where this connection is actually getting stuck.";
+    return "Ask about any card if you want the deeper layer of this connection.";
   }
   if (/work|job|career|exam|school|application|offer/.test(lower)) {
-    return "If you want, tell me what choice or pressure is in front of you right now, and I can help you read which next step these cards are pointing toward.";
+    return "Ask about any card if you want the deeper layer of this decision.";
   }
-  return "If you want, tell me more about the part that feels stuck right now, and I can help you read the next step through these cards more closely.";
+  return "Ask about any card if you want the deeper layer.";
 }
 
 function buildLocalStructuredReading(
@@ -427,13 +402,26 @@ function buildLocalStructuredReading(
   story?: string,
   focusLabel?: string,
 ): StructuredTarotReading {
-  const overall = buildOverallReading(cards, question);
+  const overall = buildOverallReading(cards);
   return {
     signal_type: overall.signalType,
     overall_summary: overall.text,
     cards: cards.map((card, index) => buildCardMeaning(card, index, spread)),
-    final_action_advice: buildFinalGuidance(overall.signalType, question, story),
+    final_action_advice: buildFinalGuidance(overall.signalType),
     follow_up_invitation: buildFollowUpInvitation(question, focusLabel),
+  };
+}
+
+function compactStructuredReading(reading: StructuredTarotReading): StructuredTarotReading {
+  return {
+    ...reading,
+    overall_summary: trimReading(reading.overall_summary, 2, 190),
+    cards: reading.cards.map((card) => ({
+      ...card,
+      meaning: compactSentence(card.meaning, 145),
+    })),
+    final_action_advice: compactSentence(reading.final_action_advice, 145),
+    follow_up_invitation: compactSentence(reading.follow_up_invitation, 118),
   };
 }
 
@@ -445,11 +433,11 @@ function buildFollowUpReply(question: string, cards: RitualCard[]) {
 
 function structuredReadingToText(reading: StructuredTarotReading) {
   return [
-    `Overall Reading: ${reading.overall_summary}`,
-    "Card Breakdown:",
+    `Answer: ${reading.overall_summary}`,
+    "Cards:",
     ...reading.cards.map((card) => `${card.position} - ${card.card_name} (${card.orientation}): ${card.meaning}`),
-    `Final Guidance: ${reading.final_action_advice}`,
-    `Keep Reading: ${reading.follow_up_invitation}`,
+    `Next Step: ${reading.final_action_advice}`,
+    `Ask More: ${reading.follow_up_invitation}`,
   ].join("\n\n");
 }
 
@@ -498,13 +486,16 @@ export function TarotHintReadingChat({
   focusLabel,
   archiveOnOpen = true,
 }: TarotHintReadingChatProps) {
+  const [, navigate] = useLocation();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [structuredReading, setStructuredReading] = useState<StructuredTarotReading | null>(null);
+  const [saveNotice, setSaveNotice] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const savedReadingKeyRef = useRef<string | null>(null);
+  const leaveTimerRef = useRef<number | null>(null);
   const chatMutation = useSendTarotChatMessage({
     mutation: {
       retry: false,
@@ -518,7 +509,7 @@ export function TarotHintReadingChat({
     () => buildLocalStructuredReading(selectedCards, spread, question, story, focusLabel),
     [focusLabel, question, selectedCardKey, selectedCards, spread, story],
   );
-  const reading = structuredReading ?? localReading;
+  const reading = useMemo(() => compactStructuredReading(structuredReading ?? localReading), [localReading, structuredReading]);
   const shortAnswer = reading.overall_summary;
   const cardMeanings = reading.cards.map((card) => `${card.position}: ${card.meaning}`);
   const questionMeaning = reading.final_action_advice;
@@ -529,6 +520,14 @@ export function TarotHintReadingChat({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [selectedCards]);
+
+  useEffect(() => {
+    return () => {
+      if (leaveTimerRef.current !== null) {
+        window.clearTimeout(leaveTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (selectedCards.length === 0) return undefined;
@@ -568,7 +567,7 @@ export function TarotHintReadingChat({
       .then((response) => response.ok ? response.json() as Promise<StructuredTarotReading> : null)
       .then((nextReading) => {
         if (nextReading?.overall_summary && Array.isArray(nextReading.cards)) {
-          setStructuredReading(nextReading);
+          setStructuredReading(compactStructuredReading(nextReading));
         }
       })
       .catch(() => {
@@ -675,10 +674,42 @@ export function TarotHintReadingChat({
     }
   }
 
+  function leaveTo(path: string) {
+    setSaveNotice(true);
+    if (leaveTimerRef.current !== null) {
+      window.clearTimeout(leaveTimerRef.current);
+    }
+    leaveTimerRef.current = window.setTimeout(() => {
+      navigate(path);
+    }, 780);
+  }
+
   return (
-    <section className="relative flex h-full w-full flex-col overflow-hidden bg-[#010207] text-[#f7ead0]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(228,193,116,0.10),transparent_24%),linear-gradient(180deg,#050816,#010207_58%,#03040c)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.8)_0_1px,transparent_1px),radial-gradient(circle_at_78%_16%,rgba(239,205,139,0.78)_0_1px,transparent_1px)] [background-size:132px_148px]" />
+    <section className="relative flex h-full w-full flex-col overflow-hidden bg-[#140d1c] text-[#f7ead0]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(228,193,116,0.16),transparent_24%),radial-gradient(circle_at_18%_72%,rgba(238,177,213,0.12),transparent_32%),linear-gradient(180deg,#211629,#140d1c_58%,#0d0914)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-28 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,244,226,0.72)_0_1px,transparent_1px),radial-gradient(circle_at_78%_16%,rgba(239,205,139,0.72)_0_1px,transparent_1px),radial-gradient(circle_at_66%_76%,rgba(234,178,217,0.44)_0_1px,transparent_1px)] [background-size:132px_148px]" />
+
+      <AnimatePresence>
+        {saveNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute right-4 top-4 z-50 flex max-w-[calc(100%-2rem)] items-center gap-3 rounded-full border border-[#e4c174]/20 bg-[#1a1023]/92 px-4 py-3 shadow-[0_16px_42px_rgba(0,0,0,0.35)] backdrop-blur-md"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e4c174]/14 text-[#ffe2a2]">
+              <History size={16} />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-sans text-[12px] font-semibold text-[#f7ead0]">Saved to History</span>
+              <span className="block truncate font-sans text-[11px] text-[#d8c7a6]/66">
+                This chat will still be there when you come back.
+              </span>
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <header className="relative z-10 border-b border-[#e4c174]/10 px-5 py-3 pl-16 sm:px-7 sm:py-3.5 sm:pl-20">
         <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-[#e4c174]/70">Tarot room</p>
@@ -686,7 +717,7 @@ export function TarotHintReadingChat({
           Read my Hint
         </h1>
         <p className="mt-1.5 max-w-2xl font-sans text-[12px] leading-relaxed text-[#d8c7a6]/74 sm:text-[13px]">
-          Summary first, then the cards, then the next honest move.
+          Quick answer, cards, then chat if you want more.
         </p>
         {(question || focusLabel) && (
           <p className="mt-2 max-w-2xl truncate font-sans text-xs leading-relaxed text-[#d8c7a6]/58">
@@ -694,6 +725,24 @@ export function TarotHintReadingChat({
             {question}
           </p>
         )}
+        <div className="absolute right-4 top-3 flex items-center gap-2 sm:right-6">
+          <button
+            type="button"
+            onClick={() => leaveTo("/app/readings")}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e4c174]/16 bg-white/[0.04] text-[#d8c7a6]/82 transition-colors hover:border-[#e4c174]/34 hover:text-[#ffe2a2]"
+            aria-label="Open reading history"
+          >
+            <History size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => leaveTo("/app")}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e4c174]/16 bg-white/[0.04] text-[#d8c7a6]/82 transition-colors hover:border-[#e4c174]/34 hover:text-[#ffe2a2]"
+            aria-label="Return home"
+          >
+            <Home size={16} />
+          </button>
+        </div>
       </header>
 
       <div ref={scrollRef} className="relative z-10 flex-1 overflow-y-auto px-4 py-4 sm:px-7">
@@ -702,7 +751,7 @@ export function TarotHintReadingChat({
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.36, ease: "easeOut" }}
-            className="w-full rounded-[14px] border border-[#e4c174]/14 bg-black/24 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.22)]"
+            className="w-full rounded-[14px] border border-[#e4c174]/14 bg-[#201426]/56 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.20)] backdrop-blur-sm"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#e4c174]/72">
@@ -745,19 +794,19 @@ export function TarotHintReadingChat({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.34, ease: "easeOut" }}
-              className="rounded-[14px] border border-[#e4c174]/14 bg-white/[0.04] p-3.5 shadow-[0_14px_30px_rgba(0,0,0,0.20)] sm:p-4"
+              className="rounded-[14px] border border-[#e4c174]/14 bg-[#201426]/48 p-3.5 shadow-[0_14px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm sm:p-4"
             >
               <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#e4c174]/76">
                 Reading
               </p>
               <div className="mt-3 space-y-3">
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Overall Reading</h3>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Answer</h3>
                   <p className="mt-1.5 font-sans text-[15px] leading-6 text-[#f7ead0]/92 sm:text-[16px]">{reading.overall_summary}</p>
                 </section>
                 <section>
                   <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">
-                    Card Breakdown
+                    Cards
                   </h3>
                   <div className="mt-2 grid gap-2 md:grid-cols-2">
                     {reading.cards.map((card, index) => (
@@ -769,18 +818,18 @@ export function TarotHintReadingChat({
                           {card.card_name}{card.orientation === "reversed" ? " reversed" : ""}
                         </p>
                         <p className="mt-1.5 font-sans text-[12.5px] leading-5 text-[#f7ead0]/86 sm:text-[13px]">
-                          {trimReading(card.meaning, 3, 360)}
+                          {compactSentence(card.meaning, 145)}
                         </p>
                       </div>
                     ))}
                   </div>
                 </section>
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Final Guidance</h3>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Next step</h3>
                   <p className="mt-1.5 font-sans text-[13.5px] leading-6 text-[#f7ead0]/88 sm:text-sm">{reading.final_action_advice}</p>
                 </section>
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Keep Reading</h3>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Want more?</h3>
                   <p className="mt-1.5 font-serif text-[15px] italic leading-6 text-[#f7ead0]/88 sm:text-[16px]">{reading.follow_up_invitation}</p>
                 </section>
               </div>
@@ -809,8 +858,31 @@ export function TarotHintReadingChat({
         </div>
       </div>
 
-      <div className="relative z-20 border-t border-[#e4c174]/10 bg-[#010207]/88 px-5 pb-4 pt-2.5 backdrop-blur-md sm:px-7">
+      <div className="relative z-20 border-t border-[#e4c174]/10 bg-[#140d1c]/90 px-5 pb-4 pt-2.5 backdrop-blur-md sm:px-7">
         <div className="mx-auto max-w-4xl">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="font-sans text-[11px] text-[#d8c7a6]/54">
+              Saved in History. You can leave and come back later.
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => leaveTo("/app/readings")}
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#e4c174]/18 bg-white/[0.035] px-3 font-sans text-[11px] font-semibold text-[#d8c7a6]/78 transition-colors hover:border-[#e4c174]/36 hover:text-[#ffe2a2]"
+              >
+                <History size={13} />
+                History
+              </button>
+              <button
+                type="button"
+                onClick={() => leaveTo("/app")}
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#e4c174]/18 bg-white/[0.035] px-3 font-sans text-[11px] font-semibold text-[#d8c7a6]/78 transition-colors hover:border-[#e4c174]/36 hover:text-[#ffe2a2]"
+              >
+                <Home size={13} />
+                Leave room
+              </button>
+            </div>
+          </div>
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
             {FOLLOW_UPS.map((question) => (
               <button
@@ -829,7 +901,7 @@ export function TarotHintReadingChat({
               {error}
             </p>
           )}
-          <div className="flex items-end gap-3 rounded-[14px] border border-[#e4c174]/16 bg-black/38 px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.28)]">
+          <div className="flex items-end gap-3 rounded-[14px] border border-[#e4c174]/16 bg-[#0f0a16]/54 px-4 py-3 shadow-[0_12px_32px_rgba(0,0,0,0.24)]">
             <textarea
               ref={inputRef}
               rows={1}
