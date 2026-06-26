@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { Activity, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleDot, Compass, Copy, ExternalLink, FileText, HeartHandshake, Link2, LockKeyhole, MapPin, Orbit, Radar, Search, Share2, ShieldCheck, UserRound } from "lucide-react";
+import { Activity, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleDot, Compass, Copy, ExternalLink, FileText, HeartHandshake, Link2, LockKeyhole, MapPin, Orbit, Radar, RefreshCw, Search, Share2, ShieldCheck, UserRound } from "lucide-react";
 import { BirthProfileCard } from "../../components/astro/BirthProfileCard";
 import { BirthProfileForm } from "../../components/astro/BirthProfileForm";
 import { RealSkyTodayCard } from "../../components/astro/RealSkyTodayCard";
 import { getAstroInterpretation, getGeoDetails, getNatalChart, getSynastry, getTimezoneDetails, getTransits, type AstroGeoPlace, type AstroNatalResponse } from "../../lib/astro/astroClient";
 import { MOCK_ASTROLOGY_REPORTS } from "../../lib/astro/mockAstrologyReports";
-import { ZODIAC_SIGNS } from "../../lib/astro/mockAstroData";
+import { buildMockNatalChart, ZODIAC_SIGNS } from "../../lib/astro/mockAstroData";
 import { buildMockRelationshipAstrology } from "../../lib/astro/mockSynastry";
 import { normalizeClientNatal } from "../../lib/astro/normalizeClientAstro";
 import { SAMPLE_CHART, SAMPLE_RELATIONSHIP, SAMPLE_TRANSITS } from "../../lib/astro/sampleAstroData";
@@ -36,6 +36,14 @@ type CompatibilityInviteResponse = {
 };
 
 type ServiceMode = "Connected" | "Fallback";
+
+type BackendStatusState = {
+  status: AstroProviderStatus;
+  online: boolean;
+  loading: boolean;
+  checkedAt: string | null;
+  error?: string;
+};
 
 type SavedNatalChartRecord = {
   accountKey: string;
@@ -78,6 +86,19 @@ const ASTRO_WHEEL_GLOW_EDGE = "var(--astro-wheel-glow-edge)";
 const ASTRO_WHEEL_LINE = "var(--astro-wheel-line)";
 const ASTRO_WHEEL_AXIS = "var(--astro-wheel-axis)";
 const SAVED_NATAL_CHART_PREFIX = "hint.astrology.savedNatalChart.v1";
+
+const FALLBACK_PROVIDER_STATUS: AstroProviderStatus = {
+  astrology: {
+    configured: false,
+    provider: "astrologyapi",
+  },
+  nasa: {
+    configured: false,
+  },
+  gpt: {
+    configured: false,
+  },
+};
 
 const SIGN_LABELS: Record<ZodiacSign, string> = {
   aries: "Aries",
@@ -135,6 +156,35 @@ const BODY_MARKS: Record<PlanetBody, string> = {
   uranus: "Ur",
   neptune: "Ne",
   pluto: "Pl",
+};
+
+const ZODIAC_GLYPHS: Record<ZodiacSign, string> = {
+  aries: "♈",
+  taurus: "♉",
+  gemini: "♊",
+  cancer: "♋",
+  leo: "♌",
+  virgo: "♍",
+  libra: "♎",
+  scorpio: "♏",
+  sagittarius: "♐",
+  capricorn: "♑",
+  aquarius: "♒",
+  pisces: "♓",
+};
+
+const BODY_GLYPHS: Record<PlanetBody, string> = {
+  sun: "☉",
+  moon: "☽",
+  rising: "AC",
+  mercury: "☿",
+  venus: "♀",
+  mars: "♂",
+  jupiter: "♃",
+  saturn: "♄",
+  uranus: "♅",
+  neptune: "♆",
+  pluto: "♇",
 };
 
 const SIGN_NAMES_BY_LANGUAGE: Record<HintLanguage, Record<ZodiacSign, string>> = {
@@ -1179,6 +1229,23 @@ function liveProfileHint(profile: BirthProfile | null) {
   return "Ready for one controlled AstrologyAPI natal test.";
 }
 
+function isLiveNatal(response: AstroNatalResponse | null): response is AstroNatalResponse & { source: "astrologyapi"; mode: "live" } {
+  return response?.source === "astrologyapi" && response.mode === "live";
+}
+
+function chartSourceLabel(response: AstroNatalResponse | null, chart?: NatalChart | null) {
+  if (isLiveNatal(response) || chart?.source === "astrologyapi" || chart?.source === "api") return "AstrologyAPI live";
+  if (response?.mode === "partial" || chart?.validation?.partial) return "Partial local chart";
+  if (response || chart?.source === "fallback") return "Local fallback chart";
+  return "Profile preview";
+}
+
+function transitSourceLabel(transits: AstroTransitsResponse | null) {
+  if (transits?.source === "astrologyapi" && transits.mode === "live") return "AstrologyAPI live";
+  if (transits?.source === "fallback") return "Local fallback";
+  return "Sample fallback";
+}
+
 function useAstrologyData(profile: BirthProfile | null) {
   const [relationship, setRelationship] = useState<RelationshipAstrology | null>(null);
   const [reports, setReports] = useState<AstrologyReport[]>([]);
@@ -1192,24 +1259,48 @@ function useAstrologyData(profile: BirthProfile | null) {
 }
 
 function useAstroBackendStatus() {
-  const [status, setStatus] = useState<AstroProviderStatus | null>(null);
+  const [requestId, setRequestId] = useState(0);
+  const [state, setState] = useState<BackendStatusState>({
+    status: FALLBACK_PROVIDER_STATUS,
+    online: false,
+    loading: true,
+    checkedAt: null,
+  });
 
   useEffect(() => {
     let alive = true;
-    fetch(apiUrl("/api/astro/status"))
-      .then((response) => (response.ok ? response.json() : null))
+    setState((current) => ({ ...current, loading: true, error: undefined }));
+    fetch(apiUrl("/api/astro/status"), { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error(`ASTRO_STATUS_${response.status}`);
+        return response.json() as Promise<AstroProviderStatus>;
+      })
       .then((next) => {
-        if (alive) setStatus(next);
+        if (!alive) return;
+        setState({
+          status: next ?? FALLBACK_PROVIDER_STATUS,
+          online: true,
+          loading: false,
+          checkedAt: new Date().toISOString(),
+        });
       })
       .catch(() => {
-        if (alive) setStatus(null);
+        if (!alive) return;
+        setState({
+          status: FALLBACK_PROVIDER_STATUS,
+          online: false,
+          loading: false,
+          checkedAt: new Date().toISOString(),
+          error: "Backend offline",
+        });
       });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [requestId]);
 
-  return status;
+  const refresh = useCallback(() => setRequestId((current) => current + 1), []);
+  return { ...state, refresh };
 }
 
 function cleanGptLines(text?: string) {
@@ -1297,7 +1388,7 @@ function TopTabs({ activeTab, onChange }: { activeTab: AstrologyTab; onChange: (
 
   return (
     <nav
-      className="-mx-1 flex gap-1 overflow-x-auto py-1 font-sans text-[10px] font-black [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="grid grid-cols-3 gap-1 py-1 font-sans text-[10px] font-black min-[560px]:grid-cols-6"
       style={{ color: ASTRO_TEXT }}
       aria-label="Astrology sections"
     >
@@ -1311,9 +1402,9 @@ function TopTabs({ activeTab, onChange }: { activeTab: AstrologyTab; onChange: (
             onClick={() => onChange(item.tab)}
             aria-label={item.full}
             aria-pressed={active}
-            className="relative inline-flex h-9 min-w-[64px] shrink-0 items-center justify-center gap-1.5 rounded-[8px] border px-2.5 transition-[opacity,transform] duration-200 active:scale-[0.98]"
+            className="relative inline-flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-[8px] border px-2 transition-[opacity,transform] duration-200 active:scale-[0.98]"
             style={{
-              opacity: active ? 1 : 0.62,
+              opacity: active ? 1 : 0.78,
               color: active ? ASTRO_BUTTON_TEXT : ASTRO_MUTED,
               background: active ? ASTRO_BUTTON : ASTRO_INNER,
               borderColor: active ? ASTRO_TILE_BORDER : ASTRO_BORDER,
@@ -1329,11 +1420,11 @@ function TopTabs({ activeTab, onChange }: { activeTab: AstrologyTab; onChange: (
 }
 
 function DataStatusRow({ hasProfile, hasSavedChart, natalResponse }: { hasProfile: boolean; hasSavedChart: boolean; natalResponse: AstroNatalResponse | null }) {
-  const live = natalResponse?.source === "astrologyapi" && natalResponse.mode === "live";
+  const live = isLiveNatal(natalResponse);
   const rows = live
     ? ["Saved chart", "Live sky"]
     : hasSavedChart
-      ? ["Saved chart", "Local cache"]
+      ? ["Local chart", "Fallback sky"]
       : [hasProfile ? "Birth profile saved" : "Birth profile needed", "Chart not saved"];
   return (
     <section className="rounded-[8px] border px-3 py-2" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
@@ -1349,34 +1440,60 @@ function DataStatusRow({ hasProfile, hasSavedChart, natalResponse }: { hasProfil
   );
 }
 
-function ProviderReadinessStrip({ status }: { status: AstroProviderStatus | null }) {
+function ProviderReadinessStrip({ state }: { state: BackendStatusState & { refresh: () => void } }) {
+  const { status, online, loading, checkedAt, refresh } = state;
   const items = [
     {
       label: "Chart",
-      value: status ? status.astrology.configured ? "Live" : "Local" : "Checking",
-      ready: status?.astrology.configured ?? false,
+      value: loading && !checkedAt ? "Checking" : status.astrology.configured ? "Live" : "Local",
+      ready: status.astrology.configured,
       icon: Orbit,
     },
     {
       label: "Sky",
-      value: status ? status.nasa.configured ? "NASA" : "Local" : "Checking",
-      ready: status?.nasa.configured ?? false,
+      value: loading && !checkedAt ? "Checking" : status.nasa.configured ? "NASA" : "Local",
+      ready: status.nasa.configured,
       icon: Radar,
     },
     {
       label: "Reports",
-      value: status ? status.gpt.configured ? "AI" : "Curated" : "Checking",
-      ready: status?.gpt.configured ?? false,
+      value: loading && !checkedAt ? "Checking" : status.gpt.configured ? "AI" : "Curated",
+      ready: status.gpt.configured,
       icon: FileText,
     },
   ];
+  const providerLine = online
+    ? status.astrology.configured
+      ? "AstrologyAPI connected"
+      : "Backend connected - local astrology fallback"
+    : "Backend offline - local preview only";
 
   return (
     <section
       aria-label="Astrology provider readiness"
-      className="rounded-[8px] border px-2.5 py-2"
+      className="rounded-[8px] border p-2.5"
       style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}
     >
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-[10px] font-black uppercase tracking-[0.13em]" style={{ color: online ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }}>
+            {loading && !checkedAt ? "Checking astrology API" : providerLine}
+          </p>
+          <p className="mt-0.5 text-[10px] font-semibold" style={{ color: ASTRO_FAINT }}>
+            {checkedAt ? `Checked ${new Date(checkedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Waiting for backend response"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={refresh}
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[8px] border px-2.5 text-[10px] font-black uppercase tracking-[0.1em] disabled:opacity-50"
+          disabled={loading}
+          style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+        >
+          <RefreshCw size={12} />
+          {loading ? "Checking" : "Retry"}
+        </button>
+      </div>
       <div className="grid grid-cols-3 gap-1.5">
         {items.map(({ label, value, ready, icon: Icon }) => (
           <div key={label} className="min-w-0 rounded-[8px] border px-2 py-2" style={{ background: ASTRO_TILE, borderColor: ASTRO_BORDER }}>
@@ -1388,7 +1505,7 @@ function ProviderReadinessStrip({ status }: { status: AstroProviderStatus | null
               <span
                 aria-hidden="true"
                 className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: status ? ready ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT : ASTRO_FAINT }}
+                style={{ background: ready ? ASTRO_AQUA : online ? ASTRO_GOLD_BRIGHT : ASTRO_FAINT }}
               />
             </div>
             <p className="mt-1 truncate text-[11px] font-black" style={{ color: ready ? ASTRO_TEXT_STRONG : ASTRO_MUTED }}>
@@ -1488,12 +1605,12 @@ function AstrologyAppSummary({
     })),
     {
       label: "Source",
-      value: chart.source === "astrologyapi" || chart.source === "api" ? "Live" : "Saved",
+      value: chart.source === "astrologyapi" || chart.source === "api" ? "Live" : "Local",
       ready: true,
       tab: "chart" as AstrologyTab,
     },
   ];
-  const statusLabel = hasSavedChart ? "Personal chart" : profile ? "Birth details ready" : "Birth details needed";
+  const statusLabel = hasSavedChart ? (chart.source === "astrologyapi" || chart.source === "api" ? "Personal chart" : "Local chart") : profile ? "Birth details ready" : "Birth details needed";
   const primaryTarget: AstrologyTab = !profile ? "birth" : !hasSavedChart ? "chart" : "birth";
   const primaryLabel = !account ? "Log in to save chart" : !profile ? "Add birth details" : !hasSavedChart ? "Create chart" : "Edit birth data";
   const showSetupCta = !account || !profile || !hasSavedChart || activeTab === "birth";
@@ -1566,7 +1683,7 @@ function AstrologyAppSummary({
           {helper}
         </p>
 
-        <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+        <div className="grid grid-cols-2 gap-1.5 min-[560px]:grid-cols-4">
           {factRows.map((item) => (
             <button
               key={item.label}
@@ -1740,7 +1857,7 @@ function AstrologyAccessGate({
             </Link>
           ) : profile ? (
             <button type="button" onClick={onPersonalize} disabled={!canPersonalize || personalizing} className="h-12 rounded-[8px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)] disabled:opacity-45" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
-              {personalizing ? "Saving chart..." : "Calculate and save chart"}
+              {personalizing ? "Saving chart..." : "Calculate chart"}
             </button>
           ) : (
             <button type="button" onClick={onAddProfile} className="h-12 rounded-[8px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)]" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
@@ -1748,7 +1865,7 @@ function AstrologyAccessGate({
             </button>
           )}
           <span className="text-center text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>
-            {needsLogin ? "Birth data is saved only after login" : hasSavedChart ? "Full astrology studio is active" : "No fake chart is saved until live data succeeds"}
+            {needsLogin ? "Birth data is saved only after login" : hasSavedChart ? "Astrology studio is active" : "Local chart works now; live upgrades when configured"}
           </span>
         </div>
       </div>
@@ -1781,9 +1898,22 @@ function AstroWheel({ chart, language, className = "aspect-square w-full max-w-[
     trine: "#7ea6ff",
     opposition: "#c7a7ff",
   };
+  const degreeTicks = Array.from({ length: 72 }, (_, index) => {
+    const degree = index * 5;
+    const angle = ((degree - 90) * Math.PI) / 180;
+    const major = index % 6 === 0;
+    return {
+      degree,
+      major,
+      x1: Math.cos(angle) * (major ? 116 : 121),
+      y1: Math.sin(angle) * (major ? 116 : 121),
+      x2: Math.cos(angle) * 126,
+      y2: Math.sin(angle) * 126,
+    };
+  });
 
   return (
-    <svg viewBox="-132 -132 264 264" className={className} role="img" aria-label="Detailed natal chart wheel">
+    <svg data-testid="astro-wheel" viewBox="-132 -132 264 264" className={className} role="img" aria-label="Natal chart wheel with zodiac signs, houses, planet placements, and aspect lines">
       <defs>
         <radialGradient id="hint-wheel-glow" cx="50%" cy="48%" r="58%">
           <stop offset="0%" stopColor={ASTRO_WHEEL_GLOW_CENTER} />
@@ -1805,6 +1935,18 @@ function AstroWheel({ chart, language, className = "aspect-square w-full max-w-[
       <circle r="90" fill="none" stroke={ASTRO_AQUA} strokeOpacity="0.22" strokeWidth="0.7" />
       <circle r="78" fill={ASTRO_WHEEL_CORE} stroke={ASTRO_TILE_BORDER} strokeWidth="0.8" />
       <circle r="58" fill="none" stroke={ASTRO_STROKE} strokeOpacity="0.54" strokeWidth="0.7" />
+      {degreeTicks.map((tick) => (
+        <line
+          key={`tick-${tick.degree}`}
+          x1={tick.x1}
+          y1={tick.y1}
+          x2={tick.x2}
+          y2={tick.y2}
+          stroke={tick.major ? ASTRO_GOLD_BRIGHT : ASTRO_WHEEL_LINE}
+          strokeOpacity={tick.major ? "0.58" : "0.38"}
+          strokeWidth={tick.major ? "0.75" : "0.45"}
+        />
+      ))}
       {ZODIAC_SIGNS.map((sign, index) => {
         const angle = ((index * 30 - 90) * Math.PI) / 180;
         const labelAngle = ((index * 30 - 75) * Math.PI) / 180;
@@ -1816,8 +1958,8 @@ function AstroWheel({ chart, language, className = "aspect-square w-full max-w-[
             <text x={Math.cos(labelAngle) * 117} y={Math.sin(labelAngle) * 117} textAnchor="middle" dominantBaseline="middle" fontSize="7.2" fontWeight="900" fill={ASTRO_TEXT}>
               {signShort(sign, language)}
             </text>
-            <text x={Math.cos(labelAngle) * 104} y={Math.sin(labelAngle) * 104} textAnchor="middle" dominantBaseline="middle" fontSize="5.8" fill={ASTRO_FAINT}>
-              {SIGN_GLYPHS[sign]}
+            <text x={Math.cos(labelAngle) * 104} y={Math.sin(labelAngle) * 104} textAnchor="middle" dominantBaseline="middle" fontSize="8.6" fontWeight="900" fill={ASTRO_FAINT}>
+              {ZODIAC_GLYPHS[sign]}
             </text>
             <text x={Math.cos(houseAngle) * 86} y={Math.sin(houseAngle) * 86} textAnchor="middle" dominantBaseline="middle" fontSize="6.4" fontWeight="800" fill={index % 2 ? ASTRO_AQUA : ASTRO_GOLD}>
               {house?.house ?? index + 1}
@@ -1843,7 +1985,7 @@ function AstroWheel({ chart, language, className = "aspect-square w-full max-w-[
         <g key={point.body}>
           <circle cx={point.x} cy={point.y} r="3.6" fill={ASTRO_WHEEL_DOT} stroke={BODY_COLORS[point.body]} strokeWidth="0.9" />
           <circle cx={point.x} cy={point.y} r="1.15" fill={BODY_COLORS[point.body]} />
-          <text x={point.x + 5.6} y={point.y - 1.1} fontSize="6.4" fill={BODY_COLORS[point.body]} fontWeight="900">{bodySymbol(point.body, language)}</text>
+          <text x={point.x + 5.6} y={point.y - 1.1} fontSize="8.2" fill={BODY_COLORS[point.body]} fontWeight="900">{BODY_GLYPHS[point.body]}</text>
           <text x={point.x + 5.6} y={point.y + 5.5} fontSize="4.4" fill={ASTRO_FAINT} fontWeight="700">{point.house ? `H${point.house}` : BODY_MARKS[point.body]}</text>
         </g>
       ))}
@@ -2272,6 +2414,29 @@ function SocialPlanetsPanel({ chart, language, ui }: { chart: NatalChart; langua
   );
 }
 
+function AspectLegend() {
+  const items: Array<{ label: string; tone: string; dash?: string }> = [
+    { label: "Trine", tone: "#7ea6ff" },
+    { label: "Sextile", tone: "#55d79b" },
+    { label: "Conjunction", tone: "#f4b761" },
+    { label: "Square", tone: "#ff6f7d", dash: "4 4" },
+    { label: "Opposition", tone: "#c7a7ff", dash: "4 4" },
+  ];
+
+  return (
+    <div className="relative z-10 grid gap-1.5 rounded-[8px] border p-2 sm:grid-cols-5" style={{ background: ASTRO_CHART_HEADER, borderColor: ASTRO_TILE_BORDER }}>
+      {items.map((item) => (
+        <div key={item.label} className="flex min-w-0 items-center gap-2">
+          <svg viewBox="0 0 32 6" className="h-2 w-8 shrink-0" aria-hidden="true">
+            <line x1="1" y1="3" x2="31" y2="3" stroke={item.tone} strokeWidth="2" strokeDasharray={item.dash} strokeLinecap="round" />
+          </svg>
+          <span className="truncate text-[9px] font-black uppercase tracking-[0.11em]" style={{ color: ASTRO_FAINT }}>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ChartGraphPanel({ chart, language, ui }: { chart: NatalChart; language: HintLanguage; ui: AstrologyUiCopy }) {
   const sun = placementSummary(chart, "sun", language);
   const moon = placementSummary(chart, "moon", language);
@@ -2288,9 +2453,10 @@ function ChartGraphPanel({ chart, language, ui }: { chart: NatalChart; language:
           {chart.placements.length} placements
         </span>
       </div>
-      <div className="relative z-0 flex min-h-[190px] items-center justify-center py-2 sm:min-h-[230px]">
-        <AstroWheel chart={chart} language={language} className="aspect-square w-full max-w-[276px]" />
+      <div className="relative z-0 flex min-h-[280px] items-center justify-center py-3 sm:min-h-[360px]">
+        <AstroWheel chart={chart} language={language} className="aspect-square w-full max-w-[340px] sm:max-w-[420px]" />
       </div>
+      <AspectLegend />
     </div>
   );
 }
@@ -2298,6 +2464,7 @@ function ChartGraphPanel({ chart, language, ui }: { chart: NatalChart; language:
 function PremiumChartHero({
   chart,
   previewMode,
+  profile,
   providerLabel,
   language,
   ui,
@@ -2306,6 +2473,7 @@ function PremiumChartHero({
 }: {
   chart: NatalChart;
   previewMode: boolean;
+  profile: BirthProfile | null;
   providerLabel: string;
   language: HintLanguage;
   ui: AstrologyUiCopy;
@@ -2332,7 +2500,7 @@ function PremiumChartHero({
                 {providerLabel}
               </span>
               <span className="rounded-[8px] border px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_AQUA }}>
-                {previewMode ? "Sample" : "Saved"}
+                {previewMode ? "Preview" : "Saved"}
               </span>
             </div>
             <h2 className="mt-2 font-serif text-[17px] leading-[1.12] tracking-normal" style={{ color: ASTRO_TEXT_STRONG }}>{headline}</h2>
@@ -2370,7 +2538,7 @@ function PremiumChartHero({
 
         {previewMode ? (
           <button type="button" onClick={onAddProfile} className="h-10 rounded-[8px] px-5 text-[12px] font-black transition-[transform,opacity] duration-200 hover:-translate-y-0.5" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
-            Add birth details
+            {profile ? "Edit birth details" : "Add birth details"}
           </button>
         ) : null}
       </div>
@@ -2424,17 +2592,18 @@ function LiveNatalControl({
   onAddProfile: () => void;
   onRun: () => void;
 }) {
-  const live = natalResponse?.source === "astrologyapi" && natalResponse.mode === "live";
-  const actionLabel = live ? (loading ? "Refreshing..." : "Refresh") : loading ? "Loading live chart..." : "Personalize with live data";
+  const live = isLiveNatal(natalResponse);
+  const sourceLabel = chartSourceLabel(natalResponse);
+  const actionLabel = loading ? "Calculating..." : live ? "Refresh live chart" : "Calculate chart";
   return (
     <section className="rounded-[8px] border p-3 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5">
         <div className="min-w-0">
           <p className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: live ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }}>
-            {live ? "AstrologyAPI live" : "Controlled live test"}
+            {sourceLabel}
           </p>
           <p className="mt-1 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>
-            {live ? `Live chart loaded${natalResponse.cached ? " from cache" : ""}.` : liveProfileHint(profile)}
+            {live ? `Live chart loaded${natalResponse?.cached ? " from cache" : ""}.` : natalResponse ? "Local fallback is saved and usable until provider credentials are added." : liveProfileHint(profile)}
           </p>
           {error ? <p className="mt-2 text-[12px] font-semibold" style={{ color: ASTRO_ROSE }}>{error}</p> : null}
         </div>
@@ -2483,7 +2652,7 @@ function ChartSection({
   onAddProfile: () => void;
   onPersonalize: () => void;
 }) {
-  const providerLabel = previewMode ? "Sample chart" : chart.source === "astrologyapi" || chart.source === "api" ? "AstrologyAPI live" : chart.validation?.partial ? "Partial chart" : "Fallback chart";
+  const providerLabel = previewMode ? (profile ? "Profile preview" : "Sample chart") : chartSourceLabel(natalResponse, chart);
   const partialMessage = chart.validation?.message ?? "Sun and planet signs can be previewed. Rising sign and houses need birth time and location.";
   const rankedAspects = [...chart.aspects].sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0) || (a.orb ?? 99) - (b.orb ?? 99));
   const visibleAspects = rankedAspects.slice(0, 5);
@@ -2491,7 +2660,8 @@ function ChartSection({
 
   return (
     <section className="grid gap-4">
-      <PremiumChartHero chart={chart} previewMode={previewMode} providerLabel={providerLabel} language={language} ui={ui} onAddProfile={onAddProfile} strongestAspect={visibleAspects[0]} />
+      <PremiumChartHero chart={chart} previewMode={previewMode} profile={profile} providerLabel={providerLabel} language={language} ui={ui} onAddProfile={onAddProfile} strongestAspect={visibleAspects[0]} />
+      <ChartGraphPanel chart={chart} language={language} ui={ui} />
       <LiveNatalControl profile={profile} canRun={canPersonalize} loading={personalizing} error={liveError} natalResponse={natalResponse} onAddProfile={onAddProfile} onRun={onPersonalize} />
       <details className="rounded-[8px] border p-3.5 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
         <summary className="cursor-pointer list-none">
@@ -2506,7 +2676,6 @@ function ChartSection({
           </div>
         </summary>
         <div className="mt-4 grid gap-4">
-          <ChartGraphPanel chart={chart} language={language} ui={ui} />
           <AstroCodePanel chart={chart} language={language} ui={ui} />
           <ElementSignaturePanel chart={chart} ui={ui} />
           <SocialPlanetsPanel chart={chart} language={language} ui={ui} />
@@ -2658,7 +2827,7 @@ function TransitsSection({
       <div className="min-w-0 rounded-[8px] border p-4 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_HERO, borderColor: ASTRO_BORDER }}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="font-sans text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{previewMode ? "Sample transits" : "Transit focus"}</p>
-          <span className="rounded-[8px] border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_FAINT }}>{transits?.source === "astrologyapi" ? "AstrologyAPI Live" : "Sample fallback"}</span>
+          <span className="rounded-[8px] border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: transits?.source === "astrologyapi" ? ASTRO_AQUA : ASTRO_FAINT }}>{transitSourceLabel(transits)}</span>
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
           <div>
@@ -2668,7 +2837,7 @@ function TransitsSection({
           <div className="rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
             <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_FAINT }}>Current window</p>
             <p className="mt-1 text-[18px] font-black" style={{ color: ASTRO_AQUA }}>{selectedDateLabel}</p>
-            <p className="mt-1 text-[12px] font-semibold" style={{ color: ASTRO_MUTED }}>{rows.length} live signals ranked</p>
+            <p className="mt-1 text-[12px] font-semibold" style={{ color: ASTRO_MUTED }}>{rows.length} signals ranked</p>
           </div>
         </div>
         <div className="mt-4">
@@ -2858,6 +3027,8 @@ function BirthSection({
   natalResponse,
   nasaMode,
   gptMode,
+  language,
+  ui,
   canPersonalize,
   personalizing,
   liveError,
@@ -2871,6 +3042,8 @@ function BirthSection({
   natalResponse: AstroNatalResponse | null;
   nasaMode: ServiceMode;
   gptMode: ServiceMode;
+  language: HintLanguage;
+  ui: AstrologyUiCopy;
   canPersonalize: boolean;
   personalizing: boolean;
   liveError?: string;
@@ -2881,22 +3054,42 @@ function BirthSection({
       <div className="grid gap-4">
         <BirthDataVisual profile={profile} />
         {profile ? <BirthProfileCard profile={profile} onEdit={() => setEditing(true)} /> : null}
+        {profile && chart ? (
+          <section className="rounded-[8px] border p-3 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_AQUA }}>Profile preview</p>
+                <h2 className="mt-1 font-serif text-[22px] leading-tight" style={{ color: ASTRO_TEXT }}>Your wheel is drawing</h2>
+              </div>
+              <span className="rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.13em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: isLiveNatal(natalResponse) ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }}>
+                {chartSourceLabel(natalResponse, chart)}
+              </span>
+            </div>
+            <ChartGraphPanel chart={chart} language={language} ui={ui} />
+            <div className="mt-3">
+              <CoreSignatureRail chart={chart} language={language} />
+            </div>
+            <p className="mt-3 rounded-[8px] border p-3 text-[12px] font-semibold leading-relaxed" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_MUTED }}>
+              This wheel uses the saved birth profile and the best available astrology API mode. Live AstrologyAPI data replaces the local fallback automatically when credentials are configured.
+            </p>
+          </section>
+        ) : null}
         <section className="rounded-[8px] border p-4 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Chart readiness</p>
               <h2 className="mt-2 font-serif text-[22px] leading-tight" style={{ color: ASTRO_TEXT }}>Saved profile status</h2>
             </div>
-            <span className="rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.13em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: natalResponse?.source === "astrologyapi" ? ASTRO_AQUA : ASTRO_FAINT }}>
-              {natalResponse?.source === "astrologyapi" ? "Live chart saved" : "Chart not saved"}
+            <span className="rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.13em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: natalResponse ? (isLiveNatal(natalResponse) ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT) : ASTRO_FAINT }}>
+              {natalResponse ? chartSourceLabel(natalResponse, chart) : "Chart not saved"}
             </span>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {[
               ["Birth details", profile ? "Saved for this account" : "Add profile details"],
-              ["Chart source", natalResponse?.source === "astrologyapi" ? "AstrologyAPI live" : "Waiting for live chart"],
+              ["Chart source", chartSourceLabel(natalResponse, chart)],
               ["Chart depth", profile?.birthTime && profile.latitude !== undefined && profile.longitude !== undefined && profile.timezoneOffset !== undefined ? "Rising sign and houses ready" : "Needs time and place"],
-              ["Cache state", natalResponse?.cached ? "Loaded from saved chart" : natalResponse ? "Fresh live response" : "No live call yet"],
+              ["Cache state", natalResponse?.cached ? "Loaded from saved chart" : natalResponse ? "Fresh API response" : "No API call yet"],
               ["Sky visual", nasaMode === "Connected" ? "NASA connected" : "Local sky visual"],
               ["Report copy", gptMode === "Connected" ? "GPT connected" : "Curated fallback"],
             ].map(([label, value]) => (
@@ -2928,7 +3121,7 @@ function BirthSection({
           <p className="mt-2 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{liveProfileHint(profile)}</p>
           <div className="mt-4 grid gap-2">
             <button type="button" onClick={onPersonalize} disabled={!canPersonalize || personalizing} className="h-10 rounded-[8px] px-5 text-[12px] font-black disabled:opacity-45" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
-              {personalizing ? "Loading live chart..." : "Personalize with live data"}
+              {personalizing ? "Calculating chart..." : "Calculate chart"}
             </button>
             <button type="button" onClick={() => setEditing(true)} className="h-10 rounded-[8px] border px-5 text-[12px] font-black" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}>Edit profile</button>
           </div>
@@ -3407,9 +3600,10 @@ export function AstrologyView() {
   const [reportRequestId, setReportRequestId] = useState(0);
   const autoNatalKeyRef = useRef<string | null>(null);
   const autoTransitKeyRef = useRef<string | null>(null);
-  const backendStatus = useAstroBackendStatus();
+  const backendState = useAstroBackendStatus();
   const { relationship, reports } = useAstrologyData(profile);
-  const activeChart = chart ?? savedNatalRecord?.chart ?? SAMPLE_CHART;
+  const previewChart = useMemo(() => (profile ? buildMockNatalChart(profile) : SAMPLE_CHART), [profile?.id, profile?.birthDate, profile?.birthTime, profile?.birthPlace, profile?.latitude, profile?.longitude, profile?.timezone, profile?.timezoneOffset, profile?.updatedAt]);
+  const activeChart = chart ?? savedNatalRecord?.chart ?? previewChart;
   const activeRelationship = relationship ?? SAMPLE_RELATIONSHIP;
   const activeReports = reports.length ? reports : MOCK_ASTROLOGY_REPORTS;
   const reportPreview = useReportPreviewBullets(reportRequestId, activeReports, activeChart);
@@ -3502,15 +3696,9 @@ export function AstrologyView() {
     setLiveError("");
     try {
       const nextNatal = await getNatalChart(profile);
-      if (nextNatal.source !== "astrologyapi" || nextNatal.mode !== "live") {
-        setLiveError(nextNatal.validation?.message ?? "AstrologyAPI did not return a live chart. No saved chart was changed.");
-        setNatalResponse(nextNatal);
-        setChart(null);
-        return;
-      }
       const nextChart = normalizeClientNatal(profile, nextNatal);
       if (!nextChart) {
-        setLiveError("Live chart response could not be normalized. No saved chart was changed.");
+        setLiveError("Chart response could not be normalized. No saved chart was changed.");
         setNatalResponse(nextNatal);
         setChart(null);
         return;
@@ -3527,7 +3715,7 @@ export function AstrologyView() {
       });
       writeSavedNatalChart(account, anonId, profile, nextChart, nextNatal);
     } catch {
-      setLiveError("Live natal chart is unavailable right now. No saved chart was changed.");
+      setLiveError("Astrology chart service is unavailable right now. Local preview remains available.");
       setNatalResponse(null);
       setChart(null);
     } finally {
@@ -3548,14 +3736,9 @@ export function AstrologyView() {
     setTransitError("");
     try {
       const nextTransits = await getTransits(profile, transitDate);
-      if (nextTransits.source !== "astrologyapi" || nextTransits.mode !== "live") {
-        setTransitError(nextTransits.validation?.message ?? "Live transits were unavailable. Saved chart remains active without live transit updates.");
-        setTransits(null);
-        return;
-      }
       setTransits(nextTransits);
     } catch {
-      setTransitError("Live transits are unavailable right now. Saved chart remains active without live transit updates.");
+      setTransitError("Transit service is unavailable right now. Sample transit guidance remains visible.");
       setTransits(null);
     } finally {
       setTransitLoading(false);
@@ -3599,8 +3782,8 @@ export function AstrologyView() {
           activeTab={activeTab}
           onTabChange={handleTabChange}
         />
-        {hasSavedChart ? <TopTabs activeTab={activeTab} onChange={handleTabChange} /> : null}
-        <ProviderReadinessStrip status={backendStatus} />
+        {account && profile ? <TopTabs activeTab={activeTab} onChange={handleTabChange} /> : null}
+        <ProviderReadinessStrip state={backendState} />
         {activeTab !== "chart" ? statusRow : null}
         <motion.div
           key={activeTab}
@@ -3610,7 +3793,7 @@ export function AstrologyView() {
           className="grid gap-4"
         >
           {activeTab === "signs" ? (
-            !account || !profile || !hasSavedChart ? chartGate : <section className="grid gap-5">
+            !account || !profile ? chartGate : <section className="grid gap-5">
               <SignatureSelfPanel profile={profile} chart={activeChart} previewMode={previewMode} language={language} ui={ui} onEditProfile={() => handleTabChange("birth")} />
               <AstroFoldout eyebrow="Pattern" title="Visual blend and rare chart cues">
                 <TraitArcGraph chart={activeChart} language={language} ui={ui} />
@@ -3630,7 +3813,7 @@ export function AstrologyView() {
             </section>
           ) : null}
           {activeTab === "chart" ? (
-            !account || !profile || !hasSavedChart ? chartGate : <section className="grid gap-5">
+            !account || !profile ? chartGate : <section className="grid gap-5">
               <ChartSection
                 chart={activeChart}
                 previewMode={previewMode}
@@ -3668,10 +3851,12 @@ export function AstrologyView() {
               editing={editingProfile || !profile}
               setEditing={setEditingProfile}
               onSave={handleSaveProfile}
-              chart={chart}
+              chart={activeChart}
               natalResponse={activeNatalResponse}
               nasaMode={nasaMode}
               gptMode={reportPreview.mode}
+              language={language}
+              ui={ui}
               canPersonalize={canPersonalize}
               personalizing={personalizing}
               liveError={liveError}

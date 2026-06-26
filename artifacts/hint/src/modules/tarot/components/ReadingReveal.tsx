@@ -60,6 +60,7 @@ export function ReadingReveal({
 }: ReadingRevealProps) {
   const [readyToReveal, setReadyToReveal] = useState(false);
   const sequenceStartedRef = useRef("");
+  const onRevealRef = useRef(onReveal);
   const allRevealed = selectedCards.every((card) => revealedIds.includes(card.visualId));
   const oneCard = selectedCards.length === 1;
   const revealProgress = selectedCards.length === 0 ? 0 : revealedIds.length / selectedCards.length;
@@ -86,6 +87,10 @@ export function ReadingReveal({
   const starClassName = theme?.starClassName ?? "";
 
   useEffect(() => {
+    onRevealRef.current = onReveal;
+  }, [onReveal]);
+
+  useEffect(() => {
     setReadyToReveal(false);
     sequenceStartedRef.current = "";
     const timer = window.setTimeout(() => setReadyToReveal(true), 760);
@@ -96,10 +101,10 @@ export function ReadingReveal({
     if (!autoReveal || !readyToReveal || sequenceStartedRef.current === sequenceKey) return;
     sequenceStartedRef.current = sequenceKey;
     const timers = selectedCards.map((card, index) =>
-      window.setTimeout(() => onReveal(card.visualId), 220 + index * 430),
+      window.setTimeout(() => onRevealRef.current(card.visualId), 220 + index * 430),
     );
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [autoReveal, onReveal, readyToReveal, selectedCards, sequenceKey]);
+  }, [autoReveal, readyToReveal, selectedCards, sequenceKey]);
 
   return (
     <section className="relative h-full w-full overflow-y-auto overflow-x-hidden px-4 py-8 text-center sm:py-10">

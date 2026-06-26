@@ -286,7 +286,7 @@ export const DEFAULT_TAROT_ROOM_SETUP: TarotRoomSetup = {
   cardFaceId: "hint-classic",
   cardBackId: getDefaultTarotCardBackForStyle("nocturne"),
   backgroundId: "stars",
-  cardColor: "Deep navy with gold linework",
+  cardColor: "Deep navy with gold sky linework",
   spreadType: "trueHeart",
 };
 
@@ -330,8 +330,8 @@ export const ROOM_PRESETS: readonly RoomPreset[] = [
 export const DECK_STYLES: readonly VisualChoice<DeckStyleId>[] = [
   {
     id: "nocturne",
-    label: "Nocturne",
-    description: "Navy cards with gold constellation lines.",
+    label: "Sky Deck",
+    description: "Navy cards with gold celestial linework.",
     preview: "linear-gradient(155deg, #101827, #070b14 58%, #171023)",
   },
   {
