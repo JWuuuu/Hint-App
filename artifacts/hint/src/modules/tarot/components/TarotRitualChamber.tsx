@@ -33,7 +33,7 @@ type ChamberDeckState = {
   ritualCards: RitualCard[];
 };
 
-const ENABLE_FULL_DECK_INTRO = false;
+const ENABLE_FULL_DECK_INTRO = true;
 const INITIAL_RITUAL_STAGE: RitualStage = ENABLE_FULL_DECK_INTRO ? "placed" : "washing";
 const INITIAL_WASH_SCORE = ENABLE_FULL_DECK_INTRO ? 0 : 10;
 

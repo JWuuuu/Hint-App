@@ -1,9 +1,10 @@
 export type TarotCardBackStyle = "nocturne" | "ivory" | "rose";
 
 const TAROT_CARD_BACK_BASE_PATH = "/brand/tarot/card-backs";
-const TAROT_CARD_BACK_ASSET_VERSION = "20260622";
+const TAROT_CARD_BACK_ASSET_VERSION = "20260625-sky-deck-borderless";
 
 export const TAROT_CARD_BACK_FILES = [
+  "00_Hint_Sky_Deck/01_Sky_Deck_Celestial_Navy_Gold.png",
   "01_Final_Eight_Set/01_Star_Orbit_Realm_Navy_Gold.png",
   "01_Final_Eight_Set/02_Moon_Tide_Lavender_Gold.png",
   "01_Final_Eight_Set/03_Flame_Heart_Burgundy_Gold.png",
@@ -77,7 +78,7 @@ export type TarotCardBackChoice = {
 };
 
 const DEFAULT_CARD_BACK_BY_STYLE: Record<TarotCardBackStyle, TarotCardBackId> = {
-  nocturne: "01_Final_Eight_Set/01_Star_Orbit_Realm_Navy_Gold.png",
+  nocturne: "00_Hint_Sky_Deck/01_Sky_Deck_Celestial_Navy_Gold.png",
   ivory: "01_Final_Eight_Set/05_Dawn_Gate_Ivory_Gold.png",
   rose: "01_Final_Eight_Set/02_Moon_Tide_Lavender_Gold.png",
 };

@@ -68,6 +68,8 @@ function readInitialMode(accountExists: boolean): AuthMode {
   if (typeof window === "undefined") return accountExists ? "login" : "signup";
   const mode = new URLSearchParams(window.location.search).get("mode");
   if (mode === "login" || mode === "signup") return mode;
+  const pathname = window.location.pathname.replace(/\/+$/, "");
+  if (pathname.endsWith("/signup")) return "signup";
   return accountExists ? "login" : "signup";
 }
 
@@ -82,6 +84,12 @@ function methodTarget(method: AuthMethod, email: string, phone: string) {
 function accountLabel(account: LocalAccount | null) {
   if (!account) return null;
   return account.email ?? account.phone ?? account.identifier;
+}
+
+function providerLabel(provider: LocalAccount["provider"]) {
+  if (provider === "email") return "Email";
+  if (provider === "phone") return "Phone";
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
 export function LoginView() {
@@ -231,6 +239,50 @@ export function LoginView() {
 
       <div className="flex flex-col gap-4">
         <GlassPanel hero>
+          {account ? (
+            <div className="mb-5 rounded-[18px] border p-4" style={{ background: "rgba(255,255,255,0.055)", borderColor: GLASS.border }}>
+              <div className="flex items-start gap-3">
+                <span
+                  className="grid size-10 shrink-0 place-items-center rounded-[14px]"
+                  style={{ background: "rgba(100,156,158,0.12)", border: `1px solid ${GLASS.border}` }}
+                >
+                  <ShieldCheck size={18} color={ACCENT.aqua} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-serif text-[18px] leading-tight" style={{ color: GLASS.text }}>
+                    {t("login.signedInAs")}
+                  </p>
+                  <p className="mt-1 break-words font-sans text-[12.5px] leading-relaxed" style={{ color: GLASS.muted }}>
+                    {account.name || accountLabel(account)}
+                  </p>
+                  <p className="mt-1 break-words font-sans text-[11.5px]" style={{ color: GLASS.faint }}>
+                    {providerLabel(account.provider)} - {accountLabel(account)}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Link
+                  href="/app/profile"
+                  className="inline-flex h-11 items-center justify-center rounded-[8px] border font-sans text-[12px] font-black uppercase tracking-[0.1em]"
+                  style={{ background: "rgba(100,156,158,0.12)", borderColor: "rgba(100,156,158,0.28)", color: ACCENT.aqua }}
+                >
+                  {t("login.backToProfile")}
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="inline-flex h-11 items-center justify-center rounded-[8px] border font-sans text-[12px] font-black uppercase tracking-[0.1em]"
+                  style={{ background: "rgba(255,255,255,0.04)", borderColor: GLASS.border, color: GLASS.muted }}
+                >
+                  {t("account.logout")}
+                </button>
+              </div>
+              <p className="mt-3 font-sans text-[11.5px] leading-relaxed" style={{ color: GLASS.faint }}>
+                {t("login.changeAccount")}
+              </p>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
             {(["signup", "login"] as const).map((item) => (
               <button
@@ -284,12 +336,15 @@ export function LoginView() {
                   {t("birthProfile.name")}
                 </span>
                 <input
+                  type="text"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder={t("login.namePlaceholder")}
                   autoComplete="name"
+                  aria-invalid={error === t("login.error.name")}
                   className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
                   style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                  data-testid="input-login-name"
                 />
               </label>
             ) : null}
@@ -301,14 +356,18 @@ export function LoginView() {
                     {t("birthProfile.birthDate")}
                   </span>
                   <input
+                    type="text"
                     value={birthDate}
                     onChange={(event) => setBirthDate(formatBirthDateInput(event.target.value))}
                     placeholder="YYYY-MM-DD"
                     autoComplete="bday"
                     inputMode="numeric"
                     maxLength={10}
+                    pattern="\d{4}-\d{2}-\d{2}"
+                    aria-invalid={error === t("login.error.birthDate")}
                     className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
                     style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                    data-testid="input-login-birthdate"
                   />
                 </label>
                 <label className="block">
@@ -321,6 +380,7 @@ export function LoginView() {
                     type="time"
                     className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
                     style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                    data-testid="input-login-birthtime"
                   />
                 </label>
                 <label className="block">
@@ -328,12 +388,14 @@ export function LoginView() {
                     {t("birthProfile.birthPlace")}
                   </span>
                   <input
+                    type="text"
                     value={birthPlace}
                     onChange={(event) => setBirthPlace(event.target.value)}
                     placeholder={t("login.birthPlacePlaceholder")}
                     autoComplete="address-level2"
                     className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
                     style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                    data-testid="input-login-birthplace"
                   />
                   <p className="mt-2 font-sans text-[11px] leading-relaxed" style={{ color: GLASS.faint }}>
                     {t("login.birthHelp")}
@@ -348,6 +410,7 @@ export function LoginView() {
                   {t("login.email")}
                 </span>
                 <input
+                  type="email"
                   value={email}
                   onChange={(event) => {
                     resetVerification("email");
@@ -356,8 +419,10 @@ export function LoginView() {
                   placeholder="you@example.com"
                   autoComplete="email"
                   inputMode="email"
+                  aria-invalid={error === t("login.error.email")}
                   className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
                   style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                  data-testid="input-login-email"
                 />
               </label>
             ) : (
@@ -366,6 +431,7 @@ export function LoginView() {
                   {t("login.phone")}
                 </span>
                 <input
+                  type="tel"
                   value={phone}
                   onChange={(event) => {
                     resetVerification("phone");
@@ -374,8 +440,10 @@ export function LoginView() {
                   placeholder="+1 555 123 4567"
                   autoComplete="tel"
                   inputMode="tel"
+                  aria-invalid={error === t("login.error.phone")}
                   className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
                   style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                  data-testid="input-login-phone"
                 />
               </label>
             )}
@@ -386,12 +454,17 @@ export function LoginView() {
                   {t("login.verificationCode")}
                 </span>
                 <input
+                  type="text"
                   value={verificationCode}
                   onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
                   placeholder={t("login.codePlaceholder")}
                   inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  aria-invalid={error === t("login.error.codeMismatch")}
                   className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
                   style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                  data-testid="input-login-code"
                 />
                 <p className="mt-2 font-sans text-[11px] leading-relaxed" style={{ color: GLASS.faint }}>
                   {t("login.betaCodePrefix")} <span style={{ color: ACCENT.gold }}>{pending.code}</span>. {t("login.betaCodeSuffix")}
@@ -421,17 +494,6 @@ export function LoginView() {
               {pending ? t("login.verifyCode") : t("login.requestCode")}
             </button>
           </form>
-
-          {account ? (
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="mt-4 font-sans text-[12px] font-semibold"
-              style={{ color: GLASS.faint }}
-            >
-              {t("login.signOutOf").replace("{account}", accountLabel(account) ?? "")}
-            </button>
-          ) : null}
 
           <div className="mt-5 grid gap-4 border-t pt-5" style={{ borderColor: GLASS.border }}>
             <button

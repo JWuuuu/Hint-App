@@ -17,7 +17,7 @@ import { useLanguage } from "../../lib/i18n";
 export function AppScreen({ children }: { children: ReactNode }) {
   return (
     <div
-      className="h-full w-full overflow-y-auto overscroll-none flex flex-col items-center pb-[calc(7.75rem+var(--hint-safe-bottom))] scroll-pt-[calc(1.25rem+var(--hint-safe-top))]"
+      className="hint-app-scroll h-full w-full flex flex-col items-center pb-[calc(7.75rem+var(--hint-safe-bottom))] scroll-pt-[calc(1.25rem+var(--hint-safe-top))]"
       style={{ background: "transparent" }}
     >
       <div className="w-full max-w-[430px] px-3.5 pt-[calc(1rem+var(--hint-safe-top))] sm:px-4">

@@ -4,10 +4,10 @@ import type { RitualCard } from "../logic/createHiddenDeck";
 import type { WashPointer } from "../logic/washPhysics";
 import {
   getDefaultTarotCardBackForStyle,
+  getTarotCardBackImage,
   type TarotCardBackId,
   type TarotCardBackStyle,
 } from "../logic/cardBacks";
-import { TarotCardVisual } from "./TarotCardVisual";
 
 export type WashRitualTheme = {
   chamberOverlay: string;
@@ -51,6 +51,27 @@ const DEFAULT_THEME: WashRitualTheme = {
   cardBackStyle: "nocturne",
   cardBackId: getDefaultTarotCardBackForStyle("nocturne"),
 };
+
+function RitualBackCard({
+  cardBackId,
+  className = "",
+}: {
+  cardBackId: TarotCardBackId;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[10px] border border-[#d7bd7c]/62 bg-[#182139] shadow-[0_8px_18px_rgba(0,0,0,0.22)] ${className}`}
+      style={{
+        backgroundImage: `url("${getTarotCardBackImage(cardBackId)}")`,
+        backgroundPosition: "center",
+        backgroundSize: "cover",
+      }}
+    >
+      <span className="pointer-events-none absolute inset-[5px] rounded-[7px] border border-white/12" />
+    </div>
+  );
+}
 
 const STAGE_INDEX: Record<CardWashRitualProps["stage"], number> = {
   placed: 0,
@@ -127,6 +148,7 @@ export function CardWashRitual({
   const spinDirection = useRef<1 | -1>(1);
   const washing = useRef(false);
   const washDistance = useRef(0);
+  const lastWashPush = useRef(0);
   const releaseTriggered = useRef(false);
   const beginWashCallback = useRef(onBeginWash);
   const washReleaseCallback = useRef(onWashRelease);
@@ -155,11 +177,11 @@ export function CardWashRitual({
         : "";
   const isDeckStackStage = stage === "gathering" || stage === "cutReady" || stage === "cutting";
   const isFullDeckStage = stage === "placed";
-  const cardTransitionMs = stage === "gathering" ? 760 : stage === "cutting" ? 640 : 70;
+  const cardTransitionMs = stage === "gathering" ? 560 : stage === "cutting" ? 620 : 86;
   const cardTransitionEase = stage === "gathering"
-    ? "cubic-bezier(0.18, 0.82, 0.18, 1)"
+    ? "cubic-bezier(0.2, 0.82, 0.16, 1)"
     : stage === "cutting"
-      ? "cubic-bezier(0.2, 0.82, 0.16, 1)"
+      ? "cubic-bezier(0.22, 0.78, 0.14, 1)"
       : "linear";
 
   useEffect(() => {
@@ -223,6 +245,9 @@ export function CardWashRitual({
       spinDirection.current = turn >= 0 ? 1 : -1;
     }
     lastPoint.current = { x, y };
+    const now = performance.now();
+    if (now - lastWashPush.current < 24) return;
+    lastWashPush.current = now;
     onWash({
       x,
       y,
@@ -311,8 +336,8 @@ export function CardWashRitual({
           isDeckStackStage
             ? "h-[min(44vh,460px)] w-[min(118vw,560px)]"
             : isFullDeckStage
-              ? "h-[min(82vw,430px)] w-[min(82vw,430px)]"
-              : "h-[min(58vh,560px)] w-[min(118vw,560px)]"
+              ? "h-[min(90vw,500px)] w-[min(90vw,500px)]"
+              : "h-[min(62vh,620px)] w-[min(124vw,640px)]"
         }`}
         style={{
           filter: isFullDeckStage ? "drop-shadow(0 24px 36px rgba(0,0,0,0.38))" : undefined,
@@ -385,7 +410,7 @@ export function CardWashRitual({
                 isFullDeckStage
                   ? getIntroTransition(index, ritualCards.length, introStep)
                   : isDeckStackStage
-                    ? `transform ${cardTransitionMs}ms ${cardTransitionEase} ${card.gatherDelay ?? 0}s`
+                    ? `transform ${cardTransitionMs}ms ${cardTransitionEase} ${Math.min(card.gatherDelay ?? 0, 0.08)}s`
                     : stage === "washing" && !washIntroSettled
                       ? `transform 760ms cubic-bezier(0.22, 0.78, 0.18, 1) ${Math.min(index, 22) * 0.004}s`
                       : "transform 70ms linear",
@@ -399,20 +424,13 @@ export function CardWashRitual({
                   isFullDeckStage
                     ? getIntroTransition(index, ritualCards.length, introStep)
                     : isDeckStackStage
-                      ? `transform ${cardTransitionMs}ms ${cardTransitionEase} ${card.gatherDelay ?? 0}s`
+                      ? `transform ${cardTransitionMs}ms ${cardTransitionEase} ${Math.min(card.gatherDelay ?? 0, 0.08)}s`
                       : stage === "washing" && !washIntroSettled
                         ? `transform 760ms cubic-bezier(0.22, 0.78, 0.18, 1) ${Math.min(index, 22) * 0.004}s`
-                        : "transform 70ms linear",
+                        : `transform ${cardTransitionMs}ms linear`,
               }}
             >
-              <TarotCardVisual
-                card={card}
-                compact
-                active={false}
-                backStyle={theme.cardBackStyle}
-                cardBackId={theme.cardBackId}
-                className={cardClassName}
-              />
+              <RitualBackCard cardBackId={theme.cardBackId} className={cardClassName} />
             </div>
           </div>
         );
