@@ -700,8 +700,9 @@ const ASTRO_UI_COPY: Record<HintLanguage, AstrologyUiCopy> = {
 function readInitialAstrologyTab(): AstrologyTab {
   if (typeof window === "undefined") return "chart";
   const tab = new URLSearchParams(window.location.search).get("tab");
-  if (tab === "signs") return "signs";
-  if (tab === "chart" || tab === "transits" || tab === "birth" || tab === "together" || tab === "reports") return tab;
+  if (tab === "signs" || tab === "code") return "signs";
+  if (tab === "transits" || tab === "today") return "transits";
+  if (tab === "chart" || tab === "birth" || tab === "together" || tab === "reports") return tab;
   return "chart";
 }
 
@@ -711,7 +712,7 @@ function writeAstrologyTab(tab: AstrologyTab) {
   if (tab === "chart") {
     url.searchParams.delete("tab");
   } else {
-    url.searchParams.set("tab", tab);
+    url.searchParams.set("tab", tab === "signs" ? "code" : tab === "transits" ? "today" : tab);
   }
   window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
@@ -1350,23 +1351,26 @@ function DataStatusRow({ hasProfile, hasSavedChart, natalResponse }: { hasProfil
 }
 
 function ProviderReadinessStrip({ status }: { status: AstroProviderStatus | null }) {
+  const chartReady = Boolean(status?.astrology?.configured);
+  const skyReady = Boolean(status?.nasa?.configured);
+  const reportReady = Boolean(status?.gpt?.configured);
   const items = [
     {
       label: "Chart",
-      value: status ? status.astrology.configured ? "Live" : "Local" : "Checking",
-      ready: status?.astrology.configured ?? false,
+      value: status ? chartReady ? "Live" : "Local" : "Checking",
+      ready: chartReady,
       icon: Orbit,
     },
     {
       label: "Sky",
-      value: status ? status.nasa.configured ? "NASA" : "Local" : "Checking",
-      ready: status?.nasa.configured ?? false,
+      value: status ? skyReady ? "NASA" : "Local" : "Checking",
+      ready: skyReady,
       icon: Radar,
     },
     {
       label: "Reports",
-      value: status ? status.gpt.configured ? "AI" : "Curated" : "Checking",
-      ready: status?.gpt.configured ?? false,
+      value: status ? reportReady ? "AI" : "Curated" : "Checking",
+      ready: reportReady,
       icon: FileText,
     },
   ];

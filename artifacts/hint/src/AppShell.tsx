@@ -203,9 +203,9 @@ function AppNavigationChrome({
 }) {
   const isDark = theme === "dark";
   const { t } = useLanguage();
-  const chromeSurface = "var(--hint-nav-bg, var(--hint-liquid-panel))";
-  const chromeBorder = "var(--hint-liquid-border, var(--hint-border))";
-  const chromeShadow = "var(--hint-nav-shadow, var(--hint-liquid-shadow))";
+  const chromeSurface = "var(--hint-dock-bg, var(--hint-nav-bg, var(--hint-liquid-panel)))";
+  const chromeBorder = "var(--hint-dock-border, var(--hint-liquid-border, var(--hint-border)))";
+  const chromeShadow = "var(--hint-dock-shadow, var(--hint-nav-shadow, var(--hint-liquid-shadow)))";
   const appTabs: AppTabItem[] = [
     { href: "/app", label: t("nav.today"), icon: Home, exact: true },
     { href: "/app/daily", label: t("nav.daily"), icon: CalendarDays },
@@ -221,22 +221,19 @@ function AppNavigationChrome({
     >
       <div
         aria-hidden
-        className="absolute inset-x-0 bottom-0 -z-10 h-[calc(7.25rem+var(--hint-safe-bottom))]"
+        className="absolute inset-x-0 bottom-0 -z-10 h-[calc(5.75rem+var(--hint-safe-bottom))]"
         style={{
-          background:
-            "linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--hint-obsidian, #17101f) 24%, transparent) 24%, color-mix(in srgb, var(--hint-obsidian, #17101f) 78%, transparent) 100%)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
+          background: "var(--hint-dock-veil)",
         }}
       />
       <div
-        className="hint-glass-nav hint-pearl-panel hint-app-dock pointer-events-auto mx-auto grid h-[72px] w-full max-w-[430px] grid-cols-5 gap-1 rounded-[30px] border p-1.5"
+        className="hint-glass-nav hint-app-dock pointer-events-auto mx-auto grid h-[72px] w-full max-w-[var(--hint-app-width)] grid-cols-5 gap-1 rounded-[30px] border p-1.5"
         style={{
           background: chromeSurface,
           borderColor: chromeBorder,
           boxShadow: chromeShadow,
-          backdropFilter: "blur(38px) saturate(1.5) brightness(1.04)",
-          WebkitBackdropFilter: "blur(38px) saturate(1.5) brightness(1.04)",
+          backdropFilter: "blur(46px) saturate(1.85) brightness(1.06) contrast(1.03)",
+          WebkitBackdropFilter: "blur(46px) saturate(1.85) brightness(1.06) contrast(1.03)",
         }}
       >
         {appTabs.map((tab) => (
@@ -278,12 +275,15 @@ function AppTab({ item, active, isDark }: { item: AppTabItem; active: boolean; i
   const Icon = item.icon;
   const featured = item.featured === true;
   const featuredActive = featured && active;
-  const featuredBackground = "var(--hint-special-action-bg)";
+  const featuredBackground = isDark
+    ? "linear-gradient(135deg, rgba(255,241,247,0.76) 0%, rgba(243,169,202,0.56) 40%, rgba(203,189,244,0.50) 70%, rgba(185,223,220,0.48) 100%)"
+    : "linear-gradient(135deg, rgba(255,244,203,0.72) 0%, rgba(255,196,220,0.60) 40%, rgba(212,201,247,0.54) 70%, rgba(176,235,229,0.50) 100%)";
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
       data-active={active ? "true" : "false"}
+      data-featured={featured ? "true" : "false"}
       className="hint-app-tab hint-tap-sparkle relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[23px] px-1 text-center transition hover:-translate-y-0.5 active:scale-[0.98]"
       style={{
         color: featured
@@ -295,19 +295,20 @@ function AppTab({ item, active, isDark }: { item: AppTabItem; active: boolean; i
           ? featuredBackground
           : active
           ? isDark
-            ? "color-mix(in srgb, var(--hint-surface-soft) 88%, rgba(255,255,255,0.04))"
-            : "color-mix(in srgb, var(--hint-surface-soft) 82%, rgba(255,255,255,0.18))"
+            ? "linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06) 58%, rgba(185,223,220,0.08))"
+            : "linear-gradient(145deg, rgba(255,255,255,0.58), rgba(255,255,255,0.24) 58%, rgba(232,249,247,0.20))"
           : "transparent",
+        border: featured || active ? "1px solid color-mix(in srgb, var(--hint-liquid-highlight) 72%, var(--hint-special-action-border, transparent))" : "1px solid transparent",
         boxShadow: featured
           ? featuredActive
-            ? "0 14px 34px color-mix(in srgb, var(--hint-rose, #cf4f92) 24%, transparent), inset 0 0 0 1px var(--hint-special-action-border), inset 0 1px 0 rgba(255,255,255,0.48)"
-            : "0 12px 28px color-mix(in srgb, var(--hint-rose, #cf4f92) 18%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--hint-special-action-border) 74%, white), inset 0 1px 0 rgba(255,255,255,0.42)"
+            ? "0 16px 38px color-mix(in srgb, var(--hint-rose, #cf4f92) 24%, transparent), 0 6px 18px color-mix(in srgb, var(--hint-aqua, #b9dfdc) 12%, transparent), inset 0 1px 1px rgba(255,255,255,0.72), inset 0 -10px 18px rgba(255,255,255,0.12), inset 0 0 0 1px color-mix(in srgb, var(--hint-special-action-border) 72%, white)"
+            : "0 13px 30px color-mix(in srgb, var(--hint-rose, #cf4f92) 18%, transparent), 0 4px 14px color-mix(in srgb, var(--hint-aqua, #b9dfdc) 10%, transparent), inset 0 1px 1px rgba(255,255,255,0.66), inset 0 -8px 16px rgba(255,255,255,0.10), inset 0 0 0 1px color-mix(in srgb, var(--hint-special-action-border) 64%, white)"
           : active
-          ? "0 11px 24px color-mix(in srgb, var(--hint-gold, #cba866) 10%, transparent), inset 0 0 0 1px var(--hint-border), inset 0 1px 0 rgba(255,255,255,0.22)"
+          ? "0 14px 30px color-mix(in srgb, var(--hint-gold, #cba866) 10%, transparent), 0 5px 18px color-mix(in srgb, var(--hint-plum, #302238) 8%, transparent), inset 0 1px 1px rgba(255,255,255,0.72), inset 0 -8px 16px rgba(82,64,92,0.05), inset 0 0 0 1px color-mix(in srgb, var(--hint-liquid-highlight) 62%, transparent)"
           : "none",
         filter: featured && !featuredActive ? "saturate(0.96) brightness(1.01)" : undefined,
-        backdropFilter: active || featured ? "blur(20px) saturate(1.28)" : undefined,
-        WebkitBackdropFilter: active || featured ? "blur(20px) saturate(1.28)" : undefined,
+        backdropFilter: active || featured ? "blur(30px) saturate(1.52) brightness(1.04)" : undefined,
+        WebkitBackdropFilter: active || featured ? "blur(30px) saturate(1.52) brightness(1.04)" : undefined,
       }}
     >
       <span

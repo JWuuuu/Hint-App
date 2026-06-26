@@ -20,7 +20,7 @@ export function AppScreen({ children }: { children: ReactNode }) {
       className="h-full w-full overflow-y-auto overscroll-none flex flex-col items-center pb-[calc(7.75rem+var(--hint-safe-bottom))] scroll-pt-[calc(1.25rem+var(--hint-safe-top))]"
       style={{ background: "transparent" }}
     >
-      <div className="w-full max-w-[430px] px-3.5 pt-[calc(1rem+var(--hint-safe-top))] sm:px-4">
+      <div className="w-full max-w-[var(--hint-app-width)] px-3.5 pt-[calc(1rem+var(--hint-safe-top))] sm:px-4">
         {children}
       </div>
     </div>

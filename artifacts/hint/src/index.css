@@ -35,6 +35,8 @@
   --hint-safe-bottom: env(safe-area-inset-bottom, 0px);
   --hint-safe-left: env(safe-area-inset-left, 0px);
   --hint-vh: 1vh;
+  --hint-app-width: 440px;
+  --hint-app-height: 956px;
 }
 
 /* HINT MODE (Dark) - default */
@@ -385,6 +387,14 @@
   --hint-daily-card-face-bg: linear-gradient(160deg, #402b4e 0%, #25233e 52%, #173d42 100%);
   --hint-nav-bg: linear-gradient(145deg, rgba(255,255,255,0.128), rgba(43,29,57,0.68) 48%, rgba(25,54,58,0.46));
   --hint-nav-shadow: 0 24px 62px rgba(13,10,24,0.42), 0 8px 26px rgba(243,169,202,0.08), inset 0 1px 0 rgba(255,255,255,0.16);
+  --hint-dock-bg:
+    radial-gradient(120% 150% at 18% -24%, rgba(255,255,255,0.30), transparent 42%),
+    radial-gradient(92% 130% at 50% 118%, rgba(243,169,202,0.22), transparent 52%),
+    radial-gradient(84% 120% at 98% 8%, rgba(185,223,220,0.18), transparent 44%),
+    linear-gradient(145deg, rgba(255,255,255,0.20), rgba(120,109,132,0.25) 38%, rgba(54,58,78,0.43) 72%, rgba(35,45,56,0.34));
+  --hint-dock-border: rgba(255, 255, 255, 0.44);
+  --hint-dock-shadow: 0 26px 68px rgba(13,10,24,0.42), 0 9px 30px rgba(243,169,202,0.10), inset 0 1px 1px rgba(255,255,255,0.34), inset 0 -10px 24px rgba(185,223,220,0.08), inset 0 0 0 1px rgba(255,255,255,0.16);
+  --hint-dock-veil: linear-gradient(180deg, transparent 0%, rgba(19,15,29,0.08) 44%, rgba(19,15,29,0.24) 100%);
   --hint-elevated-shadow: 0 28px 74px rgba(13, 10, 24, 0.36), inset 0 1px 0 rgba(255,255,255,0.13);
   --astro-text: rgba(255, 248, 242, 0.96);
   --astro-text-strong: #fff8f1;
@@ -457,6 +467,14 @@
   --hint-deck-card-bg: linear-gradient(160deg, #30283d 0%, #1a2033 56%, #15373d 100%);
   --hint-nav-bg: linear-gradient(145deg, rgba(255,255,255,0.68), rgba(255,248,252,0.48) 48%, rgba(232,249,247,0.40));
   --hint-nav-shadow: 0 24px 64px rgba(107,78,124,0.13), 0 8px 22px rgba(202,93,141,0.06), inset 0 1px 0 rgba(255,255,255,0.76), inset 0 -1px 0 rgba(89,68,101,0.06);
+  --hint-dock-bg:
+    radial-gradient(120% 150% at 18% -24%, rgba(255,255,255,0.84), transparent 42%),
+    radial-gradient(92% 130% at 50% 118%, rgba(255,196,220,0.27), transparent 54%),
+    radial-gradient(84% 120% at 98% 8%, rgba(196,239,235,0.34), transparent 46%),
+    linear-gradient(145deg, rgba(255,255,255,0.66), rgba(255,248,252,0.44) 46%, rgba(232,249,247,0.34));
+  --hint-dock-border: rgba(255, 255, 255, 0.86);
+  --hint-dock-shadow: 0 26px 70px rgba(107,78,124,0.16), 0 8px 24px rgba(202,93,141,0.07), inset 0 1px 1px rgba(255,255,255,0.92), inset 0 -12px 26px rgba(89,68,101,0.055), inset 0 0 0 1px rgba(255,255,255,0.42);
+  --hint-dock-veil: linear-gradient(180deg, transparent 0%, rgba(255,250,252,0.16) 52%, rgba(247,239,247,0.32) 100%);
   --hint-elevated-shadow: var(--hint-liquid-shadow);
   --astro-text: rgba(42, 34, 48, 0.96);
   --astro-text-strong: #2a1c32;
@@ -674,6 +692,122 @@
     radial-gradient(circle at 18% 0%, rgba(255,255,255,0.22), transparent 34%),
     radial-gradient(circle at 78% 100%, color-mix(in srgb, var(--hint-rose, #f3a9ca) 9%, transparent), transparent 42%);
   opacity: 0.66;
+}
+
+.hint-app-dock {
+  border-width: 1px;
+  background-clip: padding-box;
+  background: var(--hint-dock-bg);
+  border-color: var(--hint-dock-border);
+  box-shadow: var(--hint-dock-shadow);
+  outline: 1px solid color-mix(in srgb, var(--hint-liquid-highlight) 68%, transparent);
+  outline-offset: -3px;
+  transform: translateZ(0);
+}
+
+.hint-app-dock::before {
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(112deg, rgba(255,255,255,0.54), rgba(255,255,255,0.13) 28%, transparent 47%, color-mix(in srgb, var(--hint-aqua, #b9dfdc) 15%, transparent) 74%, transparent),
+    radial-gradient(ellipse at 17% -18%, rgba(255,255,255,0.56), transparent 42%),
+    radial-gradient(ellipse at 54% 116%, color-mix(in srgb, var(--hint-rose, #f3a9ca) 17%, transparent), transparent 54%);
+  opacity: 0.82;
+  mix-blend-mode: screen;
+}
+
+.hint-app-dock::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.44), transparent 23%, transparent 70%, rgba(255,255,255,0.18)),
+    linear-gradient(90deg, rgba(255,255,255,0.30), transparent 14%, transparent 86%, rgba(255,255,255,0.24));
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.92),
+    inset 0 -1px 1px rgba(255,255,255,0.46),
+    inset 0 -18px 30px rgba(255,255,255,0.13),
+    inset 0 0 0 1px color-mix(in srgb, var(--hint-liquid-highlight) 58%, transparent);
+  opacity: 0.72;
+}
+
+[data-hint-theme="dark"] .hint-app-dock::before {
+  background:
+    linear-gradient(112deg, rgba(255,255,255,0.34), rgba(255,255,255,0.08) 30%, transparent 50%, color-mix(in srgb, var(--hint-aqua, #b9dfdc) 10%, transparent) 76%, transparent),
+    radial-gradient(ellipse at 17% -18%, rgba(255,255,255,0.30), transparent 42%),
+    radial-gradient(ellipse at 54% 116%, color-mix(in srgb, var(--hint-rose, #f3a9ca) 13%, transparent), transparent 54%);
+  opacity: 0.66;
+}
+
+[data-hint-theme="dark"] .hint-app-dock::after {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.25), transparent 24%, transparent 70%, rgba(255,255,255,0.11)),
+    linear-gradient(90deg, rgba(255,255,255,0.18), transparent 14%, transparent 86%, rgba(255,255,255,0.14));
+  opacity: 0.54;
+}
+
+.hint-app-dock > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hint-app-dock .hint-app-tab {
+  isolation: isolate;
+  overflow: hidden;
+  background-clip: padding-box;
+}
+
+.hint-app-dock .hint-app-tab > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hint-app-dock .hint-app-tab::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 34% 0%, rgba(255,255,255,0.72), transparent 42%),
+    linear-gradient(120deg, rgba(255,255,255,0.42), rgba(255,255,255,0.08) 36%, transparent 62%),
+    radial-gradient(ellipse at 82% 112%, color-mix(in srgb, var(--hint-aqua, #b9dfdc) 18%, transparent), transparent 46%);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.hint-app-dock .hint-app-tab[data-active="true"]::before,
+.hint-app-dock .hint-app-tab[data-featured="true"]::before {
+  opacity: 0.74;
+}
+
+.hint-app-dock .hint-app-tab[data-active="true"]::after,
+.hint-app-dock .hint-app-tab[data-featured="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.40), transparent 28%, transparent 70%, rgba(255,255,255,0.16)),
+    linear-gradient(90deg, rgba(255,255,255,0.26), transparent 18%, transparent 82%, rgba(255,255,255,0.20));
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.78),
+    inset 0 -1px 1px rgba(255,255,255,0.32),
+    inset 0 -12px 22px rgba(255,255,255,0.10),
+    inset 0 0 0 1px color-mix(in srgb, var(--hint-liquid-highlight) 44%, transparent);
+  opacity: 0.72;
+  animation: none;
+}
+
+[data-hint-theme="dark"] .hint-app-dock .hint-app-tab[data-active="true"]::after,
+[data-hint-theme="dark"] .hint-app-dock .hint-app-tab[data-featured="true"]::after {
+  opacity: 0.50;
 }
 
 .hint-prism-action {

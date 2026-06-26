@@ -1226,7 +1226,7 @@ export function RoomSetup({ onStart, initialSetup = DEFAULT_TAROT_ROOM_SETUP }: 
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 1.2, ease: "easeOut" }}
-      className="flex h-full w-full max-w-[430px] flex-col justify-center px-3 py-2.5 sm:px-4"
+      className="flex h-full w-full max-w-[var(--hint-app-width)] flex-col justify-center px-3 py-2.5 sm:px-4"
     >
       <div
         className="hint-liquid-panel relative flex max-h-[calc(100vh-1rem)] flex-col overflow-hidden rounded-[28px] border"
