@@ -1,28 +1,23 @@
 import { useState, type ReactNode } from "react";
 import {
-  CalendarDays,
   ChevronRight,
   FileText,
   Globe2,
   Info,
-  KeyRound,
   LifeBuoy,
   Lock,
   Mail,
   Moon,
   Palette,
   ShieldAlert,
-  ShieldCheck,
   Sparkles,
   Sun,
   Trash2,
-  UserRound,
   Volume2,
   Wind,
   type LucideIcon,
 } from "lucide-react";
 import { Link } from "wouter";
-import type { Profile } from "@workspace/api-client-react";
 import { ACCENT, GLASS } from "../../hold/atmosphere";
 import { LanguageToggle } from "../../../components/LanguageToggle";
 import { CONTACT_EMAIL } from "../../../components/LegalNotice";
@@ -37,7 +32,6 @@ import {
   getInitialHintTheme,
   type HintTheme,
 } from "../../../components/app/theme";
-import { useLocalAccount, type LocalAccount } from "../../../lib/auth";
 
 interface Row {
   id: string;
@@ -48,23 +42,6 @@ interface Row {
   danger?: boolean;
   control?: ReactNode;
   onClick?: () => void;
-}
-
-function accountLabel(account: LocalAccount) {
-  return account.email ?? account.phone ?? account.identifier;
-}
-
-function providerLabel(provider: LocalAccount["provider"]) {
-  if (provider === "email") return "Email";
-  if (provider === "phone") return "Phone";
-  return provider.charAt(0).toUpperCase() + provider.slice(1);
-}
-
-function profileDetail(profile: Profile | null, missingText: string) {
-  if (!profile?.birthDate) return missingText;
-  return [profile.birthDate, profile.birthTime, profile.birthPlace]
-    .filter(Boolean)
-    .join(" · ");
 }
 
 async function clearHistory(confirmMessage: string) {
@@ -86,41 +63,15 @@ async function clearHistory(confirmMessage: string) {
   window.location.reload();
 }
 
-export function SettingsList({
-  profile,
-  onEditProfile,
-}: {
-  profile: Profile | null;
-  onEditProfile: () => void;
-}) {
+export function SettingsList() {
   const [theme, setTheme] = useState<HintTheme>(getInitialHintTheme);
   const { preferences, setPreference } = useHintPreferences();
-  const account = useLocalAccount();
   const { t } = useLanguage();
 
   function chooseTheme(nextTheme: HintTheme) {
     setTheme(nextTheme);
     setHintThemePreference(nextTheme);
   }
-
-  const profileRows: Row[] = [
-    {
-      id: "profile",
-      icon: profile?.birthDate ? CalendarDays : UserRound,
-      label: t("account.birthProfile"),
-      detail: profileDetail(profile, t("account.birthMissing")),
-      onClick: onEditProfile,
-    },
-    {
-      id: "account",
-      icon: account ? ShieldCheck : KeyRound,
-      label: t("me.account"),
-      detail: account
-        ? `${providerLabel(account.provider)} · ${accountLabel(account)}`
-        : t("me.settings.accountGuestDetail"),
-      href: account ? "/app/login?mode=login" : "/app/login?mode=signup",
-    },
-  ];
 
   const appRows: Row[] = [
     {
@@ -156,14 +107,11 @@ export function SettingsList({
   ];
 
   return (
-    <div className="grid gap-5">
-      <ProfileStatusGrid profile={profile} account={account} onEditProfile={onEditProfile} />
-      <SettingsSection title={t("me.settings.groupProfile")} rows={profileRows} />
-
+    <div className="grid gap-4">
       <section>
         <SectionTitle>{t("me.settings.groupPreferences")}</SectionTitle>
-        <div className="overflow-visible rounded-[22px] border" style={groupStyle}>
-          <div className="px-4 py-3.5">
+        <div className="overflow-visible rounded-[18px] border" style={groupStyle}>
+          <div className="px-3.5 py-3">
             <div className="flex items-start gap-3.5">
               <IconTile icon={Palette} />
               <div className="min-w-0 flex-1">
@@ -237,9 +185,9 @@ export function SettingsList({
 const groupStyle = {
   background: "var(--hint-liquid-panel)",
   borderColor: "var(--hint-liquid-border)",
-  boxShadow: "var(--hint-liquid-shadow)",
-  backdropFilter: "blur(34px) saturate(1.36)",
-  WebkitBackdropFilter: "blur(34px) saturate(1.36)",
+  boxShadow: "0 16px 38px rgba(25,18,34,0.18), inset 0 1px 0 rgba(255,255,255,0.18)",
+  backdropFilter: "blur(28px) saturate(1.22)",
+  WebkitBackdropFilter: "blur(28px) saturate(1.22)",
 } as const;
 
 function SectionTitle({ children }: { children: ReactNode }) {
@@ -259,7 +207,7 @@ function IconTile({
 }) {
   return (
     <span
-      className="grid size-9 shrink-0 place-items-center rounded-[12px]"
+      className="grid size-8 shrink-0 place-items-center rounded-[10px]"
       style={{
         background: danger
           ? "rgba(214,140,140,0.12)"
@@ -276,87 +224,10 @@ function SettingsSection({ title, rows }: { title: string; rows: Row[] }) {
   return (
     <section>
       <SectionTitle>{title}</SectionTitle>
-      <div className="overflow-hidden rounded-[22px] border" style={groupStyle}>
+      <div className="overflow-hidden rounded-[18px] border" style={groupStyle}>
         {rows.map((row, index) => (
           <SettingsRow key={row.id} row={row} isFirst={index === 0} />
         ))}
-      </div>
-    </section>
-  );
-}
-
-function ProfileStatusGrid({
-  profile,
-  account,
-  onEditProfile,
-}: {
-  profile: Profile | null;
-  account: LocalAccount | null;
-  onEditProfile: () => void;
-}) {
-  const { t } = useLanguage();
-  const profileName = profile?.name ?? account?.name ?? t("account.guest");
-  const accountHref = account ? "/app/login?mode=login" : "/app/login?mode=signup";
-  const items = [
-    {
-      id: "identity",
-      icon: UserRound,
-      label: t("account.briefProfile"),
-      value: profile?.name || account?.name ? profileName : t("account.guest"),
-      tone: ACCENT.aqua,
-      onClick: onEditProfile,
-    },
-    {
-      id: "birth",
-      icon: CalendarDays,
-      label: t("account.birthProfile"),
-      value: profile?.birthDate ? t("me.saved") : t("account.birthMissing"),
-      tone: ACCENT.gold,
-      onClick: onEditProfile,
-    },
-    {
-      id: "account",
-      icon: account ? ShieldCheck : KeyRound,
-      label: t("me.account"),
-      value: account ? t("account.verified") : t("account.notSignedIn"),
-      tone: account ? ACCENT.aqua : GLASS.faint,
-      href: accountHref,
-    },
-  ];
-
-  return (
-    <section>
-      <div className="grid grid-cols-3 gap-2">
-        {items.map(({ id, icon: Icon, label, value, tone, href, onClick }) => {
-          const content = (
-            <>
-              <span className="grid size-8 place-items-center rounded-[10px]" style={{ background: "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)", border: `1px solid ${GLASS.border}` }}>
-                <Icon size={15} color={tone} />
-              </span>
-              <span className="mt-2 block truncate font-sans text-[9px] font-black uppercase tracking-[0.11em]" style={{ color: GLASS.faint }}>
-                {label}
-              </span>
-              <span className="mt-1 block truncate font-serif text-[13px] leading-tight" style={{ color: GLASS.text }}>
-                {value}
-              </span>
-            </>
-          );
-          const className = "min-w-0 rounded-[18px] border px-2.5 py-3 text-left transition active:scale-[0.98]";
-          const style = {
-            background: "var(--hint-liquid-panel)",
-            borderColor: "var(--hint-liquid-border)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.20)",
-          };
-          return href ? (
-            <Link key={id} href={href} className={className} style={style}>
-              {content}
-            </Link>
-          ) : (
-            <button key={id} type="button" onClick={onClick} className={className} style={style}>
-              {content}
-            </button>
-          );
-        })}
       </div>
     </section>
   );
@@ -373,8 +244,8 @@ function ExpandableSettingsSection({
 }) {
   return (
     <section>
-      <details className="overflow-hidden rounded-[22px] border" style={groupStyle}>
-        <summary className="flex cursor-pointer list-none items-center gap-3.5 px-4 py-3.5">
+      <details className="overflow-hidden rounded-[18px] border" style={groupStyle}>
+        <summary className="flex cursor-pointer list-none items-center gap-3.5 px-3.5 py-3">
           <IconTile icon={ShieldAlert} />
           <span className="min-w-0 flex-1">
             <span className="block font-serif text-[15px] leading-tight" style={{ color: GLASS.text }}>
@@ -384,9 +255,7 @@ function ExpandableSettingsSection({
               {detail}
             </span>
           </span>
-          <span className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-black" style={{ borderColor: GLASS.border, color: GLASS.faint }}>
-            {rows.length}
-          </span>
+          <ChevronRight size={15} color={GLASS.faint} className="shrink-0" />
         </summary>
         <div style={{ borderTop: `1px solid ${GLASS.border}` }}>
           {rows.map((row, index) => (
@@ -420,7 +289,7 @@ function SettingsRow({ row, isFirst }: { row: Row; isFirst: boolean }) {
     </>
   );
 
-  const className = "flex min-h-[64px] w-full items-center gap-3.5 px-4 py-3 text-left transition active:bg-white/[0.06]";
+  const className = "flex min-h-[58px] w-full items-center gap-3.5 px-3.5 py-3 text-left transition active:bg-white/[0.06]";
   const style = { borderTop: isFirst ? "none" : `1px solid ${GLASS.border}` };
 
   if (row.href) {
@@ -456,7 +325,7 @@ function ControlRow({
   control: ReactNode;
 }) {
   return (
-    <div className="flex min-h-[64px] items-center gap-3.5 border-t px-4 py-3" style={{ borderColor: GLASS.border }}>
+    <div className="flex min-h-[58px] items-center gap-3.5 border-t px-3.5 py-3" style={{ borderColor: GLASS.border }}>
       <IconTile icon={icon} />
       <span className="min-w-0 flex-1">
         <span className="block font-serif text-[15px] leading-tight" style={{ color: GLASS.text }}>
@@ -486,7 +355,7 @@ function ThemeButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-11 items-center justify-center gap-2 rounded-[14px] border px-3 py-2 font-sans text-[12px] font-bold transition active:scale-[0.98]"
+      className="flex min-h-10 items-center justify-center gap-2 rounded-[12px] border px-3 py-2 font-sans text-[12px] font-bold transition active:scale-[0.98]"
       style={{
         borderColor: active ? "color-mix(in srgb, var(--hint-rose) 34%, var(--hint-border))" : GLASS.border,
         color: active ? "var(--hint-special-action-text)" : GLASS.text,

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ACCENT, SOFT_GOLD } from "../../hold/atmosphere";
 import type { ModuleDefinition } from "../types/home.types";
 import { useLanguage } from "../../../lib/i18n";
+import { triggerFeedback } from "../../../lib/feedback";
 
 type Variant = "grid" | "library";
 
@@ -42,7 +43,7 @@ export function ModuleTile({ module, index, baseDelay = 0, variant = "grid" }: P
         locked ? "cursor-default" : "cursor-pointer"
       } ${
         isLibrary ? "items-start justify-between p-4" : "items-center justify-between p-4"
-      }`}
+      } ${locked ? "" : "hint-pressable hint-tap-sparkle"}`}
       style={{
         background: locked
           ? "var(--hint-card-surface-muted)"
@@ -113,7 +114,7 @@ export function ModuleTile({ module, index, baseDelay = 0, variant = "grid" }: P
 export function ModuleTileWrapper({ module, index, baseDelay, variant }: Props) {
   if (module.href) {
     return (
-      <Link href={module.href} className="block h-full">
+      <Link href={module.href} onPointerDown={() => triggerFeedback("select")} className="block h-full">
         <ModuleTile module={module} index={index} baseDelay={baseDelay} variant={variant} />
       </Link>
     );
