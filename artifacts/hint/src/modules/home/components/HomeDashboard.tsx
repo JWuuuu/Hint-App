@@ -31,6 +31,7 @@ import {
 } from "../data/localRitualProgress";
 import { FeedCards } from "./FeedCards";
 import { CardSigil } from "../../hold/components/CardSigil";
+import { getDefaultTarotCardBackForStyle, getTarotCardBackImage } from "../../tarot/logic/cardBacks";
 import { getTarotCardImage } from "../../tarot/logic/cardImageMap";
 import { useLanguage } from "../../../lib/i18n";
 import { generateSkyCardReading } from "../../../lib/readings/generateSkyCardReading";
@@ -40,10 +41,13 @@ import {
 } from "../../readings/localDailyReadings";
 import { useProfile } from "../../../lib/useProfile";
 import { readBirthProfile } from "../../../lib/astro/userBirthProfile";
+import { triggerFeedback } from "../../../lib/feedback";
 import type { DailyReport, DailyScore } from "../types/home.types";
 import { LuckyIllustration } from "./LuckyIllustration";
 import { SkyEvidence } from "../../../components/tarot/SkyEvidence";
 import { SafeImage } from "../../../shared/ui/SafeImage";
+
+const SKY_DECK_CARD_BACK_IMAGE = getTarotCardBackImage(getDefaultTarotCardBackForStyle("nocturne"));
 
 type RoomShortcutData = {
   title: string;
@@ -434,7 +438,8 @@ function CompactSignalPanel({
       {revealed && !birthPersonalized && (
         <Link
           href="/app/profile"
-          className="relative mt-3 inline-flex w-full items-center justify-center rounded-full border px-4 py-2.5 font-sans text-[12px] font-semibold"
+          onPointerDown={() => triggerFeedback("select")}
+          className="hint-pressable relative mt-3 inline-flex w-full items-center justify-center rounded-full border px-4 py-2.5 font-sans text-[12px] font-semibold"
           style={{
             color: "var(--hint-text)",
             background: "color-mix(in srgb, var(--hint-surface-soft) 88%, transparent)",
@@ -647,10 +652,11 @@ function ThemeAwareDailyCard({
         <div
           className="tarot-flip-face overflow-hidden rounded-[20px] border"
           style={{
-            background:
-              "radial-gradient(circle at 50% 22%, color-mix(in srgb, var(--hint-gold, #cba866) 16%, transparent), transparent 36%), var(--hint-deck-card-bg)",
+            backgroundImage: `url("${SKY_DECK_CARD_BACK_IMAGE}")`,
+            backgroundPosition: "center",
+            backgroundSize: "cover",
             borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 58%, var(--hint-border))",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16), inset 0 0 0 1px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.04)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16), 0 0 0 1px rgba(255,255,255,0.04)",
           }}
         >
           <div
@@ -665,22 +671,6 @@ function ThemeAwareDailyCard({
               background: "linear-gradient(110deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04) 48%, transparent)",
             }}
           />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <motion.svg
-              width="58%"
-              height="58%"
-              viewBox="-48 -58 96 116"
-              fill="none"
-              stroke="color-mix(in srgb, var(--hint-gold, #cba866) 78%, var(--hint-text))"
-              strokeWidth="1.7"
-              animate={!revealed ? { scale: [1, 1.035, 1], opacity: [0.72, 1, 0.72] } : { opacity: 0.72 }}
-              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <path d="M 0 -42 L 30 0 L 0 42 L -30 0 Z" />
-              <path d="M 0 -22 L 16 0 L 0 22 L -16 0 Z" />
-              <circle cx="0" cy="0" r="4" fill="currentColor" />
-            </motion.svg>
-          </div>
         </div>
 
         <div
@@ -1156,13 +1146,16 @@ function DailyHintSection({
   function revealDailyCard() {
     if (revealed || revealStartedRef.current) return;
     revealStartedRef.current = true;
+    triggerFeedback("reveal");
     setRevealing(true);
     revealTimerRef.current = window.setTimeout(() => {
       revealTimerRef.current = null;
-      Promise.resolve(onReveal()).finally(() => {
-        revealStartedRef.current = false;
-        setRevealing(false);
-      });
+      Promise.resolve(onReveal())
+        .then(() => triggerFeedback("success"))
+        .finally(() => {
+          revealStartedRef.current = false;
+          setRevealing(false);
+        });
     }, 620);
   }
 
@@ -1212,8 +1205,11 @@ function DailyHintSection({
           {revealed && (
             <button
               type="button"
-              onClick={() => setExpanded((value) => !value)}
-              className="rounded-full border px-2.5 py-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.12em] transition hover:translate-y-[-1px]"
+              onClick={() => {
+                triggerFeedback("soft");
+                setExpanded((value) => !value);
+              }}
+              className="hint-pressable rounded-full border px-2.5 py-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.12em] transition hover:translate-y-[-1px]"
               style={{
                 color: "var(--hint-text)",
                 background: "color-mix(in srgb, var(--hint-surface-soft) 72%, var(--hint-rose, #cf4f92) 18%)",
@@ -1232,7 +1228,7 @@ function DailyHintSection({
               onPointerDown={revealDailyCard}
               onClick={revealDailyCard}
               disabled={revealed || revealing}
-              className="mx-auto block rounded-[20px] outline-none transition-transform duration-200 hover:translate-y-[-2px] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--hint-aqua)_80%,white)]"
+              className="hint-pressable hint-tap-sparkle mx-auto block rounded-[20px] outline-none transition-transform duration-200 hover:translate-y-[-2px] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--hint-aqua)_80%,white)]"
               aria-label={revealed ? `Daily tarot card: ${report.card.cardName}` : "Tap to open today's sky card"}
             >
               <ThemeAwareDailyCard report={report} revealed={revealed} revealing={revealing} />
@@ -1244,7 +1240,7 @@ function DailyHintSection({
                 onPointerDown={revealDailyCard}
                 onClick={revealDailyCard}
                 disabled={revealing}
-                className="relative mt-3 inline-flex h-9 w-full max-w-[16rem] items-center justify-center overflow-hidden rounded-full border px-4 font-sans text-[10.5px] font-semibold uppercase tracking-[0.14em] sm:w-auto"
+                className="hint-pressable hint-tap-sparkle relative mt-3 inline-flex h-9 w-full max-w-[16rem] items-center justify-center overflow-hidden rounded-full border px-4 font-sans text-[10.5px] font-semibold uppercase tracking-[0.14em] sm:w-auto"
                 style={{
                   color: "var(--hint-text)",
                   borderColor: "color-mix(in srgb, var(--hint-rose, #cf4f92) 34%, var(--hint-border-strong))",
@@ -1270,7 +1266,8 @@ function DailyHintSection({
             {!birthPersonalized && (
               <Link
                 href="/app/profile"
-                className="mt-3 inline-flex w-full max-w-[16rem] items-center justify-center rounded-full border px-4 py-2.5 font-sans text-[12px] font-semibold"
+                onPointerDown={() => triggerFeedback("select")}
+                className="hint-pressable mt-3 inline-flex w-full max-w-[16rem] items-center justify-center rounded-full border px-4 py-2.5 font-sans text-[12px] font-semibold"
                 style={{
                   color: "var(--hint-text)",
                   background: "color-mix(in srgb, var(--hint-surface-soft) 88%, transparent)",
@@ -1414,7 +1411,8 @@ function DailyHintSection({
               </div>
               <Link
                 href="/app/ask"
-                className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full font-sans text-[12px] font-semibold sm:w-auto sm:px-5"
+                onPointerDown={() => triggerFeedback("select")}
+                className="hint-pressable hint-tap-sparkle mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full font-sans text-[12px] font-semibold sm:w-auto sm:px-5"
                 style={{
                   color: "#231d2a",
                   background: "linear-gradient(135deg, rgba(228,164,82,1), rgba(242,148,111,0.98))",
@@ -1532,7 +1530,8 @@ function RitualStreakPanel({
         </div>
         <Link
           href="/app/profile"
-          className="hint-status-pill shrink-0 rounded-full px-2.5 py-1.5 font-sans text-[9px] font-black uppercase tracking-[0.1em]"
+          onPointerDown={() => triggerFeedback("select")}
+          className="hint-status-pill hint-pressable shrink-0 rounded-full px-2.5 py-1.5 font-sans text-[9px] font-black uppercase tracking-[0.1em]"
         >
           Rewards
         </Link>
@@ -1551,11 +1550,14 @@ function RitualStreakPanel({
               {tasks.slice(0, 3).map((task, index) => {
                 const checked = ritual.todayTaskCompletions.includes(index);
                 return (
-                  <button
-                    key={task.text}
-                    type="button"
-                    onClick={() => onToggleTask(index)}
-                    className="grid min-h-[44px] grid-cols-[30px_1fr] items-center gap-2 rounded-[13px] px-1.5 py-1.5 text-left transition active:scale-[0.99]"
+                    <button
+                      key={task.text}
+                      type="button"
+                      onClick={() => {
+                        triggerFeedback(checked ? "soft" : "complete");
+                        onToggleTask(index);
+                      }}
+                      className="hint-pressable grid min-h-[44px] grid-cols-[30px_1fr] items-center gap-2 rounded-[13px] px-1.5 py-1.5 text-left transition active:scale-[0.99]"
                   >
                     <span
                       className="grid size-6 place-items-center rounded-[9px] border"
@@ -1800,15 +1802,17 @@ function DailyHintHero({ report }: { report: DailyReport }) {
           />
           <Link
             href="/app/daily"
-            className="group relative mx-auto block aspect-[46/71] w-[148px] overflow-hidden rounded-[14px] border sm:w-[172px] lg:w-[188px]"
+            onPointerDown={() => triggerFeedback("select")}
+            className="hint-pressable hint-tap-sparkle group relative mx-auto block aspect-[46/71] w-[148px] overflow-hidden rounded-[14px] border sm:w-[172px] lg:w-[188px]"
             style={{
-              background: "var(--hint-deck-card-bg)",
+              backgroundImage: `url("${SKY_DECK_CARD_BACK_IMAGE}")`,
+              backgroundPosition: "center",
+              backgroundSize: "cover",
               borderColor: "rgba(206,178,110,0.38)",
-              boxShadow: "0 28px 58px rgba(0,0,0,0.34), 0 0 42px rgba(206,178,110,0.14)",
+              boxShadow: "0 0 42px rgba(206,178,110,0.16)",
             }}
           >
             <div className="absolute inset-[8px] rounded-[8px] border border-[rgba(206,178,110,0.34)]" />
-            <CardSigil cardId={report.card.cardId} />
             <div
               className="absolute inset-x-0 bottom-0 px-4 py-4 font-sans text-[12px] font-medium"
               style={{
@@ -1836,7 +1840,8 @@ function PrimaryLink({
   return (
     <Link
       href={href}
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-[999px] px-5 font-sans text-[14px] font-medium"
+      onPointerDown={() => triggerFeedback("select")}
+      className="hint-pressable hint-tap-sparkle inline-flex h-12 items-center justify-center gap-2 rounded-[999px] px-5 font-sans text-[14px] font-medium"
       style={{
         color: "#08070B",
         background: "linear-gradient(145deg, rgba(243,212,144,0.98), rgba(122,226,214,0.92))",
@@ -1859,7 +1864,8 @@ function SecondaryLink({
   return (
     <Link
       href={href}
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-[999px] border px-5 font-sans text-[14px] font-medium"
+      onPointerDown={() => triggerFeedback("select")}
+      className="hint-pressable inline-flex h-12 items-center justify-center gap-2 rounded-[999px] border px-5 font-sans text-[14px] font-medium"
       style={{
         color: "var(--hint-text)",
         borderColor: "var(--hint-border-strong)",
@@ -1886,9 +1892,9 @@ function RoomShortcutCard({
       viewport={{ once: true, amount: 0.35 }}
       transition={{ delay: 0.08 + index * 0.05, duration: 0.48, ease: "easeOut" }}
     >
-      <Link href={card.href} className="block h-full">
+      <Link href={card.href} onPointerDown={() => triggerFeedback("select")} className="block h-full">
         <div
-          className="group relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[24px] border p-4 transition-transform active:scale-[0.985]"
+          className="hint-pressable hint-tap-sparkle group relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-[24px] border p-4 transition-transform active:scale-[0.985]"
           style={{
             background:
               "linear-gradient(145deg, color-mix(in srgb, var(--hint-surface-strong) 72%, white), color-mix(in srgb, var(--hint-rose, #f7c7d7) 7%, var(--hint-surface-soft) 86%))",
@@ -1932,13 +1938,13 @@ function RoomShortcutCard({
 
 function AstrologyPreviewCard() {
   return (
-    <Link href="/app/astrology" className="block">
+    <Link href="/app/astrology" onPointerDown={() => triggerFeedback("select")} className="block">
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.3 }}
         transition={{ duration: 0.52, ease: "easeOut" }}
-        className="relative overflow-hidden rounded-[28px] border p-5"
+        className="hint-pressable hint-tap-sparkle relative overflow-hidden rounded-[28px] border p-5"
         style={{
           background:
             "linear-gradient(150deg, color-mix(in srgb, var(--hint-surface-strong) 72%, white), color-mix(in srgb, var(--hint-rose, #f7c7d7) 10%, var(--hint-surface-soft) 86%))",
@@ -2071,7 +2077,8 @@ function SectionHeader({
       {action && (
         <Link
           href={action.href}
-          className="font-sans text-[11px] font-medium uppercase tracking-[0.1em]"
+          onPointerDown={() => triggerFeedback("tap")}
+          className="hint-pressable rounded-full px-2 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.1em]"
           style={{ color: "var(--hint-muted)" }}
         >
           {action.label}
@@ -2113,7 +2120,8 @@ function TodayAppHeader({
       <Link
         href="/app/profile"
         aria-label="Open profile"
-        className="hint-liquid-panel grid size-10 shrink-0 place-items-center rounded-full font-serif text-[17px] leading-none active:scale-95"
+        onPointerDown={() => triggerFeedback("select")}
+        className="hint-liquid-panel hint-pressable hint-tap-sparkle grid size-10 shrink-0 place-items-center rounded-full font-serif text-[17px] leading-none active:scale-95"
         style={{ color: "var(--hint-text)" }}
       >
         {profileInitial(profileName)}
@@ -2141,7 +2149,11 @@ function AppActionList({ cards }: { cards: RoomShortcutData[] }) {
               viewport={{ once: true, amount: 0.45 }}
               transition={{ delay: index * 0.045, duration: 0.36, ease: "easeOut" }}
             >
-              <Link href={card.href} className="hint-liquid-panel flex min-h-[92px] flex-col justify-between rounded-[22px] px-2.5 py-3 active:scale-[0.97]">
+              <Link
+                href={card.href}
+                onPointerDown={() => triggerFeedback("select")}
+                className="hint-liquid-panel hint-pressable hint-tap-sparkle flex min-h-[92px] flex-col justify-between rounded-[22px] px-2.5 py-3 active:scale-[0.97]"
+              >
                   <span
                     className="grid size-9 shrink-0 place-items-center rounded-[15px] border"
                     style={{

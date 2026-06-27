@@ -188,7 +188,7 @@ function deckColorLabel(id: DeckStyleId): string {
     case "rose":
       return "Rose quartz with violet foil";
     default:
-      return "Deep navy with gold linework";
+      return "Deep navy with gold sky linework";
   }
 }
 

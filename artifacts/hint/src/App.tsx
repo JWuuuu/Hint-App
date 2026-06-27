@@ -15,6 +15,7 @@ const PRODUCT_ROUTES = [
   "/rooms",
   "/readings",
   "/login",
+  "/signup",
   "/me",
   "/astrology",
   "/compatibility",

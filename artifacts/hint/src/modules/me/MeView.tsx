@@ -11,7 +11,7 @@ import { SettingsList } from "./components/SettingsList";
 import { useLanguage } from "../../lib/i18n";
 
 /**
- * MeView — the user's personal account hub. History and memory live in
+ * MeView - the user's personal account hub. History and memory live in
  * Readings so this screen can stay focused on identity and settings.
  */
 export function MeView() {
@@ -62,7 +62,7 @@ export function MeView() {
         <div className="flex flex-col gap-4">
           <ProfileCard profile={profile} onEdit={() => setEditing(true)} />
           <div id="me-settings" className="scroll-mt-6">
-            <SettingsList profile={profile} onEditProfile={() => setEditing(true)} />
+            <SettingsList />
           </div>
         </div>
       )}
