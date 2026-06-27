@@ -1,0 +1,32 @@
+previews:
+  generation: off
+
+databases:
+  - name: mydailyhint-db
+    databaseName: mydailyhint
+    user: mydailyhint
+
+services:
+  - type: web
+    name: mydailyhint-api
+    runtime: node
+    buildCommand: corepack enable && corepack prepare pnpm@11.5.0 --activate && pnpm install --frozen-lockfile && pnpm run build:api
+    preDeployCommand: pnpm run db:push
+    startCommand: pnpm run start:api
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_TTS_MODEL
+        value: gpt-4o-mini-tts
+      - key: OPENAI_TTS_VOICE
+        value: coral
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mydailyhint-db
+          property: connectionString
+      - key: LOG_LEVEL
+        value: info

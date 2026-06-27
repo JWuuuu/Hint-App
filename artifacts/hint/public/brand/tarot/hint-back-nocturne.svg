@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 112" role="img" aria-label="Hint tarot card back">
+  <defs>
+    <radialGradient id="bg" cx="48%" cy="42%" r="72%">
+      <stop offset="0" stop-color="#274365"/>
+      <stop offset="0.58" stop-color="#152941"/>
+      <stop offset="1" stop-color="#081321"/>
+    </radialGradient>
+    <style>
+      .gold{stroke:#f2d58d;stroke-width:1.25;fill:none;stroke-linecap:round;stroke-linejoin:round}
+      .soft{stroke:#f2d58d;stroke-width:.65;fill:none;opacity:.38;stroke-linecap:round}
+      .ray{stroke:#c9d7d8;stroke-width:.55;opacity:.18}
+      .dot{fill:#f2d58d}
+    </style>
+  </defs>
+  <rect width="72" height="112" rx="9" fill="url(#bg)"/>
+  <path class="ray" d="M36 56 3 18M36 56 10 4M36 56 31 0M36 56 52 0M36 56 69 15M36 56 72 48M36 56 66 102M36 56 39 112M36 56 13 108M36 56 0 70"/>
+  <rect x="5" y="5" width="62" height="102" rx="7" class="gold"/>
+  <rect x="10" y="11" width="52" height="90" rx="6" class="soft"/>
+  <circle cx="36" cy="56" r="23" class="soft"/>
+  <path class="gold" d="M36 30 57 56 36 82 15 56Z"/>
+  <circle cx="36" cy="56" r="15" class="gold"/>
+  <path class="soft" d="M36 38v36M18 56h36M25 45l22 22M47 45 25 67"/>
+  <ellipse cx="36" cy="56" rx="9" ry="4.2" fill="#f2d58d"/>
+  <path class="soft" d="M36 23c7 8 16 8 22 4M14 86c8-5 17-4 25 3M56 87c-6-6-13-7-21-2"/>
+  <rect x="32" y="13" width="8" height="8" rx="1.5" transform="rotate(45 36 17)" fill="#f2d58d"/>
+  <rect x="32" y="91" width="8" height="8" rx="1.5" transform="rotate(45 36 95)" fill="#f2d58d"/>
+  <circle class="dot" cx="15" cy="16" r="1.6"/><circle class="dot" cx="57" cy="17" r="1.4"/>
+  <circle class="dot" cx="16" cy="94" r="1.3"/><circle class="dot" cx="56" cy="94" r="1.6"/>
+  <circle class="dot" cx="24" cy="27" r=".9"/><circle class="dot" cx="51" cy="37" r=".9"/>
+  <circle class="dot" cx="21" cy="71" r=".9"/><circle class="dot" cx="50" cy="78" r=".9"/>
+</svg>

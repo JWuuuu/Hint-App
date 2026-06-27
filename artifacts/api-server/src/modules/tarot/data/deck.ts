@@ -1,0 +1,218 @@
+/**
+ * Tarot deck data — Major Arcana (22 cards).
+ * Architecture supports the full 78-card deck (add Minor Arcana here later).
+ */
+
+export interface TarotCard {
+  id: string;
+  name: string;
+  arcana: "major" | "minor";
+  suit: string | null; // null for Major Arcana; "wands" | "cups" | "swords" | "pentacles" for Minor
+  keywords: string[];
+  upright: string;
+  reversed: string;
+}
+
+export const majorArcana: TarotCard[] = [
+  {
+    id: "0-fool",
+    name: "The Fool",
+    arcana: "major",
+    suit: null,
+    keywords: ["beginnings", "innocence", "spontaneity", "leap of faith"],
+    upright: "A new journey begins — naive, unguarded, full of possibility. You are standing at the edge of something you cannot yet see. Trust the leap.",
+    reversed: "Fear holds you at the threshold. Recklessness or paralysis. You are neither moving forward nor truly still — caught between.",
+  },
+  {
+    id: "1-magician",
+    name: "The Magician",
+    arcana: "major",
+    suit: null,
+    keywords: ["willpower", "resourcefulness", "power", "manifestation"],
+    upright: "Everything you need is already in your hands. The Magician asks: what are you doing with what you have? Your will shapes the world.",
+    reversed: "Manipulation, untapped potential, or feeling powerless. You may be waiting to feel ready — but you already are.",
+  },
+  {
+    id: "2-high-priestess",
+    name: "The High Priestess",
+    arcana: "major",
+    suit: null,
+    keywords: ["intuition", "mystery", "inner knowing", "the unconscious"],
+    upright: "Silence holds the answer. The High Priestess asks you to stop asking others what to do — you already know. Go inward.",
+    reversed: "You are ignoring your own intuition. Secrets, repression, disconnection from your inner voice. Listen more carefully.",
+  },
+  {
+    id: "3-empress",
+    name: "The Empress",
+    arcana: "major",
+    suit: null,
+    keywords: ["abundance", "nurturing", "creation", "fertility", "nature"],
+    upright: "Growth is happening, even when you cannot see it. The Empress invites softness — toward yourself, toward what you are tending.",
+    reversed: "Creative blocks, self-neglect, or smothering what needs to breathe. What have you stopped nurturing?",
+  },
+  {
+    id: "4-emperor",
+    name: "The Emperor",
+    arcana: "major",
+    suit: null,
+    keywords: ["structure", "authority", "stability", "fatherhood", "control"],
+    upright: "You need a foundation. The Emperor offers order not as a cage but as protection — build the structure that lets everything else grow.",
+    reversed: "Rigidity, domination, or crumbling authority. Where have you confused control with care?",
+  },
+  {
+    id: "5-hierophant",
+    name: "The Hierophant",
+    arcana: "major",
+    suit: null,
+    keywords: ["tradition", "belief", "conformity", "institutions", "guidance"],
+    upright: "There is wisdom in what came before. The Hierophant asks: what beliefs are holding you together — and which are holding you back?",
+    reversed: "Rebellion against convention, or being trapped by it. You may need to question everything you were taught.",
+  },
+  {
+    id: "6-lovers",
+    name: "The Lovers",
+    arcana: "major",
+    suit: null,
+    keywords: ["love", "alignment", "choice", "values", "partnership"],
+    upright: "This is about alignment — of values, of self, of another. The Lovers ask: what truly matters to you? Every choice reveals who you are.",
+    reversed: "Misalignment, self-betrayal, or a difficult choice avoided. You may love someone you are not at peace with.",
+  },
+  {
+    id: "7-chariot",
+    name: "The Chariot",
+    arcana: "major",
+    suit: null,
+    keywords: ["determination", "control", "victory", "willpower", "ambition"],
+    upright: "You are moving forward — even when it is difficult. The Chariot does not promise it will be easy. It promises you can do it.",
+    reversed: "Loss of direction, aggression, or being pulled in opposite directions. What is draining your momentum?",
+  },
+  {
+    id: "8-strength",
+    name: "Strength",
+    arcana: "major",
+    suit: null,
+    keywords: ["inner strength", "courage", "compassion", "patience", "control"],
+    upright: "Strength is not the absence of fear — it is moving through it gently. You have more capacity than you know.",
+    reversed: "Self-doubt, weakness, or brute force. You may be fighting something that needs to be held, not defeated.",
+  },
+  {
+    id: "9-hermit",
+    name: "The Hermit",
+    arcana: "major",
+    suit: null,
+    keywords: ["solitude", "introspection", "guidance", "inner truth", "withdrawal"],
+    upright: "The answers are not out there. The Hermit walks alone — not because he is lonely, but because some truths can only be found in silence.",
+    reversed: "Isolation that has become avoidance. You may be withdrawing from what needs to be faced.",
+  },
+  {
+    id: "10-wheel",
+    name: "Wheel of Fortune",
+    arcana: "major",
+    suit: null,
+    keywords: ["cycles", "fate", "change", "turning points", "luck"],
+    upright: "Everything turns. The Wheel of Fortune reminds you that what feels permanent — good or bad — is part of a cycle. A shift is already in motion.",
+    reversed: "Resistance to change, or feeling crushed by circumstances you did not choose. Bad luck — or a lesson in disguise.",
+  },
+  {
+    id: "11-justice",
+    name: "Justice",
+    arcana: "major",
+    suit: null,
+    keywords: ["truth", "fairness", "cause and effect", "clarity", "accountability"],
+    upright: "The truth of this situation is visible, if you choose to look clearly. Justice is not about punishment — it is about alignment with what is real.",
+    reversed: "Dishonesty, avoidance of accountability, or a sense that what happened was unfair. Sometimes the scales are slow.",
+  },
+  {
+    id: "12-hanged-man",
+    name: "The Hanged Man",
+    arcana: "major",
+    suit: null,
+    keywords: ["suspension", "surrender", "new perspective", "waiting", "sacrifice"],
+    upright: "You cannot force this. The Hanged Man asks you to pause — not as defeat but as surrender to a different way of seeing.",
+    reversed: "Stalling, martyrdom, or clinging to a perspective that no longer serves. What are you refusing to release?",
+  },
+  {
+    id: "13-death",
+    name: "Death",
+    arcana: "major",
+    suit: null,
+    keywords: ["endings", "transformation", "transition", "release", "change"],
+    upright: "Something is ending — and that is not a tragedy. Death is not about dying. It is about what must be released so something new can begin.",
+    reversed: "Resistance to endings, fear of change, or clinging to something already gone. The door is closing whether you walk through it or not.",
+  },
+  {
+    id: "14-temperance",
+    name: "Temperance",
+    arcana: "major",
+    suit: null,
+    keywords: ["balance", "patience", "moderation", "purpose", "integration"],
+    upright: "You are being called toward balance — not perfection, but flow. Temperance is the art of holding opposites without breaking.",
+    reversed: "Excess, imbalance, or forcing outcomes. Something has gotten out of proportion.",
+  },
+  {
+    id: "15-devil",
+    name: "The Devil",
+    arcana: "major",
+    suit: null,
+    keywords: ["bondage", "addiction", "shadow self", "materialism", "restriction"],
+    upright: "What are you chained to? The Devil reveals the patterns that keep you small — not because you are weak, but because you have forgotten you hold the key.",
+    reversed: "Breaking free, or the beginning of awareness. You are starting to see the chains for what they are.",
+  },
+  {
+    id: "16-tower",
+    name: "The Tower",
+    arcana: "major",
+    suit: null,
+    keywords: ["sudden change", "upheaval", "revelation", "chaos", "destruction"],
+    upright: "Something is collapsing — or it already has. The Tower does not apologize. What falls was not built to last. What remains is real.",
+    reversed: "Avoiding disaster, or resisting necessary destruction. The collapse is coming slowly — which can be worse.",
+  },
+  {
+    id: "17-star",
+    name: "The Star",
+    arcana: "major",
+    suit: null,
+    keywords: ["hope", "faith", "renewal", "serenity", "inspiration"],
+    upright: "After everything — there is still light. The Star is quiet hope. It does not demand belief. It simply shines, and asks you to look up.",
+    reversed: "Despair, hopelessness, or disconnection from what once inspired you. The light is still there — you have stopped looking.",
+  },
+  {
+    id: "18-moon",
+    name: "The Moon",
+    arcana: "major",
+    suit: null,
+    keywords: ["illusion", "fear", "the unconscious", "confusion", "dreams"],
+    upright: "Things are not what they appear. The Moon illuminates the night — which means shadows grow long. Your fears may be lying to you.",
+    reversed: "Confusion lifting, or illusions revealed. You are beginning to see more clearly — but it may be unsettling.",
+  },
+  {
+    id: "19-sun",
+    name: "The Sun",
+    arcana: "major",
+    suit: null,
+    keywords: ["joy", "success", "vitality", "clarity", "positivity"],
+    upright: "Warmth, clarity, and life returning. The Sun does not ask you to be happy — it simply reminds you that light exists, and it is generous.",
+    reversed: "Temporary gloom, or joy blocked by doubt. You may be standing in your own shadow.",
+  },
+  {
+    id: "20-judgement",
+    name: "Judgement",
+    arcana: "major",
+    suit: null,
+    keywords: ["reflection", "reckoning", "awakening", "absolution", "calling"],
+    upright: "This is a moment of reckoning — with yourself, not others. Judgement asks: who do you want to be? You are being called to something larger.",
+    reversed: "Self-condemnation, or refusing to answer the call. You are judging yourself too harshly — or not honestly enough.",
+  },
+  {
+    id: "21-world",
+    name: "The World",
+    arcana: "major",
+    suit: null,
+    keywords: ["completion", "integration", "accomplishment", "wholeness", "travel"],
+    upright: "A cycle is complete. The World marks not an ending but an arrival — you have become something. Take a moment to recognize what you have carried.",
+    reversed: "Incompletion, or nearing the end but not quite arriving. You are close. Do not stop now.",
+  },
+];
+
+// Full deck export — add Minor Arcana here later (wands, cups, swords, pentacles)
+export const deck: TarotCard[] = [...majorArcana];

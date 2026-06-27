@@ -1,0 +1,726 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: tarot
+    description: Tarot reading operations
+  - name: speech
+    description: Text-to-speech operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /tarot/reading:
+    post:
+      operationId: createTarotReading
+      tags: [tarot]
+      summary: Create a tarot reading
+      description: Predetermines cards server-side and returns an AI-generated interpretation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TarotReadingInput"
+      responses:
+        "200":
+          description: Tarot reading with drawn cards and AI interpretation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TarotReading"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /hint/chat:
+    post:
+      operationId: sendAmbientChatMessage
+      tags: [tarot]
+      summary: Send a free-form message to Hint (no reading required)
+      description: Ambient conversation with Hint outside of any tarot reading
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AmbientChatInput"
+      responses:
+        "200":
+          description: Hint's reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TarotChatReply"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /speech:
+    post:
+      operationId: createSpeech
+      tags: [speech]
+      summary: Create spoken audio from text
+      description: Generates MP3 audio for an assistant message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeechInput"
+      responses:
+        "200":
+          description: Generated speech audio
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get the profile for an anonymous user
+      parameters:
+        - name: anonId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The user's profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "404":
+          description: No profile yet for this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: saveProfile
+      tags: [profile]
+      summary: Create or update the profile for an anonymous user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileInput"
+      responses:
+        "200":
+          description: The saved profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /daily-pull:
+    post:
+      operationId: getOrCreateDailyPull
+      tags: [history]
+      summary: Get today's daily pull, drawing and saving one if none exists yet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DailyPullRequest"
+      responses:
+        "200":
+          description: The user's daily pull for the given date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyPull"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateDailyPull
+      tags: [history]
+      summary: Update the flipped state or note on a saved daily pull
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DailyPullUpdate"
+      responses:
+        "200":
+          description: The updated daily pull
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyPull"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: No daily pull found to update
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /journal:
+    get:
+      operationId: listJournalEntries
+      tags: [history]
+      summary: List a user's journal entries, newest first
+      parameters:
+        - name: anonId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The user's journal entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JournalEntry"
+    post:
+      operationId: createJournalEntry
+      tags: [history]
+      summary: Save a new journal entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JournalInput"
+      responses:
+        "200":
+          description: The saved journal entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /readings:
+    get:
+      operationId: listReadings
+      tags: [history]
+      summary: List a user's saved tarot readings, newest first
+      parameters:
+        - name: anonId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The user's saved readings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReadingSummary"
+
+  /stats:
+    get:
+      operationId: getUserStats
+      tags: [history]
+      summary: Aggregate counts for the user's Vault
+      parameters:
+        - name: anonId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The user's aggregate stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStats"
+
+  /tarot/chat:
+    post:
+      operationId: sendTarotChatMessage
+      tags: [tarot]
+      summary: Continue the tarot conversation after the initial reading
+      description: Sends a follow-up message in the context of a reading session and returns Hint's reply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TarotChatInput"
+      responses:
+        "200":
+          description: Hint's reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TarotChatReply"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SpeechInput:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: Assistant text to turn into speech
+
+    TarotReadingInput:
+      type: object
+      required:
+        - question
+        - spreadType
+      properties:
+        question:
+          type: string
+          minLength: 1
+          description: The user's question or intention for the reading
+        spreadType:
+          type: string
+          enum: [single, three, relationship]
+          description: The type of tarot spread to use
+        emotionalContext:
+          type: ["string", "null"]
+          description: Optional emotional context the user shares
+        anonId:
+          type: ["string", "null"]
+          description: Optional anonymous user id; when present the reading is saved to history
+
+    TarotCardDraw:
+      type: object
+      required:
+        - card
+        - isReversed
+        - position
+      properties:
+        card:
+          $ref: "#/components/schemas/TarotCardData"
+        isReversed:
+          type: boolean
+        position:
+          type: string
+          description: Position name in the spread (e.g. "Past", "Present", "Future")
+
+    TarotCardData:
+      type: object
+      required:
+        - id
+        - name
+        - arcana
+        - keywords
+        - upright
+        - reversed
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        arcana:
+          type: string
+        suit:
+          type: ["string", "null"]
+        keywords:
+          type: array
+          items:
+            type: string
+        upright:
+          type: string
+        reversed:
+          type: string
+
+    TarotReading:
+      type: object
+      required:
+        - id
+        - cards
+        - interpretation
+        - emotionalQuote
+        - spreadType
+        - createdAt
+      properties:
+        id:
+          type: string
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/TarotCardDraw"
+        interpretation:
+          type: string
+          description: Full AI-generated tarot interpretation
+        emotionalQuote:
+          type: string
+          description: A single evocative quote extracted for the share card
+        spreadType:
+          type: string
+        createdAt:
+          type: string
+
+    Profile:
+      type: object
+      required:
+        - anonId
+        - name
+        - birthDate
+        - createdAt
+      properties:
+        anonId:
+          type: string
+        name:
+          type: string
+        birthDate:
+          type: string
+          description: ISO calendar date (YYYY-MM-DD)
+        birthTime:
+          type: ["string", "null"]
+        birthPlace:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ProfileInput:
+      type: object
+      required:
+        - anonId
+        - name
+        - birthDate
+      properties:
+        anonId:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        birthDate:
+          type: string
+          minLength: 1
+        birthTime:
+          type: string
+        birthPlace:
+          type: string
+
+    DailyPull:
+      type: object
+      required:
+        - anonId
+        - pullDate
+        - cardId
+        - cardName
+        - whisper
+        - isFlipped
+        - createdAt
+      properties:
+        anonId:
+          type: string
+        pullDate:
+          type: string
+        cardId:
+          type: string
+        cardName:
+          type: string
+        whisper:
+          type: string
+        isFlipped:
+          type: boolean
+        note:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    DailyPullRequest:
+      type: object
+      required:
+        - anonId
+        - date
+      properties:
+        anonId:
+          type: string
+          minLength: 1
+        date:
+          type: string
+          minLength: 1
+          description: The user's local calendar date (YYYY-MM-DD)
+
+    DailyPullUpdate:
+      type: object
+      required:
+        - anonId
+        - date
+      properties:
+        anonId:
+          type: string
+          minLength: 1
+        date:
+          type: string
+          minLength: 1
+        isFlipped:
+          type: boolean
+        note:
+          type: string
+
+    JournalEntry:
+      type: object
+      required:
+        - id
+        - anonId
+        - body
+        - createdAt
+      properties:
+        id:
+          type: string
+        anonId:
+          type: string
+        title:
+          type: ["string", "null"]
+        body:
+          type: string
+        mood:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    JournalInput:
+      type: object
+      required:
+        - anonId
+        - body
+      properties:
+        anonId:
+          type: string
+          minLength: 1
+        title:
+          type: string
+        body:
+          type: string
+          minLength: 1
+        mood:
+          type: string
+
+    ReadingSummary:
+      type: object
+      required:
+        - id
+        - cardName
+        - whisper
+        - spreadType
+        - createdAt
+      properties:
+        id:
+          type: string
+        cardName:
+          type: string
+        whisper:
+          type: string
+        spreadType:
+          type: string
+        question:
+          type: ["string", "null"]
+        territory:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    UserStats:
+      type: object
+      required:
+        - nights
+        - readings
+        - journals
+        - pulls
+      properties:
+        nights:
+          type: integer
+        readings:
+          type: integer
+        journals:
+          type: integer
+        pulls:
+          type: integer
+
+    TarotChatMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+
+    TarotChatInput:
+      type: object
+      required:
+        - originalQuestion
+        - territory
+        - spreadType
+        - cards
+        - initialReading
+        - messages
+        - followUp
+      properties:
+        originalQuestion:
+          type: string
+          description: The question the user originally asked
+        territory:
+          type: string
+          description: The emotional territory the user selected
+        emotionalContext:
+          type: string
+          description: The context the user shared before drawing cards
+        spreadType:
+          type: string
+          enum: [single, three, relationship]
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/TarotCardDraw"
+          description: The cards that were drawn for this session
+        initialReading:
+          type: string
+          description: The original AI interpretation from this session
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/TarotChatMessage"
+          description: Prior chat turns in this session, in order
+        followUp:
+          type: string
+          minLength: 1
+          description: The new user message
+
+    AmbientChatInput:
+      type: object
+      required:
+        - messages
+        - followUp
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/TarotChatMessage"
+          description: Prior chat turns in this ambient conversation, in order
+        followUp:
+          type: string
+          minLength: 1
+          description: The new user message
+
+    TarotChatReply:
+      type: object
+      required:
+        - message
+        - createdAt
+      properties:
+        message:
+          type: string
+          description: Hint's reply
+        createdAt:
+          type: string

@@ -1,0 +1,30 @@
+{
+  "name": "Hint",
+  "short_name": "Hint",
+  "description": "A daily tarot, astrology, and reflection app.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080B14",
+  "theme_color": "#080B14",
+  "icons": [
+    {
+      "src": "/brand/hint-icon-64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/hint-icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/brand/hint-card-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

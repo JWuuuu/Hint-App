@@ -1,0 +1,1 @@
+export { CardCollectionView } from "./CardCollectionView";
