@@ -63,3 +63,5 @@ artifacts/checkpoints/
 artifacts/logs/
 artifacts/checkpoints/*.txt
 artifacts/checkpoints/*.zip
+.vercel
+.env*

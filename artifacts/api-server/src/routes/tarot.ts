@@ -11,6 +11,12 @@ import {
   buildLocalStructuredTarotReading,
   generateStructuredTarotReading,
 } from "../modules/tarot/ai/structuredTarotReader.js";
+import {
+  buildLocalSpreadRecommendation,
+  generateSpreadRecommendation,
+  spreadRecommendationSchema,
+  spreadTypeSchema,
+} from "../modules/tarot/ai/spreadRecommender.js";
 import { generateTarotChatReply } from "../modules/tarot/chat/chatReader.js";
 import { deck as TAROT_DECK } from "../modules/tarot/data/deck.js";
 import { logger } from "../lib/logger.js";
@@ -72,19 +78,37 @@ function buildLocalTarotReading({
 
 const readingInputSchema = z.object({
   question: z.string().min(1, "Question is required").max(1000),
-  spreadType: z.enum([
-    "single",
-    "three",
-    "relationship",
-    "futureLover",
-    "peachBlossom",
-    "reconciliation",
-    "trueHeart",
-    "loveTree",
-    "xRelationship",
-  ]),
+  spreadType: spreadTypeSchema,
   emotionalContext: z.string().max(2000).nullish(),
   anonId: z.string().max(200).nullish(),
+});
+
+/* ─── POST /tarot/spread-recommendation ───────────────────────── */
+
+const spreadRecommendationInputSchema = z.object({
+  question: z.string().min(1, "Question is required").max(1000),
+  anonId: z.string().max(200).nullish(),
+});
+
+router.post("/tarot/spread-recommendation", async (req, res) => {
+  const parsed = spreadRecommendationInputSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+
+  if (!consumeAiBudget(req, res, { feature: "tarot_spread_recommendation", dailyLimit: 20 })) {
+    return;
+  }
+
+  try {
+    const recommendation = await generateSpreadRecommendation(parsed.data.question);
+    res.json({ ...recommendation, source: "api" });
+  } catch (err) {
+    logger.error({ err }, "Failed to generate tarot spread recommendation");
+    const recommendation = spreadRecommendationSchema.parse(buildLocalSpreadRecommendation(parsed.data.question));
+    res.json({ ...recommendation, source: "local" });
+  }
 });
 
 router.post("/tarot/reading", async (req, res) => {

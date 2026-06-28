@@ -1,0 +1,23 @@
+.git
+node_modules
+
+# Local build output and caches. Vercel rebuilds from source.
+dist
+tmp
+out-tsc
+*.tsbuildinfo
+.cache
+.local
+.codex
+
+# Local-only generated artifacts.
+artifacts/checkpoints
+artifacts/logs
+artifacts/local-run
+artifacts/hint/dist
+
+# Local secrets and machine metadata.
+.env
+.env.local
+.env.*
+.DS_Store

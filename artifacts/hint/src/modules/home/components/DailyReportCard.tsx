@@ -44,18 +44,24 @@ function ScoreBar({ score }: { score: DailyScore }) {
   const Icon = SCORE_ICONS[score.key];
 
   return (
-    <div className="min-w-0">
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="inline-flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap font-sans text-[10px]" style={{ color: "var(--hint-muted)" }}>
-          <Icon size={12} strokeWidth={1.8} style={{ color: score.tone }} />
+    <div
+      className="min-w-0 rounded-[12px] border px-2 py-1.5"
+      style={{
+        background: "color-mix(in srgb, var(--hint-card-inner) 82%, transparent)",
+        borderColor: "var(--hint-border)",
+      }}
+    >
+      <div className="mb-0.5 flex items-center justify-between gap-2">
+        <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap font-sans text-[9.5px]" style={{ color: "var(--hint-muted)" }}>
+          <Icon size={11} strokeWidth={1.8} style={{ color: score.tone }} />
           {score.label}
         </span>
-        <span className="font-serif text-[15px] tabular-nums" style={{ color: "var(--hint-text)" }}>
+        <span className="font-serif text-[13px] tabular-nums" style={{ color: "var(--hint-text)" }}>
           {score.score}
         </span>
       </div>
       <div
-        className="h-1.5 overflow-hidden rounded-full"
+        className="h-1 overflow-hidden rounded-full"
         style={{ background: "var(--hint-card-inner)" }}
       >
         <motion.div
@@ -80,7 +86,7 @@ function MiniDailyCard({ card, interactive = true }: { card: DailyPull; interact
     getTarotCardImage(card.cardId, "hint-classic");
   const content = (
     <div
-      className="relative grid grid-cols-[54px_1fr] items-center gap-2.5 rounded-[18px] border p-2.5 sm:grid-cols-[62px_1fr_auto] sm:gap-3"
+      className="relative grid grid-cols-[50px_1fr] items-center gap-2.5 rounded-[16px] border p-2 sm:grid-cols-[58px_1fr_auto] sm:gap-3"
       style={{
         background: "var(--hint-input-bg)",
         borderColor: "var(--hint-border)",
@@ -88,7 +94,7 @@ function MiniDailyCard({ card, interactive = true }: { card: DailyPull; interact
       }}
     >
       <div
-        className="relative h-[82px] overflow-hidden rounded-[12px] sm:h-[92px]"
+        className="relative h-[74px] overflow-hidden rounded-[11px] sm:h-[86px]"
         style={{
           background: "var(--hint-deck-card-bg)",
           border: "1px solid color-mix(in srgb, var(--hint-gold) 34%, var(--hint-border))",
@@ -295,13 +301,13 @@ export function DailyReportCard({
             "radial-gradient(360px 260px at 18% 8%, rgba(244,175,203,0.18), transparent 70%), radial-gradient(300px 260px at 90% 16%, rgba(213,194,242,0.15), transparent 72%), radial-gradient(300px 220px at 55% 0%, rgba(227,200,137,0.12), transparent 72%)",
         }}
       />
-      <div className="relative p-3.5 sm:p-4 lg:p-5">
-        <div className="mb-2.5 lg:hidden">
+      <div className="relative p-3 sm:p-4 lg:p-5">
+        <div className="mb-3 lg:hidden">
           <MiniDailyCard card={card} interactive={!detailed} />
         </div>
 
-        <header className="mb-2.5 flex items-start justify-between gap-4 lg:mb-4">
-          <div>
+        <header className="mb-3 flex items-start justify-between gap-4 lg:mb-4">
+          <div className="min-w-0">
             <p
               className="font-serif text-[9px] uppercase tracking-[0.22em] lg:text-[11px] lg:tracking-[0.34em]"
               style={{ color: ACCENT.aqua }}
@@ -320,7 +326,7 @@ export function DailyReportCard({
                 {birthProfileLabel}
               </span>
             ) : null}
-            <h2 className="mt-1 max-w-[14ch] font-serif text-[18px] leading-tight sm:max-w-[24ch] sm:text-[21px] lg:mt-2 lg:max-w-none lg:text-[34px] lg:leading-none" style={{ color: "var(--hint-text)" }}>
+            <h2 className="mt-1.5 font-serif text-[25px] leading-[1.02] sm:text-[28px] lg:mt-2 lg:text-[34px] lg:leading-none" style={{ color: "var(--hint-text)" }}>
               {report.title}
             </h2>
           </div>
@@ -338,23 +344,9 @@ export function DailyReportCard({
           </Link>
         </header>
 
-        <div className="grid gap-3 min-[360px]:grid-cols-[0.8fr_1.2fr] min-[360px]:items-start lg:grid-cols-[0.95fr_1.05fr] lg:gap-5">
+        <div className="grid gap-3 lg:grid-cols-[0.95fr_1.05fr] lg:gap-5">
           <div className="min-w-0">
-            <div className="mb-2 flex items-end gap-2 lg:mb-5">
-              <span
-                className="font-serif text-[42px] leading-[0.9] tabular-nums sm:text-[52px] lg:text-[76px]"
-                style={{
-                  color: "var(--hint-score-ink)",
-                  textShadow: "var(--hint-score-shadow)",
-                }}
-              >
-                {report.overallScore}
-              </span>
-              <span className="pb-1.5 font-serif text-[14px] lg:pb-2.5 lg:text-[20px]" style={{ color: "var(--hint-score-ink)" }}>
-                {t("daily.score")}
-              </span>
-            </div>
-            <p className="line-clamp-5 font-sans text-[11px] leading-snug min-[360px]:line-clamp-4 lg:line-clamp-none lg:text-[14px] lg:leading-relaxed" style={{ color: "var(--hint-muted)" }}>
+            <p className="font-sans text-[12px] leading-relaxed lg:text-[14px]" style={{ color: "var(--hint-muted)" }}>
               {report.summary}
             </p>
             <div className="mt-3 hidden grid-cols-2 gap-3 lg:grid">
@@ -377,10 +369,69 @@ export function DailyReportCard({
             </div>
           </div>
 
-          <div className="grid gap-x-2 gap-y-2 min-[360px]:grid-cols-2 lg:grid-cols-1 lg:gap-3">
-            {report.scores.map((score) => (
-              <ScoreBar key={score.key} score={score} />
-            ))}
+          <div
+            className="rounded-[18px] border p-2.5"
+            style={{
+              background: "color-mix(in srgb, var(--hint-input-bg) 76%, transparent)",
+              borderColor: "var(--hint-border)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)",
+            }}
+          >
+            <div className="mb-2 flex items-end justify-between gap-3">
+              <div className="flex items-end gap-2">
+                <span
+                  className="font-serif text-[46px] leading-[0.85] tabular-nums lg:text-[76px]"
+                  style={{
+                    color: "var(--hint-score-ink)",
+                    textShadow: "var(--hint-score-shadow)",
+                  }}
+                >
+                  {report.overallScore}
+                </span>
+                <span className="pb-1 font-serif text-[13px] lg:pb-2.5 lg:text-[20px]" style={{ color: "var(--hint-score-ink)" }}>
+                  {t("daily.score")}
+                </span>
+              </div>
+              <span className="pb-1 font-sans text-[9px] font-black uppercase tracking-[0.18em]" style={{ color: "var(--hint-faint)" }}>
+                {report.scores.length} signals
+              </span>
+            </div>
+            <div className="grid gap-1.5 min-[360px]:grid-cols-2 lg:grid-cols-1 lg:gap-3">
+              {report.scores.map((score) => (
+                <ScoreBar key={score.key} score={score} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2 lg:hidden">
+          <div
+            className="rounded-[15px] border p-3"
+            style={{
+              background: "color-mix(in srgb, var(--hint-card-inner) 82%, transparent)",
+              borderColor: "var(--hint-border)",
+            }}
+          >
+            <p className="font-sans text-[9px] uppercase tracking-[0.18em]" style={{ color: "var(--hint-faint)" }}>
+              {t("daily.suggest")}
+            </p>
+            <p className="mt-1 font-serif text-[13px] leading-snug" style={{ color: "var(--hint-text)" }}>
+              {report.suggestion}
+            </p>
+          </div>
+          <div
+            className="rounded-[15px] border p-3"
+            style={{
+              background: "color-mix(in srgb, var(--hint-card-inner) 82%, transparent)",
+              borderColor: "var(--hint-border)",
+            }}
+          >
+            <p className="font-sans text-[9px] uppercase tracking-[0.18em]" style={{ color: "var(--hint-faint)" }}>
+              {t("daily.avoid")}
+            </p>
+            <p className="mt-1 font-serif text-[13px] leading-snug" style={{ color: "var(--hint-text)" }}>
+              {report.avoid}
+            </p>
           </div>
         </div>
 
@@ -390,25 +441,25 @@ export function DailyReportCard({
 
         {detailed && <CardGuidanceGrid card={card} />}
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           {report.lucky.map((item) => (
             <div
               key={item.key}
-              className="min-h-[118px] rounded-[22px] border px-2 py-3 text-center"
+              className="min-h-[112px] rounded-[20px] border px-2 py-3 text-center"
               style={{
                 background: "var(--hint-lucky-tile-bg-strong)",
                 borderColor: "var(--hint-border)",
                 boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)",
               }}
             >
-              <LuckyIllustration item={item} size={42} />
+              <LuckyIllustration item={item} size={40} />
               <p className="mt-2 font-sans text-[8px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--hint-faint)" }}>
                 {item.label}
               </p>
-              <p className="mt-1 truncate font-serif text-[15px] leading-tight" style={{ color: "var(--hint-text)" }}>
+              <p className="mt-1 truncate font-serif text-[14px] leading-tight" style={{ color: "var(--hint-text)" }}>
                 {item.value}
               </p>
-              <p className="mx-auto mt-1 line-clamp-2 max-w-[8rem] font-sans text-[9.5px] leading-snug" style={{ color: "var(--hint-muted)" }}>
+              <p className="mx-auto mt-1 line-clamp-2 max-w-[8rem] font-sans text-[9px] leading-snug" style={{ color: "var(--hint-muted)" }}>
                 {item.hint}
               </p>
             </div>

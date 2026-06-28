@@ -73,6 +73,12 @@ function RitualBackCard({
   );
 }
 
+function ritualHaptic(pattern: number | number[] = 6) {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    navigator.vibrate(pattern);
+  }
+}
+
 const STAGE_INDEX: Record<CardWashRitualProps["stage"], number> = {
   placed: 0,
   washing: 1,
@@ -157,6 +163,7 @@ export function CardWashRitual({
 
   const progress = Math.max(0, Math.min(1, washProgress));
   const introReady = stage !== "placed";
+  const deckCountLabel = `${ritualCards.length} cards`;
   const title =
     stage === "placed"
       ? "Full deck"
@@ -169,20 +176,20 @@ export function CardWashRitual({
             : "Wash deck";
   const helperCopy =
     stage === "placed"
-      ? "Watch the deck open clockwise, close, then wash by touch."
+      ? "Watch all 78 cards open, close, then wash by touch."
       : stage === "washing"
-        ? "Move the deck in slow circles, then release to cut."
+        ? "Move the full deck in slow circles, then release to cut."
         : stage === "cutting"
           ? "The deck is being cut and squared for your question."
         : "";
   const isDeckStackStage = stage === "gathering" || stage === "cutReady" || stage === "cutting";
   const isFullDeckStage = stage === "placed";
-  const cardTransitionMs = stage === "gathering" ? 560 : stage === "cutting" ? 620 : 86;
+  const cardTransitionMs = stage === "gathering" ? 640 : stage === "cutting" ? 680 : 116;
   const cardTransitionEase = stage === "gathering"
     ? "cubic-bezier(0.2, 0.82, 0.16, 1)"
     : stage === "cutting"
       ? "cubic-bezier(0.22, 0.78, 0.14, 1)"
-      : "linear";
+      : "cubic-bezier(0.18, 0.72, 0.2, 1)";
 
   useEffect(() => {
     beginWashCallback.current = onBeginWash;
@@ -197,10 +204,22 @@ export function CardWashRitual({
     releaseTriggered.current = false;
     washDistance.current = 0;
     setIntroStep("stack");
-    const spreadTimer = window.setTimeout(() => setIntroStep("spread"), 340);
-    const closingTimer = window.setTimeout(() => setIntroStep("closing"), 3080);
-    const gatherTimer = window.setTimeout(() => setIntroStep("gather"), 4620);
-    const washTimer = window.setTimeout(() => beginWashCallback.current(), 6100);
+    const spreadTimer = window.setTimeout(() => {
+      ritualHaptic(4);
+      setIntroStep("spread");
+    }, 340);
+    const closingTimer = window.setTimeout(() => {
+      ritualHaptic(5);
+      setIntroStep("closing");
+    }, 3080);
+    const gatherTimer = window.setTimeout(() => {
+      ritualHaptic([4, 22, 5]);
+      setIntroStep("gather");
+    }, 4620);
+    const washTimer = window.setTimeout(() => {
+      ritualHaptic([6, 24, 8]);
+      beginWashCallback.current();
+    }, 6100);
 
     return () => {
       window.clearTimeout(spreadTimer);
@@ -268,6 +287,7 @@ export function CardWashRitual({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     if (movedEnoughToCut) {
+      ritualHaptic([7, 30, 9]);
       triggerWashRelease();
     }
   }
@@ -308,6 +328,9 @@ export function CardWashRitual({
       </div>
 
       <div className="relative z-10 mt-8 text-center">
+        <div className="mx-auto mb-2 w-fit rounded-full border border-[#f1d390]/28 bg-white/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-[#f6e0ce]/78 shadow-[0_10px_28px_rgba(0,0,0,0.16)] backdrop-blur-md">
+          {deckCountLabel}
+        </div>
         <motion.p
           key={title}
           initial={{ opacity: 0, y: 4 }}
@@ -337,7 +360,7 @@ export function CardWashRitual({
             ? "h-[min(44vh,460px)] w-[min(118vw,560px)]"
             : isFullDeckStage
               ? "h-[min(90vw,500px)] w-[min(90vw,500px)]"
-              : "h-[min(62vh,620px)] w-[min(124vw,640px)]"
+              : "h-[min(68vh,660px)] w-[min(140vw,720px)]"
         }`}
         style={{
           filter: isFullDeckStage ? "drop-shadow(0 24px 36px rgba(0,0,0,0.38))" : undefined,
@@ -348,6 +371,7 @@ export function CardWashRitual({
           washing.current = true;
           washDistance.current = 0;
           lastPoint.current = null;
+          ritualHaptic(5);
           event.currentTarget.setPointerCapture(event.pointerId);
           onBeginWash();
           move(event);
@@ -389,14 +413,14 @@ export function CardWashRitual({
           const cardClassName = isFullDeckStage
             ? `${
               introCardsAreSmall
-                ? "h-[104px] w-[66px] min-[430px]:h-[118px] min-[430px]:w-[74px] sm:h-[132px] sm:w-[84px]"
-                : "h-[192px] w-[122px] min-[430px]:h-[226px] min-[430px]:w-[144px] sm:h-[252px] sm:w-[160px]"
+                ? "h-[92px] w-[58px] min-[430px]:h-[104px] min-[430px]:w-[66px] sm:h-[118px] sm:w-[74px]"
+                : "h-[180px] w-[114px] min-[430px]:h-[208px] min-[430px]:w-[132px] sm:h-[236px] sm:w-[150px]"
             } transition-[height,width] duration-700 ease-out`
             : stage === "cutReady" || stage === "cutting"
               ? "h-[148px] w-[94px] sm:h-[166px] sm:w-[106px] md:h-[184px] md:w-[118px]"
             : isDeckStackStage
-              ? "h-[94px] w-[62px] sm:h-[116px] sm:w-[78px] md:h-[132px] md:w-[88px]"
-              : "h-[116px] w-[76px] sm:h-[132px] sm:w-[86px]";
+              ? "h-[86px] w-[56px] sm:h-[106px] sm:w-[70px] md:h-[124px] md:w-[82px]"
+              : "h-[88px] w-[58px] min-[430px]:h-[96px] min-[430px]:w-[62px] sm:h-[108px] sm:w-[70px]";
           return (
           <div
             key={card.visualId}
@@ -413,7 +437,9 @@ export function CardWashRitual({
                     ? `transform ${cardTransitionMs}ms ${cardTransitionEase} ${Math.min(card.gatherDelay ?? 0, 0.08)}s`
                     : stage === "washing" && !washIntroSettled
                       ? `transform 760ms cubic-bezier(0.22, 0.78, 0.18, 1) ${Math.min(index, 22) * 0.004}s`
-                      : "transform 70ms linear",
+                      : stage === "washing"
+                        ? "transform 118ms cubic-bezier(0.18, 0.72, 0.2, 1)"
+                        : "transform 90ms cubic-bezier(0.18, 0.72, 0.2, 1)",
             }}
           >
             <div
@@ -427,7 +453,9 @@ export function CardWashRitual({
                       ? `transform ${cardTransitionMs}ms ${cardTransitionEase} ${Math.min(card.gatherDelay ?? 0, 0.08)}s`
                       : stage === "washing" && !washIntroSettled
                         ? `transform 760ms cubic-bezier(0.22, 0.78, 0.18, 1) ${Math.min(index, 22) * 0.004}s`
-                        : `transform ${cardTransitionMs}ms linear`,
+                        : stage === "washing"
+                          ? "transform 118ms cubic-bezier(0.18, 0.72, 0.2, 1)"
+                          : `transform ${cardTransitionMs}ms ${cardTransitionEase}`,
               }}
             >
               <RitualBackCard cardBackId={theme.cardBackId} className={cardClassName} />
