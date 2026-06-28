@@ -226,9 +226,9 @@ export const HOME_MODULES: ModuleDefinition[] = [
   /* ── Inner Self ── */
   {
     id: "personality",
-    title: "Personality",
-    hint: "How you arrive, before you speak.",
-    ...soon(),
+    title: "Personalities",
+    hint: "Your inner types and patterns.",
+    href: "/app/personalities",
     sigil: InnerTypeSigil,
     section: "inner-self",
   },

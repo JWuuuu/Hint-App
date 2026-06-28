@@ -13,6 +13,7 @@ import {
   DailyPullView,
   DreamView,
   JournalView,
+  PersonalitiesView,
 } from "../modules/features";
 import { TarotRoom } from "../modules/tarot";
 import { RedirectTo } from "../shared/navigation/RedirectTo";
@@ -44,6 +45,7 @@ export function ProductRouter() {
   if (path === "/compatibility" || path.startsWith("/compatibility/")) return <CompatibilityView />;
   if (path === "/dream") return <DreamView />;
   if (path === "/journal") return <JournalView />;
+  if (path === "/personalities") return <PersonalitiesView />;
 
   return (
     <div className="min-h-full flex items-center justify-center font-serif text-white/20 text-sm">

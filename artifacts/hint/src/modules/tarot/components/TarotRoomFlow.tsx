@@ -27,6 +27,8 @@ import {
   type RoomBackgroundId,
   type SpreadChoice,
 } from "../../hold/useHoldFlow";
+import { apiUrl } from "../../../lib/api";
+import { getAnonId } from "../../../lib/identity";
 import {
   getDefaultTarotCardBackForStyle,
   getTarotCardBackImage,
@@ -68,7 +70,6 @@ type TarotStep =
 type QuestionCard = {
   category: string;
   question: string;
-  body: string;
   icon: "love" | "decision" | "self" | "timing" | "career" | "truth";
   imageCardId: string;
   gradient: string;
@@ -87,11 +88,18 @@ type RoomDesign = {
   glow: string;
 };
 
+type SpreadRecommendation = {
+  spreadType: SpreadChoice["id"];
+  reason: string;
+  focusLabel: string;
+  confidence: "high" | "medium" | "low";
+  source: "api" | "local";
+};
+
 const QUESTION_CARDS: QuestionCard[] = [
   {
     category: "Love",
     question: "Why do I keep thinking about them?",
-    body: "For attraction, mixed signals, or someone you cannot read.",
     icon: "love",
     imageCardId: "6-lovers",
     gradient: "from-[#ffd9e6]/80 via-[#fff6ed]/70 to-[#e7dcff]/70",
@@ -99,7 +107,6 @@ const QUESTION_CARDS: QuestionCard[] = [
   {
     category: "Work",
     question: "What should I know before my next job move?",
-    body: "For interviews, offers, workplace pressure, or a new direction.",
     icon: "career",
     imageCardId: "1-magician",
     gradient: "from-[#f7e5c8]/80 via-[#fff8ef]/72 to-[#e6f0ea]/74",
@@ -107,7 +114,6 @@ const QUESTION_CARDS: QuestionCard[] = [
   {
     category: "Decision",
     question: "Which path is better for me now?",
-    body: "For two options, a hard choice, or a path that feels stuck.",
     icon: "decision",
     imageCardId: "11-justice",
     gradient: "from-[#f6e8c8]/80 via-[#fff8ef]/70 to-[#dcecff]/70",
@@ -115,7 +121,6 @@ const QUESTION_CARDS: QuestionCard[] = [
   {
     category: "Self",
     question: "What am I avoiding emotionally?",
-    body: "For patterns, self-trust, or the truth underneath the mood.",
     icon: "self",
     imageCardId: "9-hermit",
     gradient: "from-[#eee8ff]/80 via-[#fff8f5]/70 to-[#ffdce9]/70",
@@ -123,7 +128,6 @@ const QUESTION_CARDS: QuestionCard[] = [
   {
     category: "Timing",
     question: "Is now the right time to act?",
-    body: "For waiting, moving now, or knowing what needs patience.",
     icon: "timing",
     imageCardId: "14-temperance",
     gradient: "from-[#fff0ca]/80 via-[#fff8ef]/70 to-[#eadcff]/70",
@@ -131,7 +135,6 @@ const QUESTION_CARDS: QuestionCard[] = [
   {
     category: "Truth",
     question: "What is the honest thing I am missing?",
-    body: "For unclear energy when you need the simplest answer first.",
     icon: "truth",
     imageCardId: "18-moon",
     gradient: "from-[#e9f2ff]/80 via-[#fff8f1]/72 to-[#f0ddff]/70",
@@ -223,7 +226,7 @@ function questionPromptBody(intent: QuestionIntent = "general") {
   if (intent === "timing") return "Ask what is opening now, what needs patience, or when to act.";
   if (intent === "choice") return "Name the decision and the room will choose a spread around the pressure point.";
   if (intent === "self") return "Ask for the pattern, the lesson, or the truth you keep circling.";
-  return "Type your question, or start from one of the guided prompts below.";
+  return "Ask in one sentence, or tap a suggested question.";
 }
 
 function isUnlockedCardBack(item: { id: TarotCardBackId }) {
@@ -399,6 +402,68 @@ function spreadReason(spread: SpreadChoice, question: string) {
   return question
     ? `${spread.label} fits this question because it gives the room a clear shape before cards are chosen.`
     : "This spread is balanced for emotional uncertainty and next-step clarity.";
+}
+
+function findSpreadChoice(spreadType: string | null | undefined) {
+  return SPREAD_CHOICES.find((item) => item.id === spreadType) ?? null;
+}
+
+function normalizeConfidence(value: unknown): SpreadRecommendation["confidence"] {
+  return value === "high" || value === "medium" || value === "low" ? value : "medium";
+}
+
+function buildLocalSpreadRecommendation(question: string): SpreadRecommendation {
+  const spread = recommendSpread(question);
+  const intent = getQuestionIntent(question);
+  const focusLabel =
+    intent === "career"
+      ? "Next move"
+      : intent === "love"
+        ? "Inner feelings"
+        : intent === "timing"
+          ? "Timing signal"
+          : intent === "choice"
+            ? "Decision path"
+            : intent === "self"
+              ? "Self pattern"
+              : "Clear signal";
+
+  return {
+    spreadType: spread.id,
+    reason: spreadReason(spread, question),
+    focusLabel,
+    confidence: intent === "general" ? "low" : "medium",
+    source: "local",
+  };
+}
+
+async function requestSpreadRecommendation(question: string): Promise<SpreadRecommendation> {
+  const response = await fetch(apiUrl("/api/tarot/spread-recommendation"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      question,
+      anonId: getAnonId(),
+    }),
+  });
+  const data = await response.json() as Partial<SpreadRecommendation> & { error?: string };
+
+  if (!response.ok) {
+    throw new Error(data.error ?? `Spread recommendation failed: ${response.status}`);
+  }
+
+  const spread = findSpreadChoice(data.spreadType);
+  if (!spread || typeof data.reason !== "string" || typeof data.focusLabel !== "string") {
+    throw new Error("Spread recommendation response was invalid.");
+  }
+
+  return {
+    spreadType: spread.id,
+    reason: data.reason.trim(),
+    focusLabel: data.focusLabel.trim() || spread.label,
+    confidence: normalizeConfidence(data.confidence),
+    source: data.source === "api" ? "api" : "local",
+  };
 }
 
 function spreadCardSize(spread: SpreadChoice) {
@@ -653,6 +718,7 @@ function QuestionStep({
   question,
   setQuestion,
   onSubmit,
+  onPromptSelect,
   voiceOpen,
   openVoice,
   closeVoice,
@@ -660,6 +726,7 @@ function QuestionStep({
   question: string;
   setQuestion: (value: string) => void;
   onSubmit: () => void;
+  onPromptSelect: (value: string) => void;
   voiceOpen: boolean;
   openVoice: () => void;
   closeVoice: () => void;
@@ -684,12 +751,12 @@ function QuestionStep({
   return (
     <>
       <StepShell>
-      <div className="pb-[calc(var(--hint-safe-bottom)+8.25rem)]">
+      <div className="pb-[calc(var(--hint-safe-bottom)+7.5rem)]">
         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#9c7d92]">Ask Hint</p>
-        <h1 className="mt-3 font-serif text-[36px] leading-[0.98] text-[#332d45]">
+        <h1 className="mt-2.5 font-serif text-[32px] leading-[0.98] text-[#332d45]">
           {questionPromptTitle(intent)}
         </h1>
-        <p className="mt-3 max-w-[25rem] text-[14px] font-semibold leading-relaxed text-[#746276]">
+        <p className="mt-3 max-w-[24rem] text-[13px] font-semibold leading-relaxed text-[#746276]">
           {questionPromptBody(intent)}
         </p>
 
@@ -700,12 +767,14 @@ function QuestionStep({
           </div>
         ) : null}
 
-        <div className="mt-6 flex items-center justify-between gap-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9c7d92]">Start with one</p>
-          <p className="text-[11px] font-semibold text-[#8a7888]">Hint will choose the spread</p>
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9c7d92]">Suggested questions</p>
+          <p className="rounded-full border border-white/56 bg-white/42 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-[#8a7888] shadow-[0_8px_22px_rgba(96,72,104,0.08)] backdrop-blur-xl">
+            Auto spread
+          </p>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
           {QUESTION_CARDS.map((card) => {
             const image = getTarotCardImage(card.imageCardId, "hint-card-2") ?? getTarotCardImage(card.imageCardId, "hint-classic");
             return (
@@ -716,29 +785,29 @@ function QuestionStep({
                   hapticTick();
                   setPickedPrompt(card.category);
                   setQuestion(card.question);
+                  onPromptSelect(card.question);
                 }}
-                className={`relative min-h-[152px] overflow-hidden rounded-[24px] border bg-gradient-to-br ${card.gradient} p-4 text-left shadow-[0_18px_44px_rgba(104,82,111,0.14)] transition duration-200 active:scale-[0.98] ${
+                className={`relative h-[104px] overflow-hidden rounded-[18px] border bg-gradient-to-br ${card.gradient} p-3 text-left shadow-[0_14px_32px_rgba(104,82,111,0.12)] transition duration-200 active:scale-[0.98] ${
                   pickedPrompt === card.category ? "border-[#d7a85e] shadow-[0_20px_50px_rgba(215,168,94,0.26)]" : "border-white/72"
                 }`}
               >
-                <span className="pointer-events-none absolute -right-8 top-0 h-28 w-28 rounded-full bg-white/44 blur-2xl" />
-                <span className="pointer-events-none absolute -bottom-10 left-8 h-28 w-36 rounded-full bg-[#f5c9df]/22 blur-2xl" />
+                <span className="pointer-events-none absolute -right-8 top-0 h-24 w-24 rounded-full bg-white/44 blur-2xl" />
+                <span className="pointer-events-none absolute -bottom-10 left-8 h-24 w-32 rounded-full bg-[#f5c9df]/22 blur-2xl" />
                 {image ? (
-                  <span className="pointer-events-none absolute -right-2 bottom-2 h-[98px] w-[60px] rotate-[8deg] overflow-hidden rounded-[11px] border border-white/76 opacity-100 shadow-[0_16px_32px_rgba(79,58,91,0.20)]">
+                  <span className="pointer-events-none absolute -right-1 bottom-1 h-[66px] w-[40px] rotate-[8deg] overflow-hidden rounded-[8px] border border-white/76 opacity-95 shadow-[0_12px_22px_rgba(79,58,91,0.18)]">
                     <img src={image} alt="" aria-hidden="true" className="h-full w-full object-cover" draggable={false} />
                   </span>
                 ) : null}
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-white/58 text-[#5e4c67] shadow-inner">
-                  <QuestionIcon icon={card.icon} />
+                <span className="relative z-10 flex items-center gap-2">
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-white/58 text-[#5e4c67] shadow-inner">
+                    <QuestionIcon icon={card.icon} />
+                  </span>
+                  <span className="min-w-0 truncate text-[9px] font-black uppercase tracking-[0.18em] text-[#9d7c84]">
+                    {card.category}
+                  </span>
                 </span>
-                <span className="mt-4 block text-[11px] font-black uppercase tracking-[0.18em] text-[#9d7c84]">
-                  {card.category}
-                </span>
-                <span className="relative z-10 mt-2 block max-w-[calc(100%-2.5rem)] text-[14px] font-black leading-snug text-[#3e3448]">
+                <span className="relative z-10 mt-3 line-clamp-2 block max-w-[calc(100%-2rem)] text-[12.5px] font-black leading-snug text-[#3e3448]">
                   {card.question}
-                </span>
-                <span className="relative z-10 mt-2 block max-w-[calc(100%-2.9rem)] text-[10px] font-bold leading-snug text-[#7d6b7e]">
-                  {card.body}
                 </span>
               </button>
             );
@@ -795,18 +864,32 @@ function QuestionStep({
 function SpreadRecommendationStep({
   spread,
   question,
+  recommendation,
+  isLoading,
   onSpreadChange,
   onUse,
 }: {
   spread: SpreadChoice;
   question: string;
+  recommendation: SpreadRecommendation | null;
+  isLoading: boolean;
   onSpreadChange: (spread: SpreadChoice) => void;
   onUse: () => void;
 }) {
   const dragStartX = useRef<number | null>(null);
+  const dragHapticBucketRef = useRef(0);
   const [dragOffset, setDragOffset] = useState(0);
   const currentIndex = Math.max(0, FEATURED_SPREADS.findIndex((item) => item.id === spread.id));
   const intent = getQuestionIntent(question);
+  const recommendationMatches = recommendation?.spreadType === spread.id;
+  const reason = recommendationMatches ? recommendation.reason : spreadReason(spread, question);
+  const matchLabel = isLoading
+    ? "Choosing with API"
+    : recommendationMatches && recommendation?.source === "api"
+      ? "AI matched"
+      : recommendationMatches
+        ? "Local match"
+        : "Manual choice";
 
   function move(delta: number) {
     const nextIndex = Math.max(0, Math.min(FEATURED_SPREADS.length - 1, currentIndex + delta));
@@ -832,18 +915,35 @@ function SpreadRecommendationStep({
         <p className="mt-3 max-w-[23rem] text-[14px] font-semibold leading-relaxed text-[#746276]">
           {questionPromptBody(intent)} Swipe if another shape feels closer.
         </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-white/60 bg-white/54 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.13em] text-[#8a6f83] shadow-[0_8px_22px_rgba(96,72,104,0.10)] backdrop-blur-xl">
+            {matchLabel}
+          </span>
+          {recommendationMatches ? (
+            <span className="rounded-full border border-[#e5c987]/50 bg-[#fff4cf]/58 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.13em] text-[#9a7442]">
+              {recommendation.confidence} confidence
+            </span>
+          ) : null}
+        </div>
 
         <div
           className="relative mt-7 h-[470px] touch-pan-y select-none"
           onPointerDown={(event) => {
             if ((event.target as HTMLElement).closest("button")) return;
             dragStartX.current = event.clientX;
+            dragHapticBucketRef.current = 0;
+            hapticTick(3);
             event.currentTarget.setPointerCapture(event.pointerId);
           }}
           onPointerMove={(event) => {
             if (dragStartX.current === null) return;
             const delta = event.clientX - dragStartX.current;
             setDragOffset(Math.max(-132, Math.min(132, delta)));
+            const bucket = Math.trunc(Math.abs(delta) / 54);
+            if (bucket > dragHapticBucketRef.current) {
+              dragHapticBucketRef.current = bucket;
+              hapticTick(3);
+            }
           }}
           onPointerUp={(event) => finishSwipe(event.clientX)}
           onPointerCancel={() => {
@@ -920,8 +1020,8 @@ function SpreadRecommendationStep({
 
         <div className="rounded-[22px] border border-white/58 bg-white/56 p-3.5 shadow-[0_14px_36px_rgba(97,72,107,0.10)] backdrop-blur-xl">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#a28191]">Why this spread</p>
-          <p className="mt-1.5 line-clamp-2 text-[12px] font-semibold leading-relaxed text-[#655668]">
-            {spreadReason(spread, question)}
+          <p className="mt-1.5 line-clamp-3 text-[12px] font-semibold leading-relaxed text-[#655668]">
+            {reason}
           </p>
         </div>
 
@@ -1337,6 +1437,7 @@ function RitualShuffleStep({
   const deckStateRef = useRef(deckState);
   const timers = useRef<number[]>([]);
   const lastWashHapticAtRef = useRef(0);
+  const lastStrongWashHapticAtRef = useRef(0);
   const washProgress = Math.min(1, washScore / 56);
   const theme = getWashTheme(design);
   const displayRitualCards = deckState.ritualCards;
@@ -1367,7 +1468,7 @@ function RitualShuffleStep({
     let frame = 0;
     let last = performance.now();
     const tick = (now: number) => {
-      if (now - last > 48) {
+      if (now - last > 32) {
         last = now;
         updateDeckState((current) => ({
           ...current,
@@ -1387,7 +1488,7 @@ function RitualShuffleStep({
 
   function beginWash() {
     if (stage !== "placed" && stage !== "washing") return;
-    hapticTick(8);
+    hapticPulse([6, 22, 8]);
     setStage("washing");
     updateDeckState((current) => ({
       ...current,
@@ -1400,12 +1501,16 @@ function RitualShuffleStep({
     if (stage !== "washing") return;
     setWashDirection(pointer.spinDirection);
     const now = Date.now();
-    if (now - lastWashHapticAtRef.current > 135) {
+    if (now - lastWashHapticAtRef.current > 88) {
       lastWashHapticAtRef.current = now;
-      hapticTick(3);
+      hapticTick(pointer.spinDirection === 1 ? 4 : 3);
     }
     updateDeckState((current) => {
       const result = applyWashForce(current.ritualCards, pointer);
+      if (result.movementScore > 9 && now - lastStrongWashHapticAtRef.current > 320) {
+        lastStrongWashHapticAtRef.current = now;
+        hapticPulse([4, 18, 5]);
+      }
       setWashScore((score) => Math.min(56, score + result.movementScore * 0.58 + 0.22));
       return {
         ...current,
@@ -1730,7 +1835,7 @@ const PICK_WHEEL_CARD_H = 144;
 const PICK_WHEEL_CARD_W_ZOOM = 108;
 const PICK_WHEEL_CARD_H_ZOOM = 172;
 const PICK_WHEEL_DRAG_SENSITIVITY = 0.0058;
-const PICK_WHEEL_STEP_SCALE = 0.475;
+const PICK_WHEEL_STEP_SCALE = 0.6;
 const PICK_WHEEL_VISIBLE_BUFFER = 72;
 
 type PickWheelGeometry = {
@@ -1812,6 +1917,7 @@ function PickStep({
   const [zoomed, setZoomed] = useState(false);
   const [stageSize, setStageSize] = useState<StageSize>(() => getTarotPhoneStageSize());
   const [placingId, setPlacingId] = useState<string | null>(null);
+  const [armedCardId, setArmedCardId] = useState<string | null>(null);
   const wheelDragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -1822,6 +1928,7 @@ function PickStep({
   const suppressNextClickRef = useRef(false);
   const lastWheelHapticNumberRef = useRef<number | null>(null);
   const lastWheelHapticAtRef = useRef(0);
+  const lastWheelScrollHapticAtRef = useRef(0);
   const selectedIds = new Set(selectedCards.map((card) => card.visualId));
   const done = selectedCards.length >= spread.cardCount;
   const wheelGeometry = getPickWheelGeometry(zoomed, stageSize);
@@ -1863,6 +1970,7 @@ function PickStep({
   const activeCard = activeWheelCard?.card ?? deck[activeIndex];
   const activeLayout = activeWheelCard?.layout ?? getPickWheelLayout(fallbackVirtualIndex, fanRotation, deck.length, wheelGeometry);
   const activeNumber = wheelDisplayNumber(fallbackVirtualIndex, deck.length);
+  const activeCardIsArmed = Boolean(activeCard && armedCardId === activeCard.visualId);
   const nextPositionIndex = Math.min(selectedCards.length, Math.max(spread.cardCount - 1, 0));
   const nextPositionLabel = spread.positionLabels[nextPositionIndex] ?? `Card ${nextPositionIndex + 1}`;
 
@@ -1887,6 +1995,13 @@ function PickStep({
   }, [placingId]);
 
   useEffect(() => {
+    if (!armedCardId) return;
+    if (selectedCards.some((card) => card.visualId === armedCardId)) {
+      setArmedCardId(null);
+    }
+  }, [armedCardId, selectedCards]);
+
+  useEffect(() => {
     const updateSize = () => {
       setStageSize(getTarotPhoneStageSize());
     };
@@ -1903,11 +2018,18 @@ function PickStep({
     if (done) return;
     if (!card) return;
     if (selectedCards.some((item) => item.visualId === card.visualId)) {
+      hapticTick(4);
       setFanRotation((current) => current + pickWheelStep(deck.length) * 2);
       return;
     }
-    hapticTick(12);
+    if (armedCardId !== card.visualId) {
+      hapticPulse([4, 20, 5]);
+      setArmedCardId(card.visualId);
+      return;
+    }
+    hapticPulse([8, 24, 10]);
     setPlacingId(card.visualId);
+    setArmedCardId(null);
     setSelectedCards([...selectedCards, card]);
     setFanRotation((current) => current + pickWheelStep(deck.length) * 2.6);
   }
@@ -1927,6 +2049,7 @@ function PickStep({
 
   function handleWheelPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (done) return;
+    hapticTick(3);
     wheelDragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -1942,7 +2065,10 @@ function PickStep({
     if (!drag || drag.pointerId !== event.pointerId) return;
     const deltaX = event.clientX - drag.startX;
     const deltaY = event.clientY - drag.startY;
-    if (Math.hypot(deltaX, deltaY) > 5) drag.moved = true;
+    if (Math.hypot(deltaX, deltaY) > 5) {
+      drag.moved = true;
+      if (armedCardId) setArmedCardId(null);
+    }
     setFanRotation(drag.startRotation + (deltaX - deltaY * 0.7) * PICK_WHEEL_DRAG_SENSITIVITY);
   }
 
@@ -1959,12 +2085,24 @@ function PickStep({
       }, 0);
     } else {
       const card = findNearestCard(event.clientX, event.clientY);
-      if (card) choose(card, true);
+      if (card) {
+        suppressNextClickRef.current = true;
+        window.setTimeout(() => {
+          suppressNextClickRef.current = false;
+        }, 0);
+        choose(card, true);
+      }
     }
     wheelDragRef.current = null;
   }
 
   function handleWheelScroll(deltaY: number) {
+    if (armedCardId) setArmedCardId(null);
+    const now = Date.now();
+    if (now - lastWheelScrollHapticAtRef.current > 58) {
+      lastWheelScrollHapticAtRef.current = now;
+      hapticTick(zoomed ? 5 : 3);
+    }
     const nextZoomed = deltaY < 0;
     if (nextZoomed !== zoomed) {
       setWheelZoom(nextZoomed);
@@ -1973,12 +2111,14 @@ function PickStep({
     setFanRotation((current) => current - deltaY * 0.0012);
   }
 
-function setWheelZoom(nextZoomed: boolean, rotationOffset = 0) {
+  function setWheelZoom(nextZoomed: boolean, rotationOffset = 0) {
     if (nextZoomed === zoomed) {
       setFanRotation((current) => current + rotationOffset);
       return;
     }
 
+    if (armedCardId) setArmedCardId(null);
+    hapticPulse(nextZoomed ? [5, 18, 7] : [4, 16, 4]);
     const nextGeometry = getPickWheelGeometry(nextZoomed, stageSize);
     const desiredAngle = Math.atan2(activeLayout.y - nextGeometry.centerY, activeLayout.x - nextGeometry.centerX);
     const nextRotation = desiredAngle - nextGeometry.startAngle - fallbackVirtualIndex * pickWheelStep(deck.length);
@@ -2086,6 +2226,7 @@ function setWheelZoom(nextZoomed: boolean, rotationOffset = 0) {
           {visibleWheelCards.map(({ card, index, virtualIndex, displayNumber, layout }) => {
             const isActive = virtualIndex === fallbackVirtualIndex;
             const selectedInWheel = selectedIds.has(card.visualId);
+            const isArmed = armedCardId === card.visualId;
             const cardWidth = zoomed ? PICK_WHEEL_CARD_W_ZOOM : PICK_WHEEL_CARD_W;
             const cardHeight = zoomed ? PICK_WHEEL_CARD_H_ZOOM : PICK_WHEEL_CARD_H;
             const cardOpacity = selectedInWheel ? 0.68 : 1;
@@ -2099,58 +2240,77 @@ function setWheelZoom(nextZoomed: boolean, rotationOffset = 0) {
                 onClick={() => {
                   if (!selectedInWheel) choose(card);
                 }}
-                aria-label={isActive ? `Active card ${displayNumber}` : `Card ${displayNumber}`}
-                className="absolute block overflow-hidden rounded-[13px] border outline-none transition-[box-shadow,filter,opacity] duration-150 will-change-transform"
+                aria-label={
+                  isArmed
+                    ? `Confirm card ${displayNumber}`
+                    : isActive
+                      ? `Lift active card ${displayNumber}`
+                      : `Lift card ${displayNumber}`
+                }
+                className="absolute block overflow-hidden rounded-[16px] border outline-none transition-[box-shadow,filter,opacity] duration-150 will-change-transform"
                 style={{
                   left: layout.x,
                   top: layout.y,
                   width: cardWidth,
                   height: cardHeight,
-                  zIndex: layout.zIndex,
+                  zIndex: layout.zIndex + (isArmed ? 12000 : isActive ? 1000 : 0),
                   opacity: cardOpacity,
                   backgroundColor: "#251d35",
                   backgroundImage: `url("${cardBackImageUrl}")`,
                   backgroundPosition: "center",
                   backgroundSize: "cover",
-                  borderColor: "rgba(241,211,144,0.42)",
-                  boxShadow: zoomed
-                    ? "0 18px 34px rgba(78,56,92,0.20)"
-                    : "0 12px 24px rgba(78,56,92,0.15)",
+                  borderColor: isArmed ? "rgba(241,211,144,0.88)" : "rgba(241,211,144,0.42)",
+                  boxShadow: isArmed
+                    ? "0 28px 58px rgba(78,56,92,0.28), 0 0 0 1px rgba(255,255,255,0.54)"
+                    : zoomed
+                      ? "0 18px 34px rgba(78,56,92,0.20)"
+                      : "0 12px 24px rgba(78,56,92,0.15)",
                   filter: zoomed ? "brightness(0.95) saturate(1.28) contrast(1.18)" : "brightness(0.96) saturate(1.22) contrast(1.14)",
-                  x: "-50%",
-                  y: "-100%",
-                  rotate: `${layout.rotate}rad`,
                   transformOrigin: "50% 100%",
                 }}
+                animate={{
+                  x: "-50%",
+                  y: isArmed ? (zoomed ? "-132%" : "-128%") : "-100%",
+                  rotate: `${layout.rotate}rad`,
+                  scale: isArmed ? 1.035 : 1,
+                }}
+                transition={{ type: "spring", stiffness: 260, damping: 24 }}
               >
-                <span className="pointer-events-none absolute inset-[8px] rounded-[9px] border border-white/18" />
+                <span className="pointer-events-none absolute inset-[8px] rounded-[11px] border border-white/18" />
                 <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.05),transparent_28%),linear-gradient(140deg,rgba(255,255,255,0.04),transparent_42%)]" />
               </motion.button>
             );
           })}
           {zoomed
-            ? visibleWheelCards.map(({ virtualIndex, displayNumber, layout }) => (
-                <div
-                  key={`wheel-number-${virtualIndex}`}
-                  className="pointer-events-none absolute"
-                  style={{
-                    left: layout.x,
-                    top: layout.y,
-                    width: PICK_WHEEL_CARD_W_ZOOM,
-                    height: PICK_WHEEL_CARD_H_ZOOM,
-                    zIndex: layout.zIndex + 9000,
-                    transform: `translate(-50%, -100%) rotate(${layout.rotate}rad)`,
-                    transformOrigin: "50% 100%",
-                  }}
-                >
-                  <span
-                    className="absolute left-2 top-2 grid h-6 w-6 place-items-center rounded-full border border-[#f1d390]/72 bg-white/90 font-serif text-[11px] font-black text-[#332d45] shadow-[0_8px_18px_rgba(80,60,90,0.18)]"
-                    style={{ transform: `rotate(${-layout.rotate}rad)` }}
+            ? visibleWheelCards.map(({ card, virtualIndex, displayNumber, layout }) => {
+                const isArmed = armedCardId === card.visualId;
+                return (
+                  <div
+                    key={`wheel-number-${virtualIndex}`}
+                    className="pointer-events-none absolute"
+                    style={{
+                      left: layout.x,
+                      top: layout.y,
+                      width: PICK_WHEEL_CARD_W_ZOOM,
+                      height: PICK_WHEEL_CARD_H_ZOOM,
+                      zIndex: layout.zIndex + (isArmed ? 14000 : 9000),
+                      transform: `translate(-50%, ${isArmed ? "-132%" : "-100%"}) rotate(${layout.rotate}rad)`,
+                      transformOrigin: "50% 100%",
+                    }}
                   >
-                    {displayNumber}
-                  </span>
-                </div>
-              ))
+                    <span
+                      className={`absolute left-1/2 top-[-2.15rem] grid h-7 min-w-7 place-items-center rounded-full border px-1.5 font-serif text-[12px] font-black leading-none shadow-[0_10px_22px_rgba(80,60,90,0.18)] backdrop-blur-md ${
+                        isArmed
+                          ? "border-[#e3b45f]/86 bg-[#fff2cf]/95 text-[#6e4c25]"
+                          : "border-white/86 bg-white/92 text-[#332d45]"
+                      }`}
+                      style={{ transform: `translateX(-50%) rotate(${-layout.rotate}rad)` }}
+                    >
+                      {displayNumber}
+                    </span>
+                  </div>
+                );
+              })
             : null}
         </div>
         <button
@@ -2173,9 +2333,13 @@ function setWheelZoom(nextZoomed: boolean, rotationOffset = 0) {
             <button
               type="button"
               onClick={() => choose(activeCard, true)}
-              className="pointer-events-auto ml-auto flex min-h-12 w-fit min-w-32 items-center justify-center rounded-full border border-[#f1d390]/52 bg-white/72 px-5 text-[12px] font-black uppercase tracking-[0.12em] text-[#6f5570] shadow-[0_18px_44px_rgba(97,72,107,0.18)] backdrop-blur-xl"
+              className={`pointer-events-auto ml-auto flex min-h-12 w-fit min-w-32 items-center justify-center rounded-full border px-5 text-[12px] font-black uppercase tracking-[0.12em] shadow-[0_18px_44px_rgba(97,72,107,0.18)] backdrop-blur-xl transition active:scale-95 ${
+                activeCardIsArmed
+                  ? "border-[#d7a85e]/72 bg-[#fff0cc]/88 text-[#7b572e]"
+                  : "border-[#f1d390]/52 bg-white/72 text-[#6f5570]"
+              }`}
             >
-              Pick {activeNumber}
+              {activeCardIsArmed ? "Confirm" : "Lift"} {activeNumber}
             </button>
           )}
         </div>
@@ -2202,25 +2366,43 @@ export function TarotRoomFlow() {
   const [question, setQuestion] = useState("");
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [spread, setSpread] = useState<SpreadChoice>(() => SPREAD_CHOICES.find((item) => item.id === "three") ?? SPREAD_CHOICES[0]!);
+  const [spreadRecommendation, setSpreadRecommendation] = useState<SpreadRecommendation | null>(null);
+  const [spreadRecommendationPending, setSpreadRecommendationPending] = useState(false);
   const [design, setDesign] = useState<RoomDesign>(ROOM_DESIGNS[0]!);
   const [selectedCards, setSelectedCards] = useState<RitualCard[]>([]);
   const [revealedIds, setRevealedIds] = useState<string[]>([]);
   const [deck, setDeck] = useState<RitualCard[]>(() => createHiddenDeck());
 
-  function submitQuestionValue(value: string) {
+  async function submitQuestionValue(value: string) {
     const cleaned = cleanQuestion(value);
     if (!cleaned) return;
     hapticPulse([8, 26, 8]);
+    const localRecommendation = buildLocalSpreadRecommendation(cleaned);
+    const localSpread = findSpreadChoice(localRecommendation.spreadType) ?? recommendSpread(cleaned);
     setQuestion(cleaned);
-    setSpread(recommendSpread(cleaned));
+    setSpread(localSpread);
+    setSpreadRecommendation(localRecommendation);
+    setSpreadRecommendationPending(true);
     setSelectedCards([]);
     setRevealedIds([]);
     setDeck(createHiddenDeck());
     setStep("spreadRecommendation");
+
+    try {
+      const apiRecommendation = await requestSpreadRecommendation(cleaned);
+      const apiSpread = findSpreadChoice(apiRecommendation.spreadType) ?? localSpread;
+      setSpread(apiSpread);
+      setSpreadRecommendation(apiRecommendation);
+    } catch {
+      setSpread(localSpread);
+      setSpreadRecommendation(localRecommendation);
+    } finally {
+      setSpreadRecommendationPending(false);
+    }
   }
 
   function submitQuestion() {
-    submitQuestionValue(question);
+    void submitQuestionValue(question);
   }
 
   if (step === "reading") {
@@ -2234,7 +2416,7 @@ export function TarotRoomFlow() {
             cardBackId={design.cardBackId}
             cardArtId={design.cardArtId}
             question={question}
-            focusLabel="Tarot Room"
+            focusLabel={spreadRecommendation?.focusLabel ?? "Tarot Room"}
           />
         </div>
       </TarotPhoneFrame>
@@ -2264,6 +2446,7 @@ export function TarotRoomFlow() {
             question={question}
             setQuestion={setQuestion}
             onSubmit={submitQuestion}
+            onPromptSelect={(value) => void submitQuestionValue(value)}
             voiceOpen={voiceOpen}
             openVoice={() => setVoiceOpen(true)}
             closeVoice={() => setVoiceOpen(false)}
@@ -2274,6 +2457,8 @@ export function TarotRoomFlow() {
             key="spread-recommendation"
             spread={spread}
             question={question}
+            recommendation={spreadRecommendation}
+            isLoading={spreadRecommendationPending}
             onSpreadChange={setSpread}
             onUse={() => {
               hapticTick(12);
@@ -2375,6 +2560,8 @@ export function TarotRoomFlow() {
                 setSelectedCards([]);
                 setRevealedIds([]);
                 setDeck(createHiddenDeck());
+                setSpreadRecommendation(null);
+                setSpreadRecommendationPending(false);
                 setStep("question");
               }}
             />

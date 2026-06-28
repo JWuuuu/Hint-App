@@ -16,19 +16,19 @@ export type WashResult = {
   movementScore: number;
 };
 
-const INNER_RADIUS = 150;
-const OUTER_RADIUS = 360;
+const INNER_RADIUS = 132;
+const OUTER_RADIUS = 390;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
 function clampFieldX(value: number) {
-  return clamp(value, 12, 88);
+  return clamp(value, 8, 92);
 }
 
 function clampFieldY(value: number) {
-  return clamp(value, 14, 86);
+  return clamp(value, 10, 90);
 }
 
 function isBaseLayer(card: RitualCard, index: number) {
@@ -43,12 +43,12 @@ function getHome(card: RitualCard) {
 }
 
 function getWashRadius(index: number, baseLayer: boolean, laneShift = 0) {
-  const lane = ((index % 13) + laneShift + 13) % 13;
-  const shared = 7 + lane * 2.45;
+  const lane = ((index % 17) + laneShift + 17) % 17;
+  const shared = 8 + lane * 2.35;
   const layerDrift = baseLayer
-    ? Math.sin(index * 1.27 + laneShift * 0.42) * 8.4
-    : Math.cos(index * 1.19 + laneShift * 0.38) * 9.2;
-  return clamp(shared + layerDrift, 4, 46);
+    ? Math.sin(index * 1.27 + laneShift * 0.42) * 9.6
+    : Math.cos(index * 1.19 + laneShift * 0.38) * 10.8;
+  return clamp(shared + layerDrift, 5, 54);
 }
 
 function getRingPull(distance: number, desiredDistance: number, strength: number) {
@@ -72,8 +72,8 @@ function getOrbitPoint(
   const turnedAngle = angle + orbitTurn + Math.sin(index * 0.73) * 0.16;
   const laneShift = Math.sin(orbitTurn * 4.4 + index * 1.11 + card.rotate * 0.025 + card.x * 0.035 + card.y * 0.022) * 7.2;
   const radius = getWashRadius(index, baseLayer, laneShift);
-  const xScale = 1.34 + Math.sin(index * 0.43) * 0.12;
-  const yScale = 0.84 + Math.cos(index * 0.51) * 0.10;
+  const xScale = 1.48 + Math.sin(index * 0.43) * 0.13;
+  const yScale = 0.94 + Math.cos(index * 0.51) * 0.11;
   return {
     x: 50 + Math.cos(turnedAngle) * radius * xScale + Math.sin(seedAngle * 1.7) * 3.1,
     y: 52 + Math.sin(turnedAngle) * radius * yScale + Math.cos(seedAngle * 1.3) * 2.6,

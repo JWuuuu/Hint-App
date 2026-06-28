@@ -10,11 +10,12 @@ import {
   Moon,
   Sparkles,
   Star,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import { useGetUserStats } from "@workspace/api-client-react";
 import { ACCENT, GOLD } from "../../hold/atmosphere";
-import { getAnonId } from "../../../lib/identity";
+import { getAnonId, getLocalDateString } from "../../../lib/identity";
 import {
   getOrCreateDailyReceipt,
   openDailyReceipt,
@@ -48,6 +49,43 @@ import { SkyEvidence } from "../../../components/tarot/SkyEvidence";
 import { SafeImage } from "../../../shared/ui/SafeImage";
 
 const SKY_DECK_CARD_BACK_IMAGE = getTarotCardBackImage(getDefaultTarotCardBackForStyle("nocturne"));
+const DAILY_SIGNAL_INTRO_COMPLETIONS_KEY = "hint_home_daily_signal_intro_completions_v1";
+
+type DailySignalIntroCompletions = Record<string, string>;
+
+function dailySignalIntroCompletionKey(anonId: string, dailyKey: string) {
+  return `${anonId}:${dailyKey}`;
+}
+
+function readDailySignalIntroCompletions(): DailySignalIntroCompletions {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(DAILY_SIGNAL_INTRO_COMPLETIONS_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed as DailySignalIntroCompletions;
+  } catch {
+    return {};
+  }
+}
+
+function hasCompletedDailySignalIntro(anonId: string, dailyKey: string) {
+  return Boolean(readDailySignalIntroCompletions()[dailySignalIntroCompletionKey(anonId, dailyKey)]);
+}
+
+function markDailySignalIntroComplete(anonId: string, dailyKey: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const completions = {
+      ...readDailySignalIntroCompletions(),
+      [dailySignalIntroCompletionKey(anonId, dailyKey)]: new Date().toISOString(),
+    };
+    window.localStorage.setItem(DAILY_SIGNAL_INTRO_COMPLETIONS_KEY, JSON.stringify(completions));
+  } catch {
+    // The daily receipt still prevents a second reveal; this only avoids re-showing the intro.
+  }
+}
 
 type RoomShortcutData = {
   title: string;
@@ -905,16 +943,20 @@ function DailySignalIntro({
   report,
   date,
   language,
+  receiptReady,
+  alreadyOpenedToday,
   onReveal,
   onContinue,
 }: {
   report: DailyReport;
   date: string;
   language: string;
+  receiptReady: boolean;
+  alreadyOpenedToday: boolean;
   onReveal: () => void | Promise<void>;
   onContinue: () => void;
 }) {
-  const [introRevealed, setIntroRevealed] = useState(false);
+  const [introRevealed, setIntroRevealed] = useState(alreadyOpenedToday);
   const [introRevealing, setIntroRevealing] = useState(false);
   const revealStartedRef = useRef(false);
   const timersRef = useRef<number[]>([]);
@@ -929,7 +971,7 @@ function DailySignalIntro({
   }
 
   function revealIntroCard() {
-    if (introRevealed || revealStartedRef.current) return;
+    if (!receiptReady || introRevealed || alreadyOpenedToday || revealStartedRef.current) return;
     revealStartedRef.current = true;
     setIntroRevealing(true);
     queueTimer(() => {
@@ -942,6 +984,13 @@ function DailySignalIntro({
       });
     }, 240);
   }
+
+  useEffect(() => {
+    if (!receiptReady || !alreadyOpenedToday) return;
+    setIntroRevealed(true);
+    setIntroRevealing(false);
+    revealStartedRef.current = false;
+  }, [alreadyOpenedToday, receiptReady]);
 
   useEffect(() => {
     return () => {
@@ -1033,10 +1082,16 @@ function DailySignalIntro({
             <motion.button
               type="button"
               onClick={revealIntroCard}
-              disabled={introRevealed || introRevealing}
-              aria-label={introRevealed ? `Daily tarot card: ${report.card.cardName}` : "Reveal today's Hint"}
+              disabled={!receiptReady || introRevealed || introRevealing}
+              aria-label={
+                !receiptReady
+                  ? "Checking today's signal"
+                  : introRevealed
+                    ? `Daily tarot card: ${report.card.cardName}`
+                    : "Reveal today's Hint"
+              }
               className="relative z-10 rounded-[24px] outline-none transition-transform duration-200 focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--hint-aqua)_78%,white)] disabled:cursor-default"
-              whileTap={!introRevealed && !introRevealing ? { scale: 0.985 } : undefined}
+              whileTap={receiptReady && !introRevealed && !introRevealing ? { scale: 0.985 } : undefined}
             >
               <ThemeAwareDailyCard report={report} revealed={introRevealed} revealing={introRevealing} presentation="intro" />
             </motion.button>
@@ -1078,13 +1133,13 @@ function DailySignalIntro({
             ) : (
               <div className="grid justify-items-center">
                 <p className="font-serif text-[14px] leading-none" style={{ color: "var(--hint-muted)" }}>
-                  {introRevealing ? "Receiving your signal..." : "Your signal is waiting."}
+                  {!receiptReady ? "Checking today's signal..." : introRevealing ? "Receiving your signal..." : "Your signal is waiting."}
                   <span style={{ color: "var(--hint-rose)" }}> +</span>
                 </p>
                 <button
                   type="button"
                   onClick={revealIntroCard}
-                  disabled={introRevealing}
+                  disabled={!receiptReady || introRevealing}
                   className="relative mt-8 inline-flex h-12 min-w-[14.75rem] items-center justify-center overflow-hidden rounded-full px-6 font-sans text-[12px] font-black tracking-[0.01em] shadow-[0_18px_38px_rgba(202,93,141,0.22)] active:scale-[0.985] disabled:opacity-80"
                   style={{
                     color: "white",
@@ -1097,7 +1152,7 @@ function DailySignalIntro({
                     className="absolute inset-0"
                     style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.24), transparent)" }}
                   />
-                  <span className="relative">{introRevealing ? "Receiving..." : "Reveal Today's Hint"}</span>
+                  <span className="relative">{!receiptReady ? "Checking..." : introRevealing ? "Receiving..." : "Reveal Today's Hint"}</span>
                 </button>
                 <p className="mt-4 font-sans text-[10.5px] leading-none" style={{ color: "var(--hint-faint)" }}>
                   Take a deep breath, and receive.
@@ -2138,7 +2193,7 @@ function AppActionList({ cards }: { cards: RoomShortcutData[] }) {
           Rooms
         </p>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {cards.map((card, index) => {
           const Icon = card.icon;
           return (
@@ -2184,11 +2239,16 @@ function AppActionList({ cards }: { cards: RoomShortcutData[] }) {
 export function HomeDashboard() {
   const { language, t } = useLanguage();
   const { profile } = useProfile();
+  const initialDailySignalComplete = useMemo(
+    () => hasCompletedDailySignalIntro(getAnonId(), getLocalDateString()),
+    [],
+  );
   const [birthProfile, setBirthProfile] = useState(() => readBirthProfile());
   const [ritual, setRitual] = useState(() => getRitualProgress());
-  const [dailyCardRevealed, setDailyCardRevealed] = useState(false);
-  const [signalIntroComplete, setSignalIntroComplete] = useState(false);
+  const [dailyCardRevealed, setDailyCardRevealed] = useState(initialDailySignalComplete);
+  const [signalIntroComplete, setSignalIntroComplete] = useState(initialDailySignalComplete);
   const [dailyReceipt, setDailyReceipt] = useState<DailyReceipt | null>(null);
+  const [dailyReceiptReady, setDailyReceiptReady] = useState(false);
   const activeBirthDetails = profile?.birthDate
     ? {
         birthDate: profile.birthDate,
@@ -2233,12 +2293,20 @@ export function HomeDashboard() {
 
   useEffect(() => {
     let mounted = true;
+    setDailyReceiptReady(false);
     getOrCreateDailyReceipt("daily-card", {
       fallbackAssignedCardId: report.card.cardId,
     }).then((receipt) => {
       if (!mounted) return;
+      const receiptAnonId = receipt.anonId || getAnonId();
+      const openedToday = Boolean(receipt.openedAt);
       setDailyReceipt(receipt);
-      setDailyCardRevealed(Boolean(receipt.openedAt));
+      setDailyCardRevealed(openedToday);
+      setSignalIntroComplete(
+        openedToday || hasCompletedDailySignalIntro(receiptAnonId, receipt.dailyKey),
+      );
+      if (openedToday) markDailySignalIntroComplete(receiptAnonId, receipt.dailyKey);
+      setDailyReceiptReady(true);
     });
     return () => {
       mounted = false;
@@ -2265,11 +2333,17 @@ export function HomeDashboard() {
     const openedReceipt = await openDailyReceipt("daily-card", {
       fallbackAssignedCardId: report.card.cardId,
     });
+    markDailySignalIntroComplete(openedReceipt.anonId || getAnonId(), openedReceipt.dailyKey);
     setDailyReceipt(openedReceipt);
     saveLocalDailyReading(
       report.card,
       openedReceipt.dailyKey ? parseServerDailyKey(openedReceipt.dailyKey) : new Date(),
     );
+  }
+
+  function completeSignalIntro() {
+    markDailySignalIntroComplete(dailyReceipt?.anonId || getAnonId(), dailyReceipt?.dailyKey ?? getLocalDateString());
+    setSignalIntroComplete(true);
   }
 
   function handleToggleRitualTask(index: number) {
@@ -2284,8 +2358,10 @@ export function HomeDashboard() {
         report={report}
         date={report.date}
         language={language}
+        receiptReady={dailyReceiptReady}
+        alreadyOpenedToday={dailyCardRevealed}
         onReveal={revealDailyCard}
-        onContinue={() => setSignalIntroComplete(true)}
+        onContinue={completeSignalIntro}
       />
     );
   }
@@ -2314,6 +2390,14 @@ export function HomeDashboard() {
       icon: Library,
       color: ACCENT.aqua,
       tint: "rgba(134,214,199,0.12)",
+    },
+    {
+      title: "Personalities",
+      body: "Your inner types and patterns",
+      href: "/app/personalities",
+      icon: UsersRound,
+      color: ACCENT.lavender,
+      tint: "rgba(178,152,179,0.14)",
     },
   ];
   return (

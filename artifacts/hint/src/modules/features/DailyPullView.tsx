@@ -758,34 +758,63 @@ export function DailyPullView() {
       <ScreenHeader
         eyebrow={t("dailyPull.eyebrow")}
         title={t("dailyPull.title")}
-        subtitle={t("dailyPull.subtitle")}
         sigil={DailyPullSigil}
         showBack={false}
       />
 
-      <section className="mb-3">
-        <div className="relative mb-2 flex items-center justify-between gap-4">
-          <SectionLabel>{t("dailyPull.calendarTitle")}</SectionLabel>
-          <button
-            type="button"
-            data-testid="button-calendar-jump"
-            onClick={() => setCalendarOpen((open) => !open)}
-            aria-expanded={calendarOpen}
-            aria-label="Open calendar jump"
-            className="hint-tap-sparkle inline-flex h-9 items-center gap-1.5 rounded-full border px-3 font-serif text-[9px] uppercase tracking-[0.14em]"
-            style={{
-              background: calendarOpen
-                ? "var(--hint-special-action-bg)"
-                : "color-mix(in srgb, var(--hint-rose) 9%, transparent)",
-              borderColor: calendarOpen
-                ? "color-mix(in srgb, var(--hint-rose) 34%, var(--hint-border))"
-                : "color-mix(in srgb, var(--hint-rose) 24%, var(--hint-border))",
-              color: calendarOpen ? "var(--hint-special-action-text)" : "var(--hint-rose)",
-            }}
-          >
-            <CalendarDays size={13} />
-            Calendar
-          </button>
+      <section className="relative mb-3">
+        <GlassPanel padded={false} className="p-2.5">
+          <div className="mb-2 flex items-center gap-2">
+            <div
+              className="grid min-w-0 flex-1 grid-cols-4 gap-1 rounded-full border p-1"
+              style={{
+                background: "color-mix(in srgb, var(--hint-surface-soft) 78%, transparent)",
+                borderColor: "var(--hint-border)",
+              }}
+            >
+              {PERIODS.map((item) => {
+                const selected = period === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => {
+                      setPeriod(item.key);
+                      setCalendarOpen(false);
+                    }}
+                    aria-pressed={selected}
+                    className="h-8 rounded-full font-sans text-[10px] font-black transition active:scale-[0.98]"
+                    style={{
+                      background: selected ? "var(--hint-special-action-bg)" : "transparent",
+                      color: selected ? "var(--hint-special-action-text)" : GLASS.muted,
+                      boxShadow: selected ? "inset 0 1px 0 rgba(255,255,255,0.42)" : "none",
+                    }}
+                  >
+                    {t(item.labelKey)}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              data-testid="button-calendar-jump"
+              onClick={() => setCalendarOpen((open) => !open)}
+              aria-expanded={calendarOpen}
+              aria-label="Open calendar jump"
+              className="hint-tap-sparkle grid size-10 shrink-0 place-items-center rounded-full border"
+              style={{
+                background: calendarOpen
+                  ? "var(--hint-special-action-bg)"
+                  : "color-mix(in srgb, var(--hint-rose) 9%, transparent)",
+                borderColor: calendarOpen
+                  ? "color-mix(in srgb, var(--hint-rose) 34%, var(--hint-border))"
+                  : "color-mix(in srgb, var(--hint-rose) 24%, var(--hint-border))",
+                color: calendarOpen ? "var(--hint-special-action-text)" : "var(--hint-rose)",
+              }}
+            >
+              <CalendarDays size={15} />
+            </button>
+          </div>
           {calendarOpen ? (
             <CalendarJumpMenu
               selectedDate={selectedDate}
@@ -795,139 +824,103 @@ export function DailyPullView() {
               onClose={() => setCalendarOpen(false)}
             />
           ) : null}
-        </div>
-        <div className="mb-1.5 grid grid-cols-4 gap-1 rounded-[14px] border p-1" style={{ background: "var(--hint-surface-strong)", borderColor: "var(--hint-border)" }}>
-          {PERIODS.map((item) => {
-            const selected = period === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => {
-                  setPeriod(item.key);
-                  setCalendarOpen(false);
-                }}
-                aria-pressed={selected}
-                className="h-8 rounded-[10px] font-serif text-[11px] transition-[transform,opacity] duration-200 hover:-translate-y-0.5 active:translate-y-0"
-                style={{
-                  background: selected
-                    ? "linear-gradient(145deg, rgba(255,239,199,0.92), rgba(244,175,203,0.72))"
-                    : "transparent",
-                  color: selected ? "#3a2435" : GLASS.muted,
-                  border: selected ? "1px solid rgba(255,255,255,0.24)" : "1px solid transparent",
-                }}
-              >
-                {t(item.labelKey)}
-              </button>
-            );
-          })}
-        </div>
-        <div
-          className="mb-1.5 flex items-center justify-between gap-3 rounded-[14px] border px-2 py-1"
-          style={{ background: "var(--hint-surface-strong)", borderColor: "var(--hint-border)" }}
-        >
-          <button
-            type="button"
-            onClick={() => shiftActivePeriod(-1)}
-            aria-label={`${t("common.previous")} ${t(`dailyPull.period.${period}`)}`}
-            className="grid size-8 shrink-0 place-items-center rounded-[10px] border transition-[transform,opacity] duration-200 hover:-translate-x-0.5"
-            style={{ background: "var(--hint-input-bg)", borderColor: "var(--hint-border)", color: GLASS.text }}
+
+          <div
+            className="mb-2 grid grid-cols-[36px_1fr_36px] items-center gap-2 rounded-[16px] border px-1.5 py-1"
+            style={{
+              background: "color-mix(in srgb, var(--hint-input-bg) 78%, transparent)",
+              borderColor: "var(--hint-border)",
+            }}
           >
-            <ChevronLeft size={18} />
-          </button>
-          <div className="min-w-0 text-center">
-            <p className="font-serif text-[17px] leading-tight sm:text-[21px]" style={{ color: GLASS.text }}>
-              {activeLabel}
-            </p>
-            <p className="mt-0.5 truncate font-sans text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: GLASS.faint }}>
-              {activeDetail}
-            </p>
+            <button
+              type="button"
+              onClick={() => shiftActivePeriod(-1)}
+              aria-label={`${t("common.previous")} ${t(`dailyPull.period.${period}`)}`}
+              className="grid size-8 shrink-0 place-items-center rounded-full border transition active:scale-[0.96]"
+              style={{ background: "var(--hint-surface-soft)", borderColor: "var(--hint-border)", color: GLASS.text }}
+            >
+              <ChevronLeft size={17} />
+            </button>
+            <div className="min-w-0 text-center">
+              <p className="truncate font-serif text-[18px] leading-tight" style={{ color: GLASS.text }}>
+                {activeLabel}
+              </p>
+              <p className="truncate font-sans text-[9px] font-bold uppercase tracking-[0.13em]" style={{ color: GLASS.faint }}>
+                {activeDetail}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => shiftActivePeriod(1)}
+              aria-label={`${t("common.next")} ${t(`dailyPull.period.${period}`)}`}
+              className="grid size-8 shrink-0 place-items-center rounded-full border transition active:scale-[0.96]"
+              style={{ background: "var(--hint-surface-soft)", borderColor: "var(--hint-border)", color: GLASS.text }}
+            >
+              <ChevronRight size={17} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => shiftActivePeriod(1)}
-            aria-label={`${t("common.next")} ${t(`dailyPull.period.${period}`)}`}
-            className="grid size-8 shrink-0 place-items-center rounded-[10px] border transition-[transform,opacity] duration-200 hover:translate-x-0.5"
-            style={{ background: "var(--hint-input-bg)", borderColor: "var(--hint-border)", color: GLASS.text }}
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-        <div
-          className="rounded-[15px] border p-1"
-          style={{
-            background: "var(--hint-surface-strong)",
-            borderColor: "var(--hint-border)",
-            boxShadow: "var(--hint-elevated-shadow)",
-          }}
-        >
-          {period === "day" ? (
-            <div className="grid grid-cols-5 gap-1.5">
-              {dayOptions.map((option) => {
-                const selected = selectedOffset === option.offset;
-                return (
+
+          <div className="grid grid-cols-5 gap-1.5">
+            {period === "day"
+              ? dayOptions.map((option) => {
+                  const selected = selectedOffset === option.offset;
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setSelectedOffset(option.offset)}
+                      aria-pressed={selected}
+                      className="hint-tap-sparkle min-h-[48px] rounded-[12px] border px-1.5 py-1.5 text-left transition active:scale-[0.98]"
+                      style={{
+                        background: selected
+                          ? "var(--hint-special-action-bg)"
+                          : "color-mix(in srgb, var(--hint-input-bg) 82%, transparent)",
+                        borderColor: selected ? "var(--hint-special-action-border)" : "var(--hint-border)",
+                        color: selected ? "var(--hint-special-action-text)" : "var(--hint-text)",
+                      }}
+                    >
+                      <span className="block truncate font-sans text-[7.5px] font-black uppercase tracking-[0.08em]" style={{ color: selected ? "var(--hint-special-action-text)" : "var(--hint-faint)" }}>
+                        {option.label}
+                      </span>
+                      <span className="mt-0.5 block font-serif text-[18px] leading-none tabular-nums" style={{ color: selected ? "var(--hint-special-action-text)" : "var(--hint-text)" }}>
+                        {option.day}
+                      </span>
+                      <span className="mt-0.5 block truncate font-sans text-[7px] font-semibold" style={{ color: selected ? "color-mix(in srgb, var(--hint-special-action-text) 72%, transparent)" : "var(--hint-faint)" }}>
+                        {option.detail}
+                      </span>
+                    </button>
+                  );
+                })
+              : periodOptions.map((option) => (
                   <button
                     key={option.key}
                     type="button"
-                    onClick={() => setSelectedOffset(option.offset)}
-                    aria-pressed={selected}
-                    className="hint-tap-sparkle min-h-[50px] rounded-[10px] border px-1.5 py-1.5 text-left transition-[transform,opacity] duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                    onClick={() =>
+                      setPeriodOffsets((next) => ({
+                        ...next,
+                        [period]: option.offset,
+                      }))
+                    }
+                    aria-pressed={option.selected}
+                    className="hint-tap-sparkle min-h-[48px] rounded-[12px] border px-1.5 py-1.5 text-left transition active:scale-[0.98]"
                     style={{
-                      background: selected
+                      background: option.selected
                         ? "var(--hint-special-action-bg)"
-                        : "color-mix(in srgb, var(--hint-input-bg) 88%, transparent)",
-                      borderColor: selected ? "var(--hint-special-action-border)" : "var(--hint-border)",
-                      color: selected ? "var(--hint-special-action-text)" : "var(--hint-text)",
+                        : "color-mix(in srgb, var(--hint-input-bg) 82%, transparent)",
+                      borderColor: option.selected ? "var(--hint-special-action-border)" : "var(--hint-border)",
+                      color: option.selected ? "var(--hint-special-action-text)" : "var(--hint-text)",
                     }}
                   >
-                    <span className="block">
-                      <span className="block truncate font-sans text-[8px] font-bold uppercase tracking-[0.08em]" style={{ color: selected ? "var(--hint-special-action-text)" : "var(--hint-faint)" }}>
-                        {option.label}
-                      </span>
+                    <span className="block truncate font-serif text-[13px] leading-tight" style={{ color: option.selected ? "var(--hint-special-action-text)" : "var(--hint-text)" }}>
+                      {option.label}
                     </span>
-                    <span className="mt-0.5 block font-serif text-[19px] leading-none tabular-nums" style={{ color: selected ? "var(--hint-special-action-text)" : "var(--hint-text)" }}>
-                      {option.day}
-                    </span>
-                    <span className="mt-0.5 block truncate font-sans text-[7.5px] font-semibold" style={{ color: selected ? "color-mix(in srgb, var(--hint-special-action-text) 72%, transparent)" : "var(--hint-faint)" }}>
+                    <span className="mt-0.5 block truncate font-sans text-[7px] font-bold uppercase tracking-[0.08em]" style={{ color: option.selected ? "color-mix(in srgb, var(--hint-special-action-text) 72%, transparent)" : "var(--hint-faint)" }}>
                       {option.detail}
                     </span>
                   </button>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="grid grid-cols-5 gap-1.5">
-              {periodOptions.map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() =>
-                    setPeriodOffsets((next) => ({
-                      ...next,
-                      [period]: option.offset,
-                    }))
-                  }
-                  aria-pressed={option.selected}
-                  className="hint-tap-sparkle min-h-[50px] rounded-[10px] border px-1.5 py-1.5 text-left transition-[transform,opacity] duration-200 hover:-translate-y-0.5 active:translate-y-0"
-                  style={{
-                    background: option.selected
-                      ? "var(--hint-special-action-bg)"
-                      : "color-mix(in srgb, var(--hint-input-bg) 88%, transparent)",
-                    borderColor: option.selected ? "var(--hint-special-action-border)" : "var(--hint-border)",
-                    color: option.selected ? "var(--hint-special-action-text)" : "var(--hint-text)",
-                  }}
-                >
-                  <span className="block font-serif text-[13px] leading-tight" style={{ color: option.selected ? "var(--hint-special-action-text)" : "var(--hint-text)" }}>
-                    {option.label}
-                  </span>
-                  <span className="mt-0.5 block font-sans text-[7.5px] font-bold uppercase tracking-[0.08em]" style={{ color: option.selected ? "color-mix(in srgb, var(--hint-special-action-text) 72%, transparent)" : "var(--hint-faint)" }}>
-                    {option.detail}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+          </div>
+        </GlassPanel>
       </section>
 
       {periodSummary ? (
