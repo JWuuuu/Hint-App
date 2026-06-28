@@ -126,11 +126,11 @@ export const SPREAD_CHOICES: readonly SpreadChoice[] = [
   {
     id: "three",
     label: "Three cards",
-    description: "Past, present, next",
-    positions: "What shaped it, what is here, what wants attention",
+    description: "Before, now, future",
+    positions: "What shaped it, what is true now, what may unfold next",
     cardCount: 3,
-    bestFor: "Sorting a situation into before, now, and next movement.",
-    positionLabels: ["Past", "Present", "Next"],
+    bestFor: "Sorting a situation into before, now, and future direction.",
+    positionLabels: ["Before", "Now", "Future"],
     layout: [
       { n: 1, x: 23, y: 56 },
       { n: 2, x: 50, y: 42 },
