@@ -8,6 +8,7 @@ import {
   Library,
   MessageCircle,
   Moon,
+  PawPrint,
   Sparkles,
   Star,
   UsersRound,
@@ -2065,6 +2066,14 @@ export function HomeDashboard() {
       icon: UsersRound,
       color: ACCENT.lavender,
       tint: "rgba(178,152,179,0.14)",
+    },
+    {
+      title: "Animal Tarot",
+      body: "A gentler pull through instinct",
+      href: "/app/animal-tarot",
+      icon: PawPrint,
+      color: ACCENT.gold,
+      tint: "rgba(203,168,102,0.14)",
     },
   ];
   const profileName = profile?.name ?? birthProfile?.name;
