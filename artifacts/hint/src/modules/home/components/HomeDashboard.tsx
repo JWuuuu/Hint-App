@@ -118,15 +118,7 @@ const REFERENCE_HOME_COPY = {
     people: 66,
   },
 } as const;
-const REFERENCE_ENERGY_COPY = {
-  overall: 68,
-  scores: {
-    love: 66,
-    career: 68,
-    study: 70,
-    people: 74,
-  },
-} as const;
+const REFERENCE_RING_SCORE = 68;
 
 const REFERENCE_CARD_BACKGROUND =
   "radial-gradient(circle at 18% -8%, rgba(255,255,255,0.46), transparent 46%), radial-gradient(circle at 84% 112%, rgba(230,209,194,0.038), transparent 54%), linear-gradient(145deg, rgba(255,254,251,0.38), rgba(249,243,236,0.22))";
@@ -2869,14 +2861,14 @@ function ReferenceScoreItem({ score, isLast }: { score: DailyScore; isLast: bool
   const Icon = REFERENCE_SCORE_ICONS[score.key];
 
   return (
-    <div className={["min-w-0 px-1.5 text-center", isLast ? "" : "border-r"].join(" ")} style={{ borderColor: "rgba(198, 165, 142, 0.105)" }}>
-      <div className="flex min-w-0 items-center justify-center gap-1.5">
-        <Icon className="shrink-0" size={15.5} strokeWidth={1.7} style={{ color: score.tone }} />
-        <p className="truncate font-sans text-[10.5px] font-medium leading-none" style={{ color: "#5e5860" }}>
+    <div className={["min-w-0 px-0.5 text-center", isLast ? "" : "border-r"].join(" ")} style={{ borderColor: "rgba(198, 165, 142, 0.095)" }}>
+      <div className="flex min-w-0 items-center justify-center gap-1">
+        <Icon className="shrink-0" size={14.5} strokeWidth={1.7} style={{ color: score.tone }} />
+        <p className="whitespace-nowrap font-sans text-[9.5px] font-medium leading-none" style={{ color: "#5e5860" }}>
           {score.label}
         </p>
       </div>
-      <p className="mt-1.5 text-center font-serif text-[20px] leading-none tabular-nums" style={{ color: "#2f2b37" }}>
+      <p className="mt-1.5 text-center font-serif text-[19px] leading-none tabular-nums" style={{ color: "#2f2b37" }}>
         {score.score}
       </p>
     </div>
@@ -2884,21 +2876,62 @@ function ReferenceScoreItem({ score, isLast }: { score: DailyScore; isLast: bool
 }
 
 function ReferenceEnergyValue({ score }: { score: number }) {
+  const radius = 40;
+  const circumference = Math.PI * 2 * radius;
+
   return (
-    <div className="relative mt-3 flex items-end">
-      <span className="font-serif text-[50px] leading-[0.82] tabular-nums" style={{ color: "#b77caf" }}>
-        {score}
-      </span>
-      <span className="mb-[4px] ml-1 font-serif text-[14px] leading-none" style={{ color: "#736c72" }}>
-        /100
-      </span>
+    <div className="relative mt-1.5 h-[106px] w-[126px]">
+      <svg
+        aria-hidden
+        viewBox="0 0 108 108"
+        className="absolute right-0 top-0 size-[106px]"
+        style={{ transform: "rotate(-74deg)" }}
+      >
+        <circle
+          cx="54"
+          cy="54"
+          r={radius}
+          fill="none"
+          stroke="rgba(174, 159, 178, 0.105)"
+          strokeWidth="5.4"
+        />
+        <motion.circle
+          cx="54"
+          cy="54"
+          r={radius}
+          fill="none"
+          stroke="url(#reference-score-ring)"
+          strokeLinecap="round"
+          strokeWidth="5.8"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          whileInView={{ strokeDashoffset: circumference * (1 - score / 100) }}
+          viewport={{ once: true, amount: 0.6 }}
+          transition={{ duration: 0.75, ease: "easeOut" }}
+        />
+        <defs>
+          <linearGradient id="reference-score-ring" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0" stopColor="#d79fc9" />
+            <stop offset="0.52" stopColor="#b68ce3" />
+            <stop offset="1" stopColor="#7567d6" />
+          </linearGradient>
+        </defs>
+      </svg>
       <span
         aria-hidden
-        className="absolute left-[68px] top-[17px] text-[19px]"
-        style={{ color: "rgba(230, 188, 118, 0.48)" }}
-      >
-        ✦
-      </span>
+        className="absolute right-[12px] top-[12px] size-[82px] rounded-full"
+        style={{
+          background: "radial-gradient(circle at 36% 30%, rgba(255,255,255,0.44), rgba(250,238,247,0.13) 62%, transparent)",
+        }}
+      />
+      <div className="absolute left-0 top-[39px] flex items-end">
+        <span className="font-serif text-[52px] leading-[0.78] tabular-nums" style={{ color: "#665681" }}>
+          {score}
+        </span>
+        <span className="mb-[4px] ml-1 font-sans text-[12px] font-semibold leading-none" style={{ color: "#777079" }}>
+          /100
+        </span>
+      </div>
     </div>
   );
 }
@@ -2944,7 +2977,7 @@ function ReferenceEnergyPanel({
   return (
     <section
       id="today-summary"
-      className="relative mb-3 overflow-hidden rounded-[26px] border px-4 py-4"
+      className="relative mb-3 overflow-hidden rounded-[26px] border px-4 py-3.5"
       style={{
         background: REFERENCE_CARD_BACKGROUND,
         borderColor: REFERENCE_CARD_BORDER,
@@ -2956,15 +2989,15 @@ function ReferenceEnergyPanel({
         className="absolute inset-x-8 top-0 h-px rounded-full"
         style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.52), transparent)" }}
       />
-      <div className="relative grid grid-cols-[102px_minmax(0,1fr)_84px] items-center gap-4">
+      <div className="relative grid grid-cols-[126px_minmax(0,1fr)_82px] items-center gap-2.5">
         <div className="relative min-w-0">
           <p className="font-sans text-[9.5px] font-black uppercase tracking-[0.13em]" style={{ color: "#6c646c" }}>
             Today’s energy
           </p>
-          <ReferenceEnergyValue score={REFERENCE_HOME_COPY.scores.overall} />
+          <ReferenceEnergyValue score={REFERENCE_RING_SCORE} />
         </div>
         <div
-          className="min-w-0 border-l pl-5"
+          className="min-w-0 border-l pl-3"
           style={{ borderColor: "rgba(198, 158, 129, 0.13)" }}
         >
           <p className="font-sans text-[9.5px] font-black uppercase tracking-[0.13em]" style={{ color: "#6c646c" }}>
@@ -2973,7 +3006,7 @@ function ReferenceEnergyPanel({
           <p className="mt-2 font-serif text-[25px] leading-none" style={{ color: "#2f2a35" }}>
             {REFERENCE_HOME_COPY.theme}
           </p>
-          <p className="mt-2 max-w-[128px] font-serif text-[14px] leading-[1.28]" style={{ color: "#756d75" }}>
+          <p className="mt-2 font-serif text-[13px] leading-[1.32]" style={{ color: "#756d75" }}>
             {REFERENCE_HOME_COPY.themeLine}
           </p>
         </div>
@@ -2987,7 +3020,7 @@ function ReferenceEnergyPanel({
         }}
         aria-expanded={detailsOpen}
         aria-label="Tap to see more details"
-        className="hint-pressable relative mt-4 flex w-full items-center gap-2 rounded-[20px] border px-3 py-2.5 text-left active:scale-[0.99]"
+        className="hint-pressable relative mt-4 flex w-full items-center gap-2 rounded-[20px] border px-2 py-2.5 text-left active:scale-[0.99]"
         style={{
           background: "linear-gradient(145deg, rgba(255,252,248,0.42), rgba(250,242,236,0.20))",
           borderColor: "rgba(199, 160, 128, 0.10)",
