@@ -74,6 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isLaunchIntroPreview = hasLaunchIntroPreviewFlag();
   const launchIntroVariant = getLaunchIntroVariant();
   const isProductRoute = !["/privacy", "/terms", "/disclaimer", "/contact", "/about"].includes(location);
+  const referenceHomeRoute = location === "/app" || location === "/";
   const showNav = isProductRoute && !NAV_HIDDEN_ROUTES.some(
     (r) => location === r || location.startsWith(r + "/"),
   );
@@ -159,14 +160,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         data-hint-theme={theme}
         className="hint-app-shell-root fixed inset-0 overflow-hidden"
       >
-        {/* Atmosphere stack — back to front */}
-        <CelestialBackdrop theme={theme} />
-        <Moonlight />
-        <Haze />
-        <Particles />
-        <RoomLight />
-        <Vignette />
-        <Grain />
+        {!referenceHomeRoute ? (
+          <>
+            {/* Atmosphere stack — back to front */}
+            <CelestialBackdrop theme={theme} />
+            <Moonlight />
+            <Haze />
+            <Particles />
+            <RoomLight />
+            <Vignette />
+            <Grain />
+          </>
+        ) : null}
 
         {/* Route content sits above the atmosphere.
             Pages own their own scroll model — AppShell does not impose
@@ -181,7 +186,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <AppNavigationChrome location={location} theme={theme} />
         ) : null}
 
-        {ENABLE_LAUNCH_INTRO && isProductRoute && showLaunchIntro ? (
+        {ENABLE_LAUNCH_INTRO && isProductRoute && !referenceHomeRoute && showLaunchIntro ? (
           <AppLaunchIntro
             theme={theme}
             leaving={launchIntroLeaving}
@@ -204,9 +209,16 @@ function AppNavigationChrome({
 }) {
   const isDark = theme === "dark";
   const { t } = useLanguage();
-  const chromeSurface = "var(--hint-dock-bg, var(--hint-nav-bg, var(--hint-liquid-panel)))";
-  const chromeBorder = "var(--hint-dock-border, var(--hint-liquid-border, var(--hint-border)))";
-  const chromeShadow = "var(--hint-dock-shadow, var(--hint-nav-shadow, var(--hint-liquid-shadow)))";
+  const referenceHome = location === "/app" || location === "/";
+  const chromeSurface = referenceHome
+    ? "linear-gradient(180deg, rgba(255,254,251,0.66), rgba(250,244,238,0.50))"
+    : "var(--hint-dock-bg, var(--hint-nav-bg, var(--hint-liquid-panel)))";
+  const chromeBorder = referenceHome
+    ? "rgba(218,199,187,0.22)"
+    : "var(--hint-dock-border, var(--hint-liquid-border, var(--hint-border)))";
+  const chromeShadow = referenceHome
+    ? "0 12px 32px rgba(102, 79, 67, 0.042), 0 3px 12px rgba(177,137,190,0.018), inset 0 1px 0 rgba(255,255,255,0.48), inset 0 -16px 28px rgba(129,91,111,0.010)"
+    : "var(--hint-dock-shadow, var(--hint-nav-shadow, var(--hint-liquid-shadow)))";
   const appTabs: AppTabItem[] = [
     { href: "/app", label: t("nav.today"), icon: Home, exact: true },
     { href: "/app/daily", label: t("nav.daily"), icon: CalendarDays },
@@ -218,27 +230,34 @@ function AppNavigationChrome({
     <nav
       aria-label="App"
       data-app-tabbar
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-2 pb-[calc(var(--hint-safe-bottom)+0.625rem)] sm:px-4"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-6 pb-[calc(var(--hint-safe-bottom)+0.5rem)]"
     >
       <div
         aria-hidden
-        className="absolute inset-x-0 bottom-0 -z-10 h-[calc(5.75rem+var(--hint-safe-bottom))]"
+        className="absolute inset-x-0 bottom-0 -z-10 h-[calc(4.75rem+var(--hint-safe-bottom))]"
         style={{
           background: "var(--hint-dock-veil)",
         }}
       />
       <div
-        className="hint-glass-nav hint-app-dock pointer-events-auto mx-auto grid h-[72px] w-full max-w-[var(--hint-app-width)] grid-cols-5 gap-1 rounded-[30px] border p-1.5"
+        className="hint-glass-nav hint-app-dock pointer-events-auto mx-auto grid h-[66px] w-full max-w-[var(--hint-app-width)] grid-cols-5 gap-1 overflow-visible rounded-[33px] border p-1.5"
+        data-reference-home={referenceHome ? "true" : "false"}
         style={{
           background: chromeSurface,
           borderColor: chromeBorder,
           boxShadow: chromeShadow,
-          backdropFilter: "blur(46px) saturate(1.85) brightness(1.06) contrast(1.03)",
-          WebkitBackdropFilter: "blur(46px) saturate(1.85) brightness(1.06) contrast(1.03)",
+          backdropFilter: "blur(50px) saturate(1.9) brightness(1.07) contrast(1.03)",
+          WebkitBackdropFilter: "blur(50px) saturate(1.9) brightness(1.07) contrast(1.03)",
         }}
       >
         {appTabs.map((tab) => (
-          <AppTab key={tab.href} item={tab} active={isActiveAppTab(location, tab)} isDark={isDark} />
+          <AppTab
+            key={tab.href}
+            item={tab}
+            active={isActiveAppTab(location, tab)}
+            isDark={referenceHome ? false : isDark}
+            referenceHome={referenceHome}
+          />
         ))}
       </div>
     </nav>
@@ -257,28 +276,40 @@ function HintAiMark({ active }: { active: boolean }) {
   return (
     <span
       aria-hidden
-      className="grid size-[22px] place-items-center rounded-[9px] font-serif text-[13px] font-black leading-none"
+      className="relative grid size-[58px] place-items-center overflow-hidden rounded-full"
       style={{
         background: active
-          ? "linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,255,255,0.26))"
-          : "linear-gradient(135deg, rgba(255,255,255,0.64), rgba(255,255,255,0.20))",
-        color: "var(--hint-special-action-text)",
+          ? "radial-gradient(circle at 34% 20%, rgba(255,244,252,0.96), rgba(205,158,215,0.68) 38%, rgba(117,82,140,0.96) 100%)"
+          : "radial-gradient(circle at 34% 20%, rgba(255,243,252,0.90), rgba(203,157,212,0.60) 40%, rgba(125,91,148,0.92) 100%)",
+        color: "#fff8f4",
         boxShadow:
-          "inset 0 0 0 1px rgba(255,255,255,0.62), 0 5px 14px color-mix(in srgb, var(--hint-rose, #cf4f92) 16%, transparent)",
+          "0 0 0 5px rgba(255,255,255,0.58), 0 14px 30px rgba(105,77,120,0.22), inset 0 1px 0 rgba(255,255,255,0.58), inset 0 -10px 20px rgba(63,38,83,0.16), inset 0 0 0 1px rgba(255,255,255,0.40)",
       }}
     >
-      H
+      <span
+        aria-hidden
+        className="absolute inset-[6px] rounded-full border"
+        style={{ borderColor: "rgba(255,255,255,0.34)" }}
+      />
+      <Sparkles size={28} strokeWidth={1.65} />
     </span>
   );
 }
 
-function AppTab({ item, active, isDark }: { item: AppTabItem; active: boolean; isDark: boolean }) {
+function AppTab({
+  item,
+  active,
+  isDark,
+  referenceHome,
+}: {
+  item: AppTabItem;
+  active: boolean;
+  isDark: boolean;
+  referenceHome: boolean;
+}) {
   const Icon = item.icon;
   const featured = item.featured === true;
-  const featuredActive = featured && active;
-  const featuredBackground = isDark
-    ? "linear-gradient(135deg, rgba(255,241,247,0.76) 0%, rgba(243,169,202,0.56) 40%, rgba(203,189,244,0.50) 70%, rgba(185,223,220,0.48) 100%)"
-    : "linear-gradient(135deg, rgba(255,244,203,0.72) 0%, rgba(255,196,220,0.60) 40%, rgba(212,201,247,0.54) 70%, rgba(176,235,229,0.50) 100%)";
+  const glassLift = featured || (active && !referenceHome);
   return (
     <Link
       href={item.href}
@@ -286,31 +317,22 @@ function AppTab({ item, active, isDark }: { item: AppTabItem; active: boolean; i
       data-active={active ? "true" : "false"}
       data-featured={featured ? "true" : "false"}
       onPointerDown={() => triggerFeedback(featured ? "select" : "tap")}
-      className="hint-app-tab hint-pressable hint-tap-sparkle relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[23px] px-1 text-center transition hover:-translate-y-0.5 active:scale-[0.98]"
+      className={[
+        "hint-app-tab hint-pressable hint-tap-sparkle relative flex min-w-0 flex-col items-center justify-center px-1 text-center transition hover:-translate-y-0.5 active:scale-[0.98]",
+        featured ? "h-[54px] overflow-visible rounded-[24px]" : "h-[54px] gap-1 rounded-[24px]",
+      ].join(" ")}
       style={{
         color: featured
           ? "var(--hint-special-action-text)"
           : active
-            ? "var(--hint-text)"
-            : "var(--hint-muted)",
-        background: featured
-          ? featuredBackground
-          : active
-          ? isDark
-            ? "linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06) 58%, rgba(185,223,220,0.08))"
-            : "linear-gradient(145deg, rgba(255,255,255,0.58), rgba(255,255,255,0.24) 58%, rgba(232,249,247,0.20))"
-          : "transparent",
-        border: featured || active ? "1px solid color-mix(in srgb, var(--hint-liquid-highlight) 72%, var(--hint-special-action-border, transparent))" : "1px solid transparent",
-        boxShadow: featured
-          ? featuredActive
-            ? "0 16px 38px color-mix(in srgb, var(--hint-rose, #cf4f92) 24%, transparent), 0 6px 18px color-mix(in srgb, var(--hint-aqua, #b9dfdc) 12%, transparent), inset 0 1px 1px rgba(255,255,255,0.72), inset 0 -10px 18px rgba(255,255,255,0.12), inset 0 0 0 1px color-mix(in srgb, var(--hint-special-action-border) 72%, white)"
-            : "0 13px 30px color-mix(in srgb, var(--hint-rose, #cf4f92) 18%, transparent), 0 4px 14px color-mix(in srgb, var(--hint-aqua, #b9dfdc) 10%, transparent), inset 0 1px 1px rgba(255,255,255,0.66), inset 0 -8px 16px rgba(255,255,255,0.10), inset 0 0 0 1px color-mix(in srgb, var(--hint-special-action-border) 64%, white)"
-          : active
-          ? "0 14px 30px color-mix(in srgb, var(--hint-gold, #cba866) 10%, transparent), 0 5px 18px color-mix(in srgb, var(--hint-plum, #302238) 8%, transparent), inset 0 1px 1px rgba(255,255,255,0.72), inset 0 -8px 16px rgba(82,64,92,0.05), inset 0 0 0 1px color-mix(in srgb, var(--hint-liquid-highlight) 62%, transparent)"
-          : "none",
-        filter: featured && !featuredActive ? "saturate(0.96) brightness(1.01)" : undefined,
-        backdropFilter: active || featured ? "blur(30px) saturate(1.52) brightness(1.04)" : undefined,
-        WebkitBackdropFilter: active || featured ? "blur(30px) saturate(1.52) brightness(1.04)" : undefined,
+            ? isDark ? "#f8f1e8" : "#29252e"
+            : isDark ? "rgba(248,241,232,0.62)" : "#7b747a",
+        background: "transparent",
+        border: "1px solid transparent",
+        boxShadow: "none",
+        filter: featured && !active ? "saturate(0.96) brightness(1.01)" : undefined,
+        backdropFilter: glassLift ? "blur(30px) saturate(1.52) brightness(1.04)" : undefined,
+        WebkitBackdropFilter: glassLift ? "blur(30px) saturate(1.52) brightness(1.04)" : undefined,
       }}
     >
       <span
@@ -319,11 +341,18 @@ function AppTab({ item, active, isDark }: { item: AppTabItem; active: boolean; i
         style={{ background: active ? "linear-gradient(90deg, transparent, rgba(255,255,255,0.58), transparent)" : "transparent" }}
       />
       {featured ? (
-        <HintAiMark active={active} />
+        <span className="hint-app-tab-orb pointer-events-none absolute left-1/2 top-[-30px] -translate-x-1/2">
+          <HintAiMark active={active} />
+        </span>
       ) : (
-        <Icon className="size-[18px] shrink-0" strokeWidth={active ? 2.35 : 1.9} />
+        <Icon className="size-[21px] shrink-0" strokeWidth={active ? 2.35 : 1.9} />
       )}
-      <span className="max-w-full truncate font-sans text-[9.5px] font-black leading-none sm:text-[10px]">
+      <span
+        className={[
+          "hint-app-tab-label max-w-full truncate font-sans font-black leading-none",
+          featured ? "absolute inset-x-0 bottom-[4px] text-[10px]" : "text-[11px]",
+        ].join(" ")}
+      >
         {item.label}
       </span>
     </Link>

@@ -207,19 +207,19 @@ export function CardWashRitual({
     const spreadTimer = window.setTimeout(() => {
       ritualHaptic(4);
       setIntroStep("spread");
-    }, 340);
+    }, 260);
     const closingTimer = window.setTimeout(() => {
       ritualHaptic(5);
       setIntroStep("closing");
-    }, 3080);
+    }, 2200);
     const gatherTimer = window.setTimeout(() => {
       ritualHaptic([4, 22, 5]);
       setIntroStep("gather");
-    }, 4620);
+    }, 3260);
     const washTimer = window.setTimeout(() => {
       ritualHaptic([6, 24, 8]);
       beginWashCallback.current();
-    }, 6100);
+    }, 4200);
 
     return () => {
       window.clearTimeout(spreadTimer);
