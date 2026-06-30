@@ -1078,14 +1078,14 @@ function RoomBackground({
   design?: RoomDesign;
 }) {
   return (
-    <>
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <div
-        className="fixed inset-0"
+        className="absolute inset-0"
         style={{ background: design.background }}
       />
-      <div className="fixed inset-0 opacity-55 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.86)_0_1px,transparent_1px),radial-gradient(circle_at_78%_16%,rgba(205,158,82,0.44)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(148,111,188,0.42)_0_1px,transparent_1px)] [background-size:118px_138px]" />
-      <div className="fixed inset-x-[-20%] bottom-[-16%] h-[48%] rounded-[50%] bg-[radial-gradient(ellipse_at_50%_35%,rgba(255,255,255,0.72),rgba(239,215,224,0.32)_42%,transparent_70%)]" />
-    </>
+      <div className="absolute inset-0 opacity-55 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.86)_0_1px,transparent_1px),radial-gradient(circle_at_78%_16%,rgba(205,158,82,0.44)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(148,111,188,0.42)_0_1px,transparent_1px)] [background-size:118px_138px]" />
+      <div className="absolute inset-x-[-20%] bottom-[-16%] h-[48%] rounded-[50%] bg-[radial-gradient(ellipse_at_50%_35%,rgba(255,255,255,0.72),rgba(239,215,224,0.32)_42%,transparent_70%)]" />
+    </div>
   );
 }
 
@@ -3088,7 +3088,7 @@ function PickStep({
     <StepShell>
       <div
         ref={pickStageRef}
-        className="relative -mx-5 flex min-h-0 flex-1 flex-col overflow-hidden px-5"
+        className="relative -mx-5 -mb-[calc(var(--hint-safe-bottom)+1.25rem)] flex min-h-0 flex-1 flex-col overflow-hidden px-5"
       >
         <div
           className={`pointer-events-none relative z-50 text-center transition duration-300 ${
