@@ -126,18 +126,18 @@ function getIntroDeckTransform(index: number, total: number, step: IntroStep) {
 
 function getIntroTransition(index: number, total: number, step: IntroStep) {
   if (step === "spread") {
-    return `transform 1280ms cubic-bezier(0.18, 0.86, 0.2, 1) ${index * 0.0038}s`;
+    return `transform 820ms cubic-bezier(0.18, 0.86, 0.2, 1) ${index * 0.0025}s`;
   }
 
   if (step === "closing") {
-    return `transform 1220ms cubic-bezier(0.2, 0.82, 0.2, 1) ${index * 0.0032}s`;
+    return `transform 720ms cubic-bezier(0.2, 0.82, 0.2, 1) ${index * 0.0022}s`;
   }
 
   if (step === "gather") {
-    return `transform 1080ms cubic-bezier(0.24, 0.76, 0.18, 1) ${(total - index) * 0.0014}s`;
+    return `transform 580ms cubic-bezier(0.24, 0.76, 0.18, 1) ${(total - index) * 0.001}s`;
   }
 
-  return `transform 820ms cubic-bezier(0.2, 0.78, 0.2, 1) ${index * 0.0012}s`;
+  return `transform 520ms cubic-bezier(0.2, 0.78, 0.2, 1) ${index * 0.0008}s`;
 }
 
 export function CardWashRitual({
@@ -171,14 +171,14 @@ export function CardWashRitual({
         ? "Gathering"
         : stage === "cutReady" || stage === "cutting"
           ? "Cut the deck"
-          : progress > 0.72
+          : progress > 0.82
             ? "Ready to cut"
             : "Wash deck";
   const helperCopy =
     stage === "placed"
       ? "Watch all 78 cards open, close, then wash by touch."
       : stage === "washing"
-        ? "Move the full deck in slow circles, then release to cut."
+        ? "Wash all 78 cards in slow circles. Fill the ring, then release to cut."
         : stage === "cutting"
           ? "The deck is being cut and squared for your question."
         : "";
@@ -207,19 +207,19 @@ export function CardWashRitual({
     const spreadTimer = window.setTimeout(() => {
       ritualHaptic(4);
       setIntroStep("spread");
-    }, 260);
+    }, 120);
     const closingTimer = window.setTimeout(() => {
       ritualHaptic(5);
       setIntroStep("closing");
-    }, 2200);
+    }, 1120);
     const gatherTimer = window.setTimeout(() => {
       ritualHaptic([4, 22, 5]);
       setIntroStep("gather");
-    }, 3260);
+    }, 1760);
     const washTimer = window.setTimeout(() => {
       ritualHaptic([6, 24, 8]);
       beginWashCallback.current();
-    }, 4200);
+    }, 2350);
 
     return () => {
       window.clearTimeout(spreadTimer);
@@ -280,7 +280,7 @@ export function CardWashRitual({
 
   function finishPointerWash(event: PointerEvent<HTMLDivElement>) {
     if (!washing.current) return;
-    const movedEnoughToCut = washDistance.current >= 42;
+    const movedEnoughToCut = washDistance.current >= 840 || (washDistance.current >= 620 && progress >= 0.56);
     washing.current = false;
     lastPoint.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -296,6 +296,7 @@ export function CardWashRitual({
     <section
       data-ritual-stage={stage}
       data-intro-step={isFullDeckStage ? introStep : ""}
+      data-wash-progress={progress.toFixed(2)}
       className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden px-4 pb-[calc(var(--hint-safe-bottom)+5.25rem)] pt-[calc(var(--hint-safe-top)+1rem)]"
     >
       <div className="pointer-events-none absolute inset-0" style={{ background: theme.chamberOverlay }} />
@@ -360,7 +361,7 @@ export function CardWashRitual({
             ? "h-[min(44vh,460px)] w-[min(118vw,560px)]"
             : isFullDeckStage
               ? "h-[min(90vw,500px)] w-[min(90vw,500px)]"
-              : "h-[min(68vh,660px)] w-[min(140vw,720px)]"
+              : "h-[min(72vh,700px)] w-[min(156vw,760px)]"
         }`}
         style={{
           filter: isFullDeckStage ? "drop-shadow(0 24px 36px rgba(0,0,0,0.38))" : undefined,
