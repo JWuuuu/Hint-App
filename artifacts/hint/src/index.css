@@ -769,7 +769,7 @@
   isolation: isolate;
   overflow: hidden;
   background-clip: padding-box;
-  height: 54px;
+  height: 50px;
   align-self: center;
 }
 

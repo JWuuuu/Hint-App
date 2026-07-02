@@ -211,13 +211,13 @@ function AppNavigationChrome({
   const { t } = useLanguage();
   const referenceHome = location === "/app" || location === "/";
   const chromeSurface = referenceHome
-    ? "linear-gradient(180deg, rgba(255,254,251,0.66), rgba(250,244,238,0.50))"
+    ? "linear-gradient(180deg, rgba(255,254,251,0.88), rgba(250,244,238,0.76))"
     : "var(--hint-dock-bg, var(--hint-nav-bg, var(--hint-liquid-panel)))";
   const chromeBorder = referenceHome
-    ? "rgba(218,199,187,0.22)"
+    ? "rgba(218,199,187,0.42)"
     : "var(--hint-dock-border, var(--hint-liquid-border, var(--hint-border)))";
   const chromeShadow = referenceHome
-    ? "0 12px 32px rgba(102, 79, 67, 0.042), 0 3px 12px rgba(177,137,190,0.018), inset 0 1px 0 rgba(255,255,255,0.48), inset 0 -16px 28px rgba(129,91,111,0.010)"
+    ? "0 18px 44px rgba(102, 79, 67, 0.09), 0 6px 18px rgba(177,137,190,0.045), inset 0 1px 0 rgba(255,255,255,0.74), inset 0 -16px 28px rgba(129,91,111,0.025)"
     : "var(--hint-dock-shadow, var(--hint-nav-shadow, var(--hint-liquid-shadow)))";
   const appTabs: AppTabItem[] = [
     { href: "/app", label: t("nav.today"), icon: Home, exact: true },
@@ -230,17 +230,17 @@ function AppNavigationChrome({
     <nav
       aria-label="App"
       data-app-tabbar
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-6 pb-[calc(var(--hint-safe-bottom)+0.5rem)]"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-6 pb-[calc(var(--hint-safe-bottom)+0.45rem)]"
     >
       <div
         aria-hidden
-        className="absolute inset-x-0 bottom-0 -z-10 h-[calc(4.75rem+var(--hint-safe-bottom))]"
+        className="absolute inset-x-0 bottom-0 -z-10 h-[calc(4.35rem+var(--hint-safe-bottom))]"
         style={{
           background: "var(--hint-dock-veil)",
         }}
       />
       <div
-        className="hint-glass-nav hint-app-dock pointer-events-auto mx-auto grid h-[66px] w-full max-w-[var(--hint-app-width)] grid-cols-5 gap-1 overflow-visible rounded-[33px] border p-1.5"
+        className="hint-glass-nav hint-app-dock pointer-events-auto mx-auto grid h-[62px] w-full max-w-[var(--hint-app-width)] grid-cols-5 gap-1 overflow-visible rounded-[31px] border p-1.5"
         data-reference-home={referenceHome ? "true" : "false"}
         style={{
           background: chromeSurface,
@@ -276,14 +276,14 @@ function HintAiMark({ active }: { active: boolean }) {
   return (
     <span
       aria-hidden
-      className="relative grid size-[58px] place-items-center overflow-hidden rounded-full"
+      className="relative grid size-[52px] place-items-center overflow-hidden rounded-full"
       style={{
         background: active
-          ? "radial-gradient(circle at 34% 20%, rgba(255,244,252,0.96), rgba(205,158,215,0.68) 38%, rgba(117,82,140,0.96) 100%)"
-          : "radial-gradient(circle at 34% 20%, rgba(255,243,252,0.90), rgba(203,157,212,0.60) 40%, rgba(125,91,148,0.92) 100%)",
+          ? "radial-gradient(circle at 34% 20%, rgba(255,244,252,0.98), rgba(207,161,215,0.70) 40%, rgba(123,87,143,0.94) 100%)"
+          : "radial-gradient(circle at 34% 20%, rgba(255,243,252,0.92), rgba(205,159,214,0.62) 42%, rgba(130,95,151,0.90) 100%)",
         color: "#fff8f4",
         boxShadow:
-          "0 0 0 5px rgba(255,255,255,0.58), 0 14px 30px rgba(105,77,120,0.22), inset 0 1px 0 rgba(255,255,255,0.58), inset 0 -10px 20px rgba(63,38,83,0.16), inset 0 0 0 1px rgba(255,255,255,0.40)",
+          "0 0 0 5px rgba(255,255,255,0.66), 0 13px 26px rgba(105,77,120,0.18), inset 0 1px 0 rgba(255,255,255,0.62), inset 0 -10px 20px rgba(63,38,83,0.13), inset 0 0 0 1px rgba(255,255,255,0.44)",
       }}
     >
       <span
@@ -291,7 +291,7 @@ function HintAiMark({ active }: { active: boolean }) {
         className="absolute inset-[6px] rounded-full border"
         style={{ borderColor: "rgba(255,255,255,0.34)" }}
       />
-      <Sparkles size={28} strokeWidth={1.65} />
+      <Sparkles size={25} strokeWidth={1.6} />
     </span>
   );
 }
@@ -319,7 +319,7 @@ function AppTab({
       onPointerDown={() => triggerFeedback(featured ? "select" : "tap")}
       className={[
         "hint-app-tab hint-pressable hint-tap-sparkle relative flex min-w-0 flex-col items-center justify-center px-1 text-center transition hover:-translate-y-0.5 active:scale-[0.98]",
-        featured ? "h-[54px] overflow-visible rounded-[24px]" : "h-[54px] gap-1 rounded-[24px]",
+        featured ? "h-[50px] overflow-visible rounded-[24px]" : "h-[50px] gap-0.5 rounded-[24px]",
       ].join(" ")}
       style={{
         color: featured
@@ -341,7 +341,7 @@ function AppTab({
         style={{ background: active ? "linear-gradient(90deg, transparent, rgba(255,255,255,0.58), transparent)" : "transparent" }}
       />
       {featured ? (
-        <span className="hint-app-tab-orb pointer-events-none absolute left-1/2 top-[-30px] -translate-x-1/2">
+        <span className="hint-app-tab-orb pointer-events-none absolute left-1/2 top-[-25px] -translate-x-1/2">
           <HintAiMark active={active} />
         </span>
       ) : (
