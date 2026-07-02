@@ -118,13 +118,12 @@ const REFERENCE_HOME_COPY = {
     people: 66,
   },
 } as const;
-const REFERENCE_RING_SCORE = 68;
 
 const REFERENCE_CARD_BACKGROUND =
-  "radial-gradient(circle at 18% -8%, rgba(255,255,255,0.46), transparent 46%), radial-gradient(circle at 84% 112%, rgba(230,209,194,0.038), transparent 54%), linear-gradient(145deg, rgba(255,254,251,0.38), rgba(249,243,236,0.22))";
-const REFERENCE_CARD_BORDER = "rgba(185, 153, 128, 0.034)";
+  "radial-gradient(circle at 18% -8%, rgba(255,255,255,0.62), transparent 46%), radial-gradient(circle at 84% 112%, rgba(219,186,169,0.12), transparent 54%), linear-gradient(145deg, rgba(255,254,251,0.70), rgba(249,243,236,0.46))";
+const REFERENCE_CARD_BORDER = "rgba(185, 153, 128, 0.15)";
 const REFERENCE_CARD_SHADOW =
-  "0 12px 34px rgba(93, 72, 58, 0.014), 0 1px 4px rgba(151,112,154,0.006), inset 0 1px 0 rgba(255,255,255,0.40), inset 0 -18px 42px rgba(190,142,122,0.006)";
+  "0 18px 44px rgba(93, 72, 58, 0.055), 0 4px 14px rgba(151,112,154,0.025), inset 0 1px 0 rgba(255,255,255,0.64), inset 0 -18px 42px rgba(190,142,122,0.028)";
 
 const LOCALE_BY_LANGUAGE: Record<string, string> = {
   en: "en-US",
@@ -2336,12 +2335,12 @@ function ReferenceHintLogo() {
       href="/app/profile"
       aria-label="Open profile"
       onPointerDown={() => triggerFeedback("select")}
-      className="hint-pressable relative grid size-[56px] shrink-0 place-items-center overflow-hidden rounded-full border text-center active:scale-95"
+      className="hint-pressable relative grid size-[62px] shrink-0 place-items-center overflow-hidden rounded-full border text-center active:scale-95"
       style={{
         color: "#2d2934",
-        background: "linear-gradient(145deg, rgba(255,254,250,0.50), rgba(248,239,230,0.28))",
-        borderColor: "rgba(191, 159, 132, 0.14)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.58), 0 12px 26px rgba(98,78,64,0.038)",
+        background: "linear-gradient(145deg, rgba(255,254,250,0.74), rgba(248,239,230,0.46))",
+        borderColor: "rgba(191, 159, 132, 0.24)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.74), 0 14px 30px rgba(98,78,64,0.065)",
       }}
     >
       <span
@@ -2350,8 +2349,8 @@ function ReferenceHintLogo() {
         style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.86), transparent)" }}
       />
       <span className="grid justify-items-center">
-        <Sparkles size={18} strokeWidth={1.55} />
-        <span className="font-serif text-[14px] leading-none">hint</span>
+        <Sparkles size={19} strokeWidth={1.5} />
+        <span className="font-serif text-[15px] leading-none">hint</span>
       </span>
     </Link>
   );
@@ -2370,11 +2369,6 @@ function ReferenceFloatingHintCard({
   report: DailyReport;
   onActivate: () => void;
 }) {
-  const cardTitle = report.card.cardName.replace(/^The\s+/i, "");
-  const revealedCardImage =
-    getTarotCardImage(report.card.cardId, "original") ??
-    getTarotCardImage(report.card.cardId, "hint-classic");
-
   return (
     <motion.button
       type="button"
@@ -2389,15 +2383,15 @@ function ReferenceFloatingHintCard({
       }
       onClick={onActivate}
       className="hint-pressable pointer-events-auto absolute z-10 border-0 bg-transparent p-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#fff1cf] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-wait disabled:opacity-85"
-      style={{ position: "absolute", overflow: "visible", right: 75, top: 49, height: 174, width: 78 }}
+      style={{ position: "absolute", overflow: "visible", right: 62, top: 38, height: 190, width: 88 }}
       whileTap={receiptReady && !revealing ? { scale: 0.985 } : undefined}
     >
       <motion.span
         className="relative block h-full w-full"
         animate={{
           y: [0, -4, 0],
-          rotate: revealed ? [-0.2, 0.4, -0.2] : [-0.9, -0.2, -0.9],
-          rotateY: revealing ? [0, 78, 0] : revealed ? [0, -3, 0] : [-4, 1.5, -4],
+          rotate: [-0.6, 0.25, -0.6],
+          rotateY: revealing ? [0, 66, 0] : [-3, 1, -3],
         }}
         transition={{
           y: { duration: 5.6, repeat: Infinity, ease: "easeInOut" },
@@ -2406,17 +2400,15 @@ function ReferenceFloatingHintCard({
         }}
         style={{
           transformStyle: "preserve-3d",
-          filter: revealed
-            ? "drop-shadow(0 30px 36px rgba(72,45,98,0.15)) drop-shadow(0 0 48px rgba(255,240,207,0.70))"
-            : "drop-shadow(0 30px 38px rgba(72,45,98,0.14)) drop-shadow(0 0 48px rgba(255,240,207,0.68))",
+          filter: "drop-shadow(0 34px 44px rgba(72,45,98,0.19)) drop-shadow(0 0 58px rgba(255,240,207,0.82))",
         }}
       >
       <span
         aria-hidden
         className="absolute inset-[-10px] rounded-[20px]"
         style={{
-          background: "linear-gradient(90deg, rgba(255,249,224,0.62), rgba(255,246,232,0.14))",
-          filter: "blur(8px)",
+          background: "linear-gradient(90deg, rgba(255,249,224,0.74), rgba(255,246,232,0.20))",
+          filter: "blur(9px)",
           transform: "translateX(7px)",
         }}
       />
@@ -2444,36 +2436,33 @@ function ReferenceFloatingHintCard({
         aria-hidden
         className="absolute -right-[8px] top-[12px] h-[calc(100%-16px)] w-[82%] rounded-[13px] border"
         style={{
-          background: "linear-gradient(155deg, rgba(247,229,220,0.30), rgba(132,92,161,0.24))",
-          borderColor: "rgba(255,238,209,0.13)",
+          background: "linear-gradient(155deg, rgba(255,237,221,0.44), rgba(132,92,161,0.30))",
+          borderColor: "rgba(255,238,209,0.24)",
           transform: "skewY(0.8deg)",
-          boxShadow: "9px 13px 24px rgba(77,50,105,0.075)",
+          boxShadow: "12px 16px 28px rgba(77,50,105,0.12)",
         }}
       />
       <span
         aria-hidden
         className="absolute -right-[5px] top-[7px] h-[calc(100%-8px)] w-3 rounded-r-[13px] border"
         style={{
-          background: "linear-gradient(90deg, rgba(255,246,226,0.72), rgba(167,124,183,0.38) 42%, rgba(86,58,113,0.50))",
-          borderColor: "rgba(255,233,203,0.22)",
-          boxShadow: "inset 2px 0 0 rgba(255,255,255,0.22)",
+          background: "linear-gradient(90deg, rgba(255,248,232,0.86), rgba(174,132,190,0.46) 42%, rgba(86,58,113,0.58))",
+          borderColor: "rgba(255,233,203,0.36)",
+          boxShadow: "inset 2px 0 0 rgba(255,255,255,0.32), 5px 10px 18px rgba(85,58,108,0.10)",
         }}
       />
       <motion.div
         className="relative h-full w-full overflow-hidden rounded-[13px] border"
-        animate={{ scale: revealed ? [1, 1.035, 1.01] : 1 }}
+        animate={{ scale: revealed ? [1, 1.018, 1.006] : 1 }}
         transition={{ duration: 0.52, ease: "easeOut" }}
         style={{
-          background: revealed
-            ? "radial-gradient(circle at 48% 37%, rgba(255,249,223,0.62), transparent 24%), linear-gradient(160deg, rgba(255,248,241,0.84), rgba(234,210,230,0.72) 45%, rgba(166,119,183,0.70))"
-            : "radial-gradient(circle at 52% 51%, rgba(255,239,175,0.78), transparent 17%), radial-gradient(circle at 48% 36%, rgba(255,255,255,0.48), transparent 25%), radial-gradient(circle at 82% 14%, rgba(255,255,255,0.24), transparent 20%), linear-gradient(158deg, rgba(237,214,233,0.74), rgba(178,129,193,0.66) 48%, rgba(110,83,153,0.74) 100%)",
+          background:
+            "radial-gradient(circle at 52% 51%, rgba(255,239,175,0.82), transparent 17%), radial-gradient(circle at 48% 36%, rgba(255,255,255,0.54), transparent 25%), radial-gradient(circle at 82% 14%, rgba(255,255,255,0.28), transparent 20%), linear-gradient(158deg, rgba(237,214,233,0.78), rgba(178,129,193,0.70) 48%, rgba(110,83,153,0.78) 100%)",
           backgroundPosition: "center",
           backgroundSize: "cover",
           borderColor: "rgba(255,240,213,0.86)",
           boxShadow:
-            revealed
-              ? "inset 0 1px 0 rgba(255,255,255,0.72), inset 0 0 0 1px rgba(160,113,151,0.12), inset 0 -20px 34px rgba(119,78,126,0.13)"
-            : "inset 0 1px 0 rgba(255,255,255,0.76), inset 0 0 0 1px rgba(255,238,206,0.30), inset 0 -22px 34px rgba(87,55,103,0.060)",
+            "inset 0 1px 0 rgba(255,255,255,0.82), inset 0 0 0 1px rgba(255,238,206,0.38), inset 0 -24px 38px rgba(87,55,103,0.12)",
         }}
       >
         <span
@@ -2506,7 +2495,7 @@ function ReferenceFloatingHintCard({
         <svg
           viewBox="0 0 106 172"
           className="absolute inset-0 h-full w-full transition-opacity duration-500"
-          style={{ opacity: revealed ? 0.18 : 1 }}
+          style={{ opacity: 1 }}
         >
           <defs>
             <linearGradient id="reference-card-foil" x1="0" x2="1" y1="0" y2="1">
@@ -2562,48 +2551,11 @@ function ReferenceFloatingHintCard({
           className="absolute inset-y-0 left-0 w-[46%]"
           style={{ background: "linear-gradient(105deg, rgba(255,255,255,0.22), rgba(255,255,255,0.04) 54%, transparent)" }}
         />
-        <motion.div
-          className="absolute inset-[9px] flex flex-col items-center justify-between rounded-[9px] border px-2.5 py-2.5 text-center"
-          initial={false}
-          animate={{ opacity: revealed ? 1 : 0, y: revealed ? 0 : 6 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
-          style={{
-            color: "#332d38",
-            background:
-              "radial-gradient(circle at 50% 29%, rgba(255,246,210,0.64), transparent 28%), linear-gradient(180deg, rgba(255,252,247,0.42), rgba(246,225,238,0.20))",
-            borderColor: "rgba(189, 143, 176, 0.30)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.58)",
-          }}
-        >
-          <span className="font-sans text-[5.8px] font-black uppercase tracking-[0.22em]" style={{ color: "#a87e68" }}>
-            Today&apos;s Hint
-          </span>
-          <span
-            className="relative grid h-[78px] w-[46px] place-items-center overflow-hidden rounded-[5px] border font-serif text-[24px] leading-none"
-            style={{
-              color: "#7e5b92",
-              background: "radial-gradient(circle at 34% 22%, rgba(255,255,255,0.96), rgba(229,201,232,0.62))",
-              borderColor: "rgba(170, 124, 171, 0.24)",
-              boxShadow: "0 12px 22px rgba(129,88,145,0.13), inset 0 1px 0 rgba(255,255,255,0.72)",
-            }}
-          >
-            {revealedCardImage ? (
-              <SafeImage
-                src={revealedCardImage}
-                alt=""
-                loading="eager"
-                className="h-full w-full object-cover"
-                fallbackClassName="h-full w-full"
-                fallbackLabel="Card"
-              >
-                <CardSigil cardId={report.card.cardId} />
-              </SafeImage>
-            ) : (
-              "H"
-            )}
-          </span>
-          <span className="line-clamp-2 font-serif text-[11px] leading-[1.04]">{cardTitle}</span>
-        </motion.div>
+        <span
+          aria-hidden
+          className="absolute bottom-[13px] left-1/2 h-[2px] w-9 -translate-x-1/2 rounded-full"
+          style={{ background: "rgba(255,238,205,0.52)", boxShadow: "0 0 14px rgba(255,238,205,0.50)" }}
+        />
       </motion.div>
       </motion.span>
     </motion.button>
@@ -2635,7 +2587,7 @@ function ReferenceHeroArt({
         className="absolute inset-y-0 right-0 w-full"
         style={{
           background:
-            "linear-gradient(90deg, rgba(250,224,235,0) 0%, rgba(228,197,224,0.06) 36%, rgba(174,133,190,0.24) 68%, rgba(134,97,168,0.54) 100%)",
+            "linear-gradient(90deg, rgba(250,224,235,0) 0%, rgba(228,197,224,0.08) 34%, rgba(174,133,190,0.30) 66%, rgba(134,97,168,0.64) 100%)",
         }}
       />
       <span
@@ -2643,7 +2595,7 @@ function ReferenceHeroArt({
         className="absolute inset-0 opacity-[0.70]"
         style={{
           background:
-            "radial-gradient(circle at 72% 58%, rgba(255,247,205,0.24), transparent 25%), radial-gradient(circle at 83% 24%, rgba(255,255,255,0.13), transparent 18%), radial-gradient(circle at 61% 42%, rgba(214,174,218,0.10), transparent 48%), linear-gradient(90deg, rgba(253,226,236,0) 0%, rgba(239,204,224,0.04) 32%, rgba(126,90,160,0.48) 100%)",
+            "radial-gradient(circle at 72% 58%, rgba(255,247,205,0.30), transparent 25%), radial-gradient(circle at 83% 24%, rgba(255,255,255,0.17), transparent 18%), radial-gradient(circle at 61% 42%, rgba(214,174,218,0.14), transparent 48%), linear-gradient(90deg, rgba(253,226,236,0) 0%, rgba(239,204,224,0.06) 32%, rgba(126,90,160,0.56) 100%)",
         }}
       />
       <svg viewBox="0 0 208 232" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
@@ -2769,18 +2721,16 @@ function ReferenceHero({
       }, 720);
     });
   }
-  const heroTitle = revealed ? "open." : "waiting.";
-  const heroCopy = revealed ? "Your card is ready. Follow the signal below." : "The universe left you a little note.";
 
   return (
     <section
-      className="relative mb-2.5 overflow-hidden rounded-[28px] border"
+      className="relative mb-2.5 overflow-hidden rounded-[30px] border"
       style={{
-        minHeight: 254,
+        minHeight: 264,
         background:
-          "radial-gradient(circle at 75% 75%, rgba(255,235,194,0.18), transparent 30%), linear-gradient(105deg, rgba(255,248,244,0.84) 0%, rgba(250,228,236,0.66) 46%, rgba(174,132,188,0.50) 100%)",
-        borderColor: "rgba(204, 142, 183, 0.115)",
-        boxShadow: "0 20px 48px rgba(116, 80, 120, 0.032), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -20px 48px rgba(107,76,119,0.022)",
+          "radial-gradient(circle at 73% 72%, rgba(255,235,194,0.24), transparent 30%), linear-gradient(105deg, rgba(255,248,244,0.92) 0%, rgba(250,228,236,0.72) 44%, rgba(174,132,188,0.60) 100%)",
+        borderColor: "rgba(204, 142, 183, 0.22)",
+        boxShadow: "0 22px 54px rgba(116, 80, 120, 0.075), 0 1px 0 rgba(255,255,255,0.78) inset, inset 0 -20px 48px rgba(107,76,119,0.036)",
       }}
     >
       <span
@@ -2793,54 +2743,33 @@ function ReferenceHero({
         className="absolute bottom-[-4rem] right-[5.5rem] h-36 w-36 rounded-full blur-2xl"
         style={{ background: "rgba(255,235,197,0.18)" }}
       />
-      <div className="relative min-h-[254px]">
-        <div className="relative z-10 flex min-h-[254px] w-[58%] flex-col pl-7 pr-0 pt-[48px]">
-          <h2 className="font-serif text-[32px] leading-[1.05]" style={{ color: "#2f2b37" }}>
+      <div className="relative min-h-[264px]">
+        <div className="relative z-10 flex min-h-[264px] w-[58%] flex-col pl-7 pr-0 pt-[50px]">
+          <h2 className="font-serif text-[34px] leading-[1.04]" style={{ color: "#2f2b37" }}>
             Your Hint<br />
-            is <span className="italic" style={{ color: "#a982b0" }}>{heroTitle}</span>
+            is <span className="italic" style={{ color: "#a982b0" }}>waiting.</span>
           </h2>
           <p
-            className={[
-              "max-w-[9.5rem] font-serif leading-snug",
-              revealed ? "mt-2 line-clamp-2 text-[12px]" : "mt-3 text-[13.5px]",
-            ].join(" ")}
+            className="mt-3 max-w-[9.5rem] font-serif text-[13.5px] leading-snug"
             style={{ color: "#4c4650" }}
           >
-            {heroCopy}
+            The universe left you a little note.
           </p>
-          {revealed ? (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.28, ease: "easeOut" }}
-              className="mt-3 inline-flex max-w-[180px] items-center gap-1.5 rounded-full border px-3 py-1 font-sans text-[9px] font-black uppercase tracking-[0.14em]"
-              style={{
-                color: "#8c668c",
-                background: "rgba(255, 250, 246, 0.34)",
-                borderColor: "rgba(187, 139, 174, 0.14)",
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.46)",
-              }}
-            >
-              <Sparkles size={12} strokeWidth={1.8} />
-              <span className="truncate">{report.card.cardName}</span>
-            </motion.div>
-          ) : null}
           <button
             type="button"
             disabled={!receiptReady || revealing}
             onClick={handleRevealClick}
             aria-busy={revealing ? "true" : "false"}
             className={[
-              "hint-pressable inline-flex h-[38px] w-full max-w-[154px] items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 font-serif text-[12px] active:scale-[0.98] disabled:opacity-75",
-              revealed ? "mt-3" : "mt-4",
+              "hint-pressable mt-4 inline-flex h-[40px] w-full max-w-[172px] items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 font-serif text-[13px] active:scale-[0.98] disabled:opacity-75",
             ].join(" ")}
             style={{
               color: "#fff8f4",
-              background: "linear-gradient(145deg, #9a75ad 0%, #7f5e94 48%, #684879 100%)",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.30), inset 0 -8px 16px rgba(67,42,80,0.12), 0 14px 26px rgba(104,72,119,0.18)",
+              background: "linear-gradient(145deg, #9b78ac 0%, #805f95 48%, #684879 100%)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.36), inset 0 -8px 16px rgba(67,42,80,0.14), 0 16px 28px rgba(104,72,119,0.22)",
             }}
           >
-            {revealed ? "View Today’s Hint" : revealing ? "Opening Today’s Hint" : receiptReady ? "Reveal Today’s Hint" : "Preparing Today’s Hint"}
+            {revealing ? "Opening Today’s Hint" : receiptReady ? "Reveal Today’s Hint" : "Preparing Today’s Hint"}
             <span aria-hidden className="shrink-0 text-[16px] leading-none">✦</span>
           </button>
         </div>
@@ -2876,56 +2805,28 @@ function ReferenceScoreItem({ score, isLast }: { score: DailyScore; isLast: bool
 }
 
 function ReferenceEnergyValue({ score }: { score: number }) {
-  const radius = 40;
-  const circumference = Math.PI * 2 * radius;
-
   return (
-    <div className="relative mt-1.5 h-[106px] w-[126px]">
-      <svg
-        aria-hidden
-        viewBox="0 0 108 108"
-        className="absolute right-0 top-0 size-[106px]"
-        style={{ transform: "rotate(-74deg)" }}
-      >
-        <circle
-          cx="54"
-          cy="54"
-          r={radius}
-          fill="none"
-          stroke="rgba(174, 159, 178, 0.105)"
-          strokeWidth="5.4"
-        />
-        <motion.circle
-          cx="54"
-          cy="54"
-          r={radius}
-          fill="none"
-          stroke="url(#reference-score-ring)"
-          strokeLinecap="round"
-          strokeWidth="5.8"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          whileInView={{ strokeDashoffset: circumference * (1 - score / 100) }}
-          viewport={{ once: true, amount: 0.6 }}
-          transition={{ duration: 0.75, ease: "easeOut" }}
-        />
-        <defs>
-          <linearGradient id="reference-score-ring" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0" stopColor="#d79fc9" />
-            <stop offset="0.52" stopColor="#b68ce3" />
-            <stop offset="1" stopColor="#7567d6" />
-          </linearGradient>
-        </defs>
-      </svg>
+    <div className="relative mt-2.5 h-[68px] w-[112px]">
       <span
         aria-hidden
-        className="absolute right-[12px] top-[12px] size-[82px] rounded-full"
+        className="absolute left-2 top-2 size-11 rounded-full"
         style={{
-          background: "radial-gradient(circle at 36% 30%, rgba(255,255,255,0.44), rgba(250,238,247,0.13) 62%, transparent)",
+          background: "radial-gradient(circle, rgba(255,247,223,0.58), rgba(255,232,205,0.14) 58%, transparent 72%)",
+          filter: "blur(2px)",
         }}
       />
-      <div className="absolute left-0 top-[39px] flex items-end">
-        <span className="font-serif text-[52px] leading-[0.78] tabular-nums" style={{ color: "#665681" }}>
+      <span
+        aria-hidden
+        className="absolute right-3 top-4 text-[21px]"
+        style={{
+          color: "rgba(214,160,95,0.30)",
+          textShadow: "0 0 16px rgba(255,232,189,0.60)",
+        }}
+      >
+        ✦
+      </span>
+      <div className="absolute left-0 top-[9px] flex items-end">
+        <span className="font-serif text-[52px] leading-[0.78] tabular-nums" style={{ color: "#b783aa" }}>
           {score}
         </span>
         <span className="mb-[4px] ml-1 font-sans text-[12px] font-semibold leading-none" style={{ color: "#777079" }}>
@@ -2940,7 +2841,7 @@ function ReferenceMoonScene() {
   return (
     <div
       aria-hidden
-      className="relative size-[84px] shrink-0 overflow-hidden rounded-full"
+      className="relative size-[76px] shrink-0 overflow-hidden rounded-full"
       style={{
         background: "linear-gradient(145deg, rgba(60, 38, 80, 0.72), rgba(34, 28, 54, 0.92))",
         boxShadow: "0 16px 26px rgba(72, 46, 84, 0.10), inset 0 1px 0 rgba(255,255,255,0.18)",
@@ -2977,7 +2878,7 @@ function ReferenceEnergyPanel({
   return (
     <section
       id="today-summary"
-      className="relative mb-3 overflow-hidden rounded-[26px] border px-4 py-3.5"
+      className="relative mb-2.5 overflow-hidden rounded-[26px] border px-4 py-3"
       style={{
         background: REFERENCE_CARD_BACKGROUND,
         borderColor: REFERENCE_CARD_BORDER,
@@ -2989,12 +2890,12 @@ function ReferenceEnergyPanel({
         className="absolute inset-x-8 top-0 h-px rounded-full"
         style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.52), transparent)" }}
       />
-      <div className="relative grid grid-cols-[126px_minmax(0,1fr)_82px] items-center gap-2.5">
+      <div className="relative grid grid-cols-[112px_minmax(0,1fr)_76px] items-center gap-2.5">
         <div className="relative min-w-0">
           <p className="font-sans text-[9.5px] font-black uppercase tracking-[0.13em]" style={{ color: "#6c646c" }}>
             Today’s energy
           </p>
-          <ReferenceEnergyValue score={REFERENCE_RING_SCORE} />
+          <ReferenceEnergyValue score={REFERENCE_HOME_COPY.scores.overall} />
         </div>
         <div
           className="min-w-0 border-l pl-3"
@@ -3020,11 +2921,11 @@ function ReferenceEnergyPanel({
         }}
         aria-expanded={detailsOpen}
         aria-label="Tap to see more details"
-        className="hint-pressable relative mt-4 flex w-full items-center gap-2 rounded-[20px] border px-2 py-2.5 text-left active:scale-[0.99]"
+        className="hint-pressable relative mt-3 flex w-full items-center gap-2 rounded-[19px] border px-2 py-2 text-left active:scale-[0.99]"
         style={{
-          background: "linear-gradient(145deg, rgba(255,252,248,0.42), rgba(250,242,236,0.20))",
-          borderColor: "rgba(199, 160, 128, 0.10)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.50), 0 10px 22px rgba(96, 75, 61, 0.012)",
+          background: "linear-gradient(145deg, rgba(255,252,248,0.72), rgba(250,242,236,0.44))",
+          borderColor: "rgba(199, 160, 128, 0.17)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.68), 0 12px 24px rgba(96, 75, 61, 0.035)",
         }}
       >
         <div className="grid min-w-0 flex-1 grid-cols-5 items-center">
@@ -3033,7 +2934,7 @@ function ReferenceEnergyPanel({
           ))}
         </div>
         <span
-          className="grid size-8 shrink-0 place-items-center rounded-full"
+          className="grid size-7 shrink-0 place-items-center rounded-full"
           style={{
             color: "#fff8fb",
             background: "linear-gradient(145deg, rgba(202, 145, 196, 0.76), rgba(166, 103, 178, 0.86))",
@@ -3041,7 +2942,7 @@ function ReferenceEnergyPanel({
           }}
         >
           <motion.span animate={{ rotate: detailsOpen ? 180 : 0 }} transition={{ duration: 0.22, ease: "easeOut" }}>
-            <ChevronDown size={17} strokeWidth={2} />
+            <ChevronDown size={15} strokeWidth={2} />
           </motion.span>
         </span>
       </button>
@@ -3051,7 +2952,7 @@ function ReferenceEnergyPanel({
           triggerFeedback("select");
           setDetailsOpen((open) => !open);
         }}
-        className="hint-pressable mx-auto mt-2 flex items-center justify-center gap-2 px-2 py-1 font-sans text-[10.5px]"
+        className="hint-pressable mx-auto mt-1.5 flex items-center justify-center gap-2 px-2 py-0.5 font-sans text-[10px]"
         style={{ color: "#91878e" }}
       >
         <span aria-hidden style={{ color: "rgba(214, 160, 95, 0.48)" }}>
@@ -3100,9 +3001,9 @@ function ReferenceEnergyPanel({
 
 function ReferenceSkyEvidenceArt() {
   return (
-    <div aria-hidden className="pointer-events-none relative h-[52px] w-[82px] overflow-visible">
+    <div aria-hidden className="pointer-events-none relative h-[46px] w-[76px] overflow-visible">
       <span
-        className="absolute right-4 top-3 size-[42px] rounded-full"
+        className="absolute right-4 top-2.5 size-[38px] rounded-full"
         style={{
           background: "radial-gradient(circle at 34% 24%, #f7dee3 0%, #ead4df 36%, #c4a2d0 74%, #9f78ad 100%)",
           boxShadow: "0 14px 26px rgba(142, 96, 154, 0.13), inset 0 1px 0 rgba(255,255,255,0.62)",
@@ -3177,7 +3078,7 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
 
   return (
     <section
-      className="relative mb-3 rounded-[22px] border px-5 py-3"
+      className="relative mb-2.5 rounded-[22px] border px-5 py-2.5"
       style={{
         background: REFERENCE_CARD_BACKGROUND,
         borderColor: REFERENCE_CARD_BORDER,
@@ -3189,21 +3090,21 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
         className="absolute inset-x-10 top-0 h-px rounded-full"
         style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.48), transparent)" }}
       />
-      <div className="min-h-[72px] pr-[96px]">
+      <div className="min-h-[58px] pr-[98px]">
         <div className="min-w-0">
-          <h3 className="font-serif text-[16px] leading-none" style={{ color: "#2f2b37" }}>
+          <h3 className="font-serif text-[17px] leading-none" style={{ color: "#2f2b37" }}>
             Why this hint?
           </h3>
-          <div className="mt-2.5 flex flex-nowrap gap-2">
+          <div className="mt-2 flex flex-nowrap gap-2">
             {evidenceLabels.map((label, index) => (
               <span
                 key={`${label}-${index}`}
-                className="inline-flex min-h-[23px] max-w-full min-w-0 items-center gap-1 rounded-full border px-2 font-sans text-[8.3px] leading-none"
+                className="inline-flex min-h-[24px] max-w-full min-w-0 items-center gap-1.5 rounded-full border px-2.5 font-sans text-[8.6px] leading-none"
                 style={{
                   color: "#777077",
-                  background: "rgba(255, 250, 246, 0.30)",
-                  borderColor: "rgba(198, 165, 142, 0.048)",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.30)",
+                  background: "rgba(255, 250, 246, 0.56)",
+                  borderColor: "rgba(198, 165, 142, 0.14)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.54)",
                 }}
               >
                 <span style={{ color: index === 0 ? "#d39b69" : "#a77caf" }}>{index === 0 ? "☉" : "☽"}</span>
@@ -3221,8 +3122,8 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
           setExpanded((open) => !open);
         }}
         aria-expanded={expanded}
-        className="hint-pressable absolute right-5 top-2.5 flex w-[112px] flex-col items-end text-right active:scale-[0.98]"
-        style={{ position: "absolute", right: 20, top: 10 }}
+        className="hint-pressable absolute right-5 top-2 flex w-[112px] flex-col items-end text-right active:scale-[0.98]"
+        style={{ position: "absolute", right: 20, top: 8 }}
       >
         <span className="inline-flex items-center gap-1 whitespace-nowrap font-serif text-[13px]" style={{ color: "#a36b9a" }}>
           Sky Evidence ✦
