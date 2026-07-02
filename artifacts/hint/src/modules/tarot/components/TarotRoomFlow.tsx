@@ -21,8 +21,6 @@ import {
   Send,
   Sparkles,
   WandSparkles,
-  ZoomIn,
-  ZoomOut,
 } from "lucide-react";
 import { Link } from "wouter";
 import {
@@ -2204,7 +2202,8 @@ function RitualShuffleStep({
   const timers = useRef<number[]>([]);
   const lastWashHapticAtRef = useRef(0);
   const lastStrongWashHapticAtRef = useRef(0);
-  const washProgress = Math.min(1, washScore / 56);
+  const washCompleteScore = 104;
+  const washProgress = Math.min(1, washScore / washCompleteScore);
   const theme = getWashTheme(design);
   const displayRitualCards = deckState.ritualCards;
 
@@ -2241,7 +2240,7 @@ function RitualShuffleStep({
           ritualCards: applyTableCurrent(
             settleWashedDeck(current.ritualCards),
             now,
-            stage === "placed" ? 0.2 : 0.55,
+            stage === "placed" ? 0.22 : 0.9,
             washDirection,
           ),
         }));
@@ -2260,7 +2259,7 @@ function RitualShuffleStep({
       ...current,
       ritualCards: loosenDeckForWash(current.ritualCards),
     }));
-    setWashScore((score) => Math.max(score, 10));
+    setWashScore((score) => Math.max(score, 4));
   }
 
   function wash(pointer: WashPointer) {
@@ -2281,7 +2280,7 @@ function RitualShuffleStep({
         hapticPulse([4, 18, 5]);
       }
       setWashScore((score) =>
-        Math.min(56, score + result.movementScore * 0.58 + 0.22),
+        Math.min(washCompleteScore, score + result.movementScore * 0.18 + 0.12),
       );
       return {
         ...current,
@@ -2347,7 +2346,7 @@ function RitualShuffleStep({
   function finishWash() {
     if (stage !== "washing") return;
     hapticPulse([8, 34, 10]);
-    setWashScore(56);
+    setWashScore(washCompleteScore);
     setStage("gathering");
     updateDeckState((current) => ({
       ...current,
@@ -2685,8 +2684,8 @@ type StageSize = {
 const TAROT_PHONE_FRAME_MAX_WIDTH = 440;
 const PICK_WHEEL_CARD_W = 84;
 const PICK_WHEEL_CARD_H = 134;
-const PICK_WHEEL_CARD_W_ZOOM = 100;
-const PICK_WHEEL_CARD_H_ZOOM = 160;
+const PICK_WHEEL_CARD_W_ZOOM = 102;
+const PICK_WHEEL_CARD_H_ZOOM = 162;
 const PICK_WHEEL_DRAG_SENSITIVITY = 0.0048;
 const PICK_WHEEL_STEP_SCALE = 0.74;
 
@@ -2725,16 +2724,13 @@ function getTarotPhoneStageSize(): StageSize {
   };
 }
 
-function getPickWheelGeometry(
-  zoomed: boolean,
-  size: StageSize,
-): PickWheelGeometry {
+function getPickWheelGeometry(size: StageSize, zoomed = false): PickWheelGeometry {
   const shorter = Math.min(size.width, size.height);
-  const radius = shorter * (zoomed ? 0.98 : 0.95);
+  const baseRadius = shorter * 0.95;
   return {
-    centerX: size.width * (zoomed ? 0.94 : 1.0),
-    centerY: size.height + radius * (zoomed ? 0.39 : 0.43),
-    radius,
+    centerX: size.width,
+    centerY: size.height + baseRadius * 0.43,
+    radius: baseRadius * (zoomed ? 1.08 : 1),
     startAngle: -Math.PI * 0.86,
   };
 }
@@ -2756,6 +2752,32 @@ function getPickWheelLayout(
     zIndex: Math.round(y),
     angle,
   };
+}
+
+function isPointInsidePickWheelCard(
+  layout: PickWheelLayout,
+  width: number,
+  height: number,
+  radialOffset: number,
+  clientX: number,
+  clientY: number,
+  padding = 14,
+) {
+  const originX = layout.x + Math.cos(layout.angle) * radialOffset;
+  const originY = layout.y + Math.sin(layout.angle) * radialOffset;
+  const dx = clientX - originX;
+  const dy = clientY - originY;
+  const cos = Math.cos(layout.rotate);
+  const sin = Math.sin(layout.rotate);
+  const localX = dx * cos + dy * sin;
+  const localY = -dx * sin + dy * cos;
+
+  return (
+    localX >= -width / 2 - padding &&
+    localX <= width / 2 + padding &&
+    localY >= -height - padding &&
+    localY <= padding
+  );
 }
 
 function PickStep({
@@ -2796,7 +2818,10 @@ function PickStep({
   const lastWheelScrollHapticAtRef = useRef(0);
   const selectedIds = new Set(selectedCards.map((card) => card.visualId));
   const done = selectedCards.length >= spread.cardCount;
-  const wheelGeometry = getPickWheelGeometry(zoomed, stageSize);
+  const wheelGeometry = getPickWheelGeometry(stageSize, zoomed);
+  const wheelCardWidth = zoomed ? PICK_WHEEL_CARD_W_ZOOM : PICK_WHEEL_CARD_W;
+  const wheelCardHeight = zoomed ? PICK_WHEEL_CARD_H_ZOOM : PICK_WHEEL_CARD_H;
+  const armedLift = zoomed ? 30 : 22;
   const cardBackImageUrl = getTarotCardBackImage(design.cardBackId);
   const pickTarget = {
     x: stageSize.width * 0.52,
@@ -2846,21 +2871,8 @@ function PickStep({
     activeWheelCard?.virtualIndex ?? virtualCenterIndex;
   const activeIndex = positiveModulo(fallbackVirtualIndex, deck.length);
   const activeCard = activeWheelCard?.card ?? deck[activeIndex];
-  const activeLayout =
-    activeWheelCard?.layout ??
-    getPickWheelLayout(
-      fallbackVirtualIndex,
-      fanRotation,
-      deck.length,
-      wheelGeometry,
-    );
   const activeNumber = wheelDisplayNumber(fallbackVirtualIndex, deck.length);
-  const nextPositionIndex = Math.min(
-    selectedCards.length,
-    Math.max(spread.cardCount - 1, 0),
-  );
-  const nextPositionLabel =
-    spread.positionLabels[nextPositionIndex] ?? `Card ${nextPositionIndex + 1}`;
+  const activeVisualId = activeCard?.visualId ?? null;
 
   useEffect(() => {
     if (lastWheelHapticNumberRef.current === null) {
@@ -2871,10 +2883,10 @@ function PickStep({
     lastWheelHapticNumberRef.current = activeNumber;
 
     const now = Date.now();
-    if (now - lastWheelHapticAtRef.current < (zoomed ? 46 : 72)) return;
+    if (now - lastWheelHapticAtRef.current < 72) return;
     lastWheelHapticAtRef.current = now;
-    hapticTick(zoomed ? 5 : 3);
-  }, [activeNumber, zoomed]);
+    hapticTick(3);
+  }, [activeNumber]);
 
   useEffect(() => {
     if (!placingId) return undefined;
@@ -2970,13 +2982,42 @@ function PickStep({
     setFanRotation((current) => current + pickWheelStep(deck.length) * 2.6);
   }
 
-  function findNearestCard(clientX: number, clientY: number) {
-    const threshold = zoomed ? 118 : 104;
+  function findTopCardAtPoint(localX: number, localY: number) {
+    let topCard: { card: RitualCard; zIndex: number } | null = null;
+    for (const item of candidateWheelCards) {
+      const { card, layout } = item;
+      if (!card || selectedIds.has(card.visualId)) continue;
+      const radialOffset = armedCardId === card.visualId ? armedLift : 0;
+      if (
+        !isPointInsidePickWheelCard(
+          layout,
+          wheelCardWidth,
+          wheelCardHeight,
+          radialOffset,
+          localX,
+          localY,
+          zoomed ? 20 : 16,
+        )
+      ) {
+        continue;
+      }
+      if (!topCard || layout.zIndex > topCard.zIndex) {
+        topCard = { card, zIndex: layout.zIndex };
+      }
+    }
+    return topCard?.card ?? null;
+  }
+
+  function findNearestCard(localX: number, localY: number) {
+    const threshold = zoomed ? 132 : 104;
     let nearest: { card: RitualCard; distance: number } | null = null;
     for (const item of candidateWheelCards) {
       const { card, layout } = item;
       if (!card || selectedIds.has(card.visualId)) continue;
-      const distance = Math.hypot(clientX - layout.x, clientY - layout.y);
+      const offset = armedCardId === card.visualId ? armedLift : 0;
+      const originX = layout.x + Math.cos(layout.angle) * offset;
+      const originY = layout.y + Math.sin(layout.angle) * offset;
+      const distance = Math.hypot(localX - originX, localY - originY);
       if (distance > threshold) continue;
       if (!nearest || distance < nearest.distance) nearest = { card, distance };
     }
@@ -3001,14 +3042,16 @@ function PickStep({
     if (!drag || drag.pointerId !== event.pointerId) return;
     const deltaX = event.clientX - drag.startX;
     const deltaY = event.clientY - drag.startY;
-    if (Math.hypot(deltaX, deltaY) > 5) {
+    if (Math.hypot(deltaX, deltaY) > 10) {
       drag.moved = true;
       if (armedCardId) setArmedCardId(null);
     }
-    scheduleFanRotation(
-      drag.startRotation +
-        (deltaX - deltaY * 0.7) * PICK_WHEEL_DRAG_SENSITIVITY,
-    );
+    if (drag.moved) {
+      scheduleFanRotation(
+        drag.startRotation +
+          (deltaX - deltaY * 0.7) * PICK_WHEEL_DRAG_SENSITIVITY,
+      );
+    }
   }
 
   function handleWheelPointerUp(event: PointerEvent<HTMLDivElement>) {
@@ -3024,7 +3067,37 @@ function PickStep({
         suppressNextClickRef.current = false;
       }, 0);
     } else {
-      const card = findNearestCard(event.clientX, event.clientY);
+      const rect = event.currentTarget.getBoundingClientRect();
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      const targetElement = event.target instanceof HTMLElement ? event.target : null;
+      const targetButton = targetElement?.closest<HTMLButtonElement>("button[data-visual-id]");
+      const targetVisualId = targetButton?.dataset.visualId;
+      const directCard = targetVisualId
+        ? deck.find((card) => card.visualId === targetVisualId)
+        : undefined;
+      const armedItem = armedCardId
+        ? candidateWheelCards.find((item) => item.card.visualId === armedCardId)
+        : undefined;
+      const armedCard =
+        armedItem &&
+        !selectedIds.has(armedItem.card.visualId) &&
+        isPointInsidePickWheelCard(
+          armedItem.layout,
+          wheelCardWidth,
+          wheelCardHeight,
+          armedLift,
+          localX,
+          localY,
+          zoomed ? 24 : 18,
+        )
+          ? armedItem.card
+          : undefined;
+      const card = armedCard ??
+        findTopCardAtPoint(localX, localY) ??
+        (directCard && !selectedIds.has(directCard.visualId)
+          ? directCard
+          : findNearestCard(localX, localY));
       if (card) {
         suppressNextClickRef.current = true;
         window.setTimeout(() => {
@@ -3041,58 +3114,51 @@ function PickStep({
     const now = Date.now();
     if (now - lastWheelScrollHapticAtRef.current > 58) {
       lastWheelScrollHapticAtRef.current = now;
-      hapticTick(zoomed ? 5 : 3);
-    }
-    const nextZoomed = deltaY < 0;
-    if (nextZoomed !== zoomed) {
-      setWheelZoom(nextZoomed);
-      return;
+      hapticTick(3);
     }
     setFanRotation((current) => current - deltaY * 0.0012);
   }
 
-  function setWheelZoom(nextZoomed: boolean, rotationOffset = 0) {
-    if (nextZoomed === zoomed) {
-      setFanRotation((current) => current + rotationOffset);
-      return;
-    }
-
-    if (armedCardId) setArmedCardId(null);
-    hapticPulse(nextZoomed ? [5, 18, 7] : [4, 16, 4]);
-    const nextGeometry = getPickWheelGeometry(nextZoomed, stageSize);
-    const desiredAngle = Math.atan2(
-      activeLayout.y - nextGeometry.centerY,
-      activeLayout.x - nextGeometry.centerX,
-    );
-    const nextRotation =
-      desiredAngle -
-      nextGeometry.startAngle -
-      fallbackVirtualIndex * pickWheelStep(deck.length);
-    setFanRotation(nextRotation + rotationOffset);
-    setZoomed(nextZoomed);
-  }
-
   const visibleWheelCards = candidateWheelCards.filter(({ card, layout }) => {
     if (selectedIds.has(card.visualId)) return false;
-    const topLimit = zoomed ? stageSize.height * 0.22 : stageSize.height * 0.36;
+    const topLimit = stageSize.height * (zoomed ? 0.30 : 0.36);
     return (
-      layout.x > -260 &&
-      layout.x < stageSize.width + 260 &&
+      layout.x > -310 &&
+      layout.x < stageSize.width + 310 &&
       layout.y > topLimit &&
-      layout.y < stageSize.height + 280
+      layout.y < stageSize.height + 320
     );
   });
+  const visibleWheelNumberBadges = zoomed
+    ? visibleWheelCards.flatMap(({ card, virtualIndex, displayNumber, layout }) => {
+        const isActiveTarget = card.visualId === activeVisualId;
+        const isArmed = armedCardId === card.visualId;
+        if (!isActiveTarget && !isArmed) return [];
+        const offset = isArmed ? armedLift : 0;
+        return [{
+          visualId: card.visualId,
+          virtualIndex,
+          displayNumber,
+          isActiveTarget,
+          isArmed,
+          x: layout.x + Math.cos(layout.angle) * offset,
+          y: layout.y + Math.sin(layout.angle) * offset,
+          rotate: layout.rotate,
+          zIndex: layout.zIndex + 220,
+        }];
+      })
+    : [];
   const spreadPreviewPoints = spread.layout.slice(0, spread.cardCount);
 
   return (
     <StepShell>
       <div
         ref={pickStageRef}
-        className="relative -mx-5 -mb-[calc(var(--hint-safe-bottom)+1.25rem)] flex min-h-0 flex-1 flex-col overflow-hidden px-5"
+        className="relative -mx-5 -mb-[calc(var(--hint-safe-bottom)+1.25rem)] flex min-h-0 flex-1 flex-col overflow-clip px-5"
       >
         <div
           className={`pointer-events-none relative z-50 text-center transition duration-300 ${
-            zoomed ? "-translate-y-3 opacity-0" : "translate-y-0 opacity-100"
+            zoomed ? "-translate-y-4 opacity-0" : "translate-y-0 opacity-100"
           }`}
         >
           <h1 className="font-serif text-[32px] leading-none text-[#332d45]">
@@ -3102,23 +3168,9 @@ function PickStep({
             {spread.label} - {selectedCards.length} of {spread.cardCount} chosen
           </p>
         </div>
-        {zoomed ? (
-          <motion.div
-            className="pointer-events-none fixed inset-x-0 top-[calc(var(--hint-safe-top)+4.2rem)] z-50 mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-2 rounded-full border border-white/70 bg-white/78 px-4 py-2 text-[11px] font-black uppercase tracking-[0.13em] text-[#6f5570] shadow-[0_16px_38px_rgba(98,72,107,0.16)] backdrop-blur-xl"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
-          >
-            <span>{nextPositionLabel} card</span>
-            <span className="h-1 w-1 rounded-full bg-[#d7a85e]" />
-            <span>
-              {selectedCards.length} of {spread.cardCount} chosen
-            </span>
-          </motion.div>
-        ) : null}
         <div
           className={`pointer-events-none relative z-50 mt-7 h-[300px] rounded-[34px] border border-white/70 bg-white/34 shadow-[inset_0_0_80px_rgba(255,255,255,0.20),0_18px_54px_rgba(91,65,100,0.08)] backdrop-blur-sm transition duration-300 ${
-            zoomed ? "scale-[0.96] opacity-0" : "scale-100 opacity-100"
+            zoomed ? "scale-[0.98] opacity-0" : "scale-100 opacity-100"
           }`}
         >
           {spreadPreviewPoints.map((point, index) => (
@@ -3174,7 +3226,7 @@ function PickStep({
           ))}
         </div>
         <div
-          className="absolute inset-0 z-40 cursor-grab touch-none select-none overflow-hidden active:cursor-grabbing"
+          className="absolute inset-0 z-40 cursor-grab touch-none select-none overflow-clip active:cursor-grabbing"
           onPointerDown={handleWheelPointerDown}
           onPointerMove={handleWheelPointerMove}
           onPointerUp={handleWheelPointerUp}
@@ -3196,21 +3248,15 @@ function PickStep({
           />
           {visibleWheelCards.map(
             ({ card, index, virtualIndex, displayNumber, layout }) => {
-              const isActive = virtualIndex === fallbackVirtualIndex;
               const selectedInWheel = selectedIds.has(card.visualId);
               const isArmed = armedCardId === card.visualId;
-              const cardWidth = zoomed
-                ? PICK_WHEEL_CARD_W_ZOOM
-                : PICK_WHEEL_CARD_W;
-              const cardHeight = zoomed
-                ? PICK_WHEEL_CARD_H_ZOOM
-                : PICK_WHEEL_CARD_H;
+              const isActiveTarget = zoomed && card.visualId === activeVisualId;
+              const cardWidth = wheelCardWidth;
+              const cardHeight = wheelCardHeight;
               const cardOpacity = selectedInWheel ? 0.68 : 1;
-              const cardLiftY = isArmed
-                ? zoomed
-                  ? "-108%"
-                  : "-107%"
-                : "-100%";
+              const armedOffset = isArmed ? armedLift : 0;
+              const cardX = layout.x + Math.cos(layout.angle) * armedOffset;
+              const cardY = layout.y + Math.sin(layout.angle) * armedOffset;
               return (
                 <motion.button
                   key={`${card.visualId}-${virtualIndex}`}
@@ -3220,107 +3266,104 @@ function PickStep({
                   type="button"
                   data-visual-id={card.visualId}
                   aria-disabled={selectedInWheel}
-                  onClick={() => {
-                    if (!selectedInWheel) choose(card);
+                  onClick={(event) => {
+                    event.preventDefault();
                   }}
                   aria-label={
                     isArmed
                       ? `Confirm card ${displayNumber}`
-                      : isActive
-                        ? `Lift active card ${displayNumber}`
-                        : `Lift card ${displayNumber}`
+                      : `Lift card ${displayNumber}`
                   }
-                  className="absolute block overflow-hidden rounded-[16px] border outline-none transition-[box-shadow,filter,opacity] duration-150 will-change-transform"
+                  className="absolute block overflow-visible rounded-[16px] border outline-none transition-[box-shadow,filter,opacity] duration-150 will-change-transform"
                   style={{
-                    left: layout.x,
-                    top: layout.y,
+                    left: cardX,
+                    top: cardY,
                     width: cardWidth,
                     height: cardHeight,
-                    zIndex:
-                      layout.zIndex + (isArmed ? 180 : isActive ? 90 : 0),
+                    zIndex: layout.zIndex + (isActiveTarget || isArmed ? 80 : 0),
                     opacity: cardOpacity,
                     backgroundColor: "#251d35",
                     backgroundImage: `url("${cardBackImageUrl}")`,
                     backgroundPosition: "center",
                     backgroundSize: "cover",
-                    borderColor: isArmed
-                      ? "rgba(241,211,144,0.88)"
+                    borderColor: isActiveTarget || isArmed
+                      ? "rgba(241,211,144,0.86)"
                       : "rgba(241,211,144,0.42)",
-                    boxShadow: isArmed
-                      ? "0 12px 26px rgba(78,56,92,0.18), 0 0 0 1px rgba(255,255,255,0.48)"
-                      : zoomed
-                        ? "0 13px 26px rgba(78,56,92,0.17)"
-                        : "0 9px 18px rgba(78,56,92,0.13)",
-                    filter: zoomed
-                      ? "brightness(0.95) saturate(1.28) contrast(1.18)"
+                    boxShadow: isActiveTarget || isArmed
+                      ? "0 14px 30px rgba(78,56,92,0.20), 0 0 0 2px rgba(255,244,216,0.62), 0 0 34px rgba(241,211,144,0.26)"
+                      : "0 9px 18px rgba(78,56,92,0.13)",
+                    filter: isActiveTarget || isArmed
+                      ? "brightness(1.04) saturate(1.34) contrast(1.16)"
                       : "brightness(0.96) saturate(1.22) contrast(1.14)",
                     transformOrigin: "50% 100%",
                   }}
                   animate={{
                     x: "-50%",
-                    y: cardLiftY,
+                    y: "-100%",
                     rotate: `${layout.rotate}rad`,
-                    scale: isArmed ? 1.006 : 1,
+                    scale: 1,
                   }}
                   transition={{
-                    type: "tween",
-                    duration: isArmed ? 0.16 : 0.07,
-                    ease: "easeOut",
+                    type: "spring",
+                    stiffness: 420,
+                    damping: 34,
+                    mass: 0.78,
                   }}
                 >
-                  <span className="pointer-events-none absolute inset-[8px] rounded-[11px] border border-white/18" />
-                  <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.05),transparent_28%),linear-gradient(140deg,rgba(255,255,255,0.04),transparent_42%)]" />
+                  <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-[16px]">
+                    <span className="absolute inset-[8px] rounded-[11px] border border-white/18" />
+                    <span className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.05),transparent_28%),linear-gradient(140deg,rgba(255,255,255,0.04),transparent_42%)]" />
+                    {isActiveTarget || isArmed ? (
+                      <span className="absolute inset-0 rounded-[16px] bg-[radial-gradient(circle_at_50%_12%,rgba(255,246,215,0.20),transparent_35%)]" />
+                    ) : null}
+                  </span>
                 </motion.button>
               );
             },
           )}
-          {zoomed
-            ? visibleWheelCards.map(
-                ({ card, virtualIndex, displayNumber, layout }) => {
-                  const isArmed = armedCardId === card.visualId;
-                  return (
-                    <div
-                      key={`wheel-number-${virtualIndex}`}
-                      className="pointer-events-none absolute"
-                      style={{
-                        left: layout.x,
-                        top: layout.y,
-                        width: PICK_WHEEL_CARD_W_ZOOM,
-                        height: PICK_WHEEL_CARD_H_ZOOM,
-                        zIndex: layout.zIndex + (isArmed ? 260 : 120),
-                        transform: `translate(-50%, ${isArmed ? "-108%" : "-100%"}) rotate(${layout.rotate}rad)`,
-                        transformOrigin: "50% 100%",
-                      }}
-                    >
-                      <span
-                        className={`absolute left-1/2 top-[-2.15rem] grid h-7 min-w-7 place-items-center rounded-full border px-1.5 font-serif text-[12px] font-black leading-none shadow-[0_10px_22px_rgba(80,60,90,0.18)] backdrop-blur-md ${
-                          isArmed
-                            ? "border-[#e3b45f]/86 bg-[#fff2cf]/95 text-[#6e4c25]"
-                            : "border-white/86 bg-white/92 text-[#332d45]"
-                        }`}
-                        style={{
-                          transform: `translateX(-50%) rotate(${-layout.rotate}rad)`,
-                        }}
-                      >
-                        {displayNumber}
-                      </span>
-                    </div>
-                  );
-                },
-              )
-            : null}
+          {visibleWheelNumberBadges.map((badge) => (
+            <div
+              key={`wheel-number-${badge.visualId}-${badge.virtualIndex}`}
+              className="pointer-events-none absolute"
+              style={{
+                left: badge.x,
+                top: badge.y,
+                width: wheelCardWidth,
+                height: wheelCardHeight,
+                zIndex: badge.zIndex,
+                transform: `translate(-50%, -100%) rotate(${badge.rotate}rad)`,
+                transformOrigin: "50% 100%",
+              }}
+            >
+              <span
+                className={`absolute left-1/2 top-[-2.35rem] grid h-8 min-w-8 place-items-center rounded-full border px-2 font-serif text-[14px] font-black leading-none shadow-[0_12px_24px_rgba(80,60,90,0.18)] backdrop-blur-xl ${
+                  badge.isArmed
+                    ? "border-[#e2b45f]/80 bg-[#fff4d4]/96 text-[#6a461d]"
+                    : "border-[#e8c27a]/84 bg-[#fff8e6]/96 text-[#4a3422]"
+                }`}
+                style={{
+                  transform: `translateX(-50%) rotate(${-badge.rotate}rad)`,
+                }}
+              >
+                {badge.displayNumber}
+              </span>
+            </div>
+          ))}
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            hapticTick(8);
-            setWheelZoom(!zoomed);
-          }}
-          aria-label={zoomed ? "Zoom out wheel" : "Zoom in wheel"}
-          className="absolute bottom-4 left-5 z-50 grid h-12 w-12 place-items-center rounded-full border border-[#f1d390]/52 bg-white/78 text-[#6f5570] shadow-[0_18px_44px_rgba(97,72,107,0.18)] backdrop-blur-xl transition active:scale-95"
-        >
-          {zoomed ? <ZoomOut size={19} /> : <ZoomIn size={19} />}
-        </button>
+        <div className="absolute bottom-[5.25rem] left-5 z-50 flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={zoomed ? "Close expanded deck" : "Expand deck"}
+            className="h-11 rounded-full border border-white/75 bg-white/84 px-5 text-[11px] font-black uppercase tracking-[0.14em] text-[#654f6d] shadow-[0_14px_32px_rgba(78,56,92,0.14)] backdrop-blur-xl transition active:scale-95"
+            onClick={() => {
+              hapticPulse([4, 18, 5]);
+              setArmedCardId(null);
+              setZoomed((current) => !current);
+            }}
+          >
+            {zoomed ? "Close" : "Expand"}
+          </button>
+        </div>
         <div className="pointer-events-none absolute inset-x-5 bottom-4 z-50">
           {done ? (
             <PrimaryButton

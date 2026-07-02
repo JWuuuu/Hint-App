@@ -16,8 +16,8 @@ export type WashResult = {
   movementScore: number;
 };
 
-const INNER_RADIUS = 132;
-const OUTER_RADIUS = 390;
+const INNER_RADIUS = 160;
+const OUTER_RADIUS = 500;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -44,11 +44,11 @@ function getHome(card: RitualCard) {
 
 function getWashRadius(index: number, baseLayer: boolean, laneShift = 0) {
   const lane = ((index % 17) + laneShift + 17) % 17;
-  const shared = 8 + lane * 2.35;
+  const shared = 10 + lane * 2.75;
   const layerDrift = baseLayer
-    ? Math.sin(index * 1.27 + laneShift * 0.42) * 9.6
-    : Math.cos(index * 1.19 + laneShift * 0.38) * 10.8;
-  return clamp(shared + layerDrift, 5, 54);
+    ? Math.sin(index * 1.27 + laneShift * 0.42) * 10.8
+    : Math.cos(index * 1.19 + laneShift * 0.38) * 12.2;
+  return clamp(shared + layerDrift, 7, 66);
 }
 
 function getRingPull(distance: number, desiredDistance: number, strength: number) {
@@ -72,8 +72,8 @@ function getOrbitPoint(
   const turnedAngle = angle + orbitTurn + Math.sin(index * 0.73) * 0.16;
   const laneShift = Math.sin(orbitTurn * 4.4 + index * 1.11 + card.rotate * 0.025 + card.x * 0.035 + card.y * 0.022) * 7.2;
   const radius = getWashRadius(index, baseLayer, laneShift);
-  const xScale = 1.48 + Math.sin(index * 0.43) * 0.13;
-  const yScale = 0.94 + Math.cos(index * 0.51) * 0.11;
+  const xScale = 1.58 + Math.sin(index * 0.43) * 0.16;
+  const yScale = 1.02 + Math.cos(index * 0.51) * 0.13;
   return {
     x: 50 + Math.cos(turnedAngle) * radius * xScale + Math.sin(seedAngle * 1.7) * 3.1,
     y: 52 + Math.sin(turnedAngle) * radius * yScale + Math.cos(seedAngle * 1.3) * 2.6,
@@ -86,7 +86,7 @@ export function applyWashForce(
 ): WashResult {
   const activeVisualIds: string[] = [];
   let movementScore = 0;
-  const pointerSpeed = Math.min(14, Math.max(1, Math.hypot(pointer.movementX, pointer.movementY)));
+  const pointerSpeed = Math.min(18, Math.max(1, Math.hypot(pointer.movementX, pointer.movementY)));
   const tableCenterX = pointer.width / 2;
   const tableCenterY = pointer.height / 2;
   const spinDirection = pointer.spinDirection;
@@ -122,8 +122,8 @@ export function applyWashForce(
     const currentVelocityRotate = card.velocityRotate ?? 0;
 
     if (distance > OUTER_RADIUS) {
-      const ambient = pointerSpeed > 2 ? 0.035 : 0.012;
-      const drift = baseLayer ? 0.075 : 0.070;
+      const ambient = pointerSpeed > 2 ? 0.052 : 0.018;
+      const drift = baseLayer ? 0.095 : 0.092;
       const velocityCarry = baseLayer ? 0.22 : 0.24;
       const rotationCarry = baseLayer ? 0.22 : 0.18;
       return {
@@ -144,39 +144,39 @@ export function applyWashForce(
     const impact = near ? 1 : falloff;
     const strength = baseLayer
       ? near
-        ? 5.2 + Math.random() * 5.4
-        : 2.8 + Math.random() * 3.4 * falloff
+        ? 6.6 + Math.random() * 6.2
+        : 3.8 + Math.random() * 4.4 * falloff
       : near
-        ? 9.4 + Math.random() * 9.2
-        : 4.4 + Math.random() * 5.6 * falloff;
+        ? 11.8 + Math.random() * 10.2
+        : 5.9 + Math.random() * 6.4 * falloff;
     const handBlend = near ? 1 : 0.62 + falloff * 0.28;
     const layerGrip = baseLayer ? 0.48 : 0.58;
     const crossMix = Math.sin(index * 1.53 + pointer.x * 0.018 + pointer.y * 0.014 + card.rotate * 0.041);
     const slipMix = Math.cos(index * 1.87 + pointer.x * 0.024 - pointer.y * 0.018 + card.y * 0.033);
-    const radialMixX = tableRadialX * crossMix * (near ? 7.4 : 4.8 * falloff);
-    const radialMixY = tableRadialY * crossMix * (near ? 6.2 : 4.0 * falloff);
-    const crossTangentX = -tangentY * slipMix * (near ? 3.6 : 2.5 * falloff);
-    const crossTangentY = tangentX * slipMix * (near ? 3.6 : 2.5 * falloff);
+    const radialMixX = tableRadialX * crossMix * (near ? 9.0 : 5.8 * falloff);
+    const radialMixY = tableRadialY * crossMix * (near ? 7.4 : 4.8 * falloff);
+    const crossTangentX = -tangentY * slipMix * (near ? 4.6 : 3.1 * falloff);
+    const crossTangentY = tangentX * slipMix * (near ? 4.6 : 3.1 * falloff);
     const dx = tangentX * strength * handBlend * layerGrip + radialMixX + crossTangentX;
     const dy = tangentY * strength * handBlend * layerGrip + radialMixY + crossTangentY;
     const rotateDelta = (baseLayer
-      ? near ? 1.1 + Math.random() * 1.6 : 0.45 + Math.random() * 1.0
-      : near ? 2.2 + Math.random() * 2.8 : 0.8 + Math.random() * 1.8) * spinDirection;
+      ? near ? 1.35 + Math.random() * 1.9 : 0.62 + Math.random() * 1.2
+      : near ? 2.7 + Math.random() * 3.1 : 1.1 + Math.random() * 2.1) * spinDirection;
 
     activeVisualIds.push(card.visualId);
-    movementScore += Math.max(0.45, impact) * (near ? 2.1 : 0.95) * (baseLayer ? 0.78 : 1);
+    movementScore += Math.max(0.38, impact) * (near ? 1.55 : 0.72) * (baseLayer ? 0.68 : 0.88);
 
     const forceX = (dx / pointer.width) * 100;
     const forceY = (dy / pointer.height) * 100;
-    const nextVelocityX = currentVelocityX * (baseLayer ? 0.30 : 0.32) + forceX * (baseLayer ? 0.20 : 0.28);
-    const nextVelocityY = currentVelocityY * (baseLayer ? 0.30 : 0.32) + forceY * (baseLayer ? 0.20 : 0.28);
-    const nextVelocityRotate = currentVelocityRotate * (baseLayer ? 0.24 : 0.24) + rotateDelta * (baseLayer ? 0.10 : 0.12) + pointerSpeed * (baseLayer ? 0.0018 : 0.003) * spinDirection;
+    const nextVelocityX = currentVelocityX * (baseLayer ? 0.34 : 0.36) + forceX * (baseLayer ? 0.23 : 0.32);
+    const nextVelocityY = currentVelocityY * (baseLayer ? 0.34 : 0.36) + forceY * (baseLayer ? 0.23 : 0.32);
+    const nextVelocityRotate = currentVelocityRotate * (baseLayer ? 0.28 : 0.28) + rotateDelta * (baseLayer ? 0.12 : 0.15) + pointerSpeed * (baseLayer ? 0.0024 : 0.0037) * spinDirection;
     const rotation = clamp(card.rotate + rotateDelta + pointerSpeed * (baseLayer ? 0.0015 : 0.0025) * spinDirection, -64, 64);
 
     return {
       ...card,
-      x: clampFieldX(card.x + forceX + ringPullX * 0.14 + orbitPullX + homePullX),
-      y: clampFieldY(card.y + forceY + ringPullY * 0.14 + orbitPullY + homePullY),
+      x: clampFieldX(card.x + forceX + ringPullX * 0.18 + orbitPullX * 1.1 + homePullX),
+      y: clampFieldY(card.y + forceY + ringPullY * 0.18 + orbitPullY * 1.1 + homePullY),
       rotate: rotation,
       rotation,
       velocityX: nextVelocityX,
@@ -204,7 +204,7 @@ export function loosenDeckForWash(ritualCards: readonly RitualCard[]): RitualCar
       2.8,
     )
       + (Math.random() - 0.5) * (baseLayer ? 1.4 : 1.7);
-    const tangent = baseLayer ? 1.0 + Math.random() * 1.7 : 1.35 + Math.random() * 2.35;
+    const tangent = baseLayer ? 1.3 + Math.random() * 2.1 : 1.75 + Math.random() * 2.85;
     const rotation = clamp(card.rotate + (Math.random() - 0.5) * (baseLayer ? 4.5 : 6.5), -58, 58);
 
     return {
@@ -213,9 +213,9 @@ export function loosenDeckForWash(ritualCards: readonly RitualCard[]): RitualCar
       y: clampFieldY(card.y + (orbitPoint.y - card.y) * (baseLayer ? 0.070 : 0.090) + (home.y - card.y) * (baseLayer ? 0.003 : 0.0015) + Math.sin(angle) * radial + Math.cos(angle) * tangent),
       rotate: rotation,
       rotation,
-      velocityX: Math.cos(angle + Math.PI / 2) * (baseLayer ? 0.055 + Math.random() * 0.070 : 0.085 + Math.random() * 0.110),
-      velocityY: Math.sin(angle + Math.PI / 2) * (baseLayer ? 0.055 + Math.random() * 0.070 : 0.085 + Math.random() * 0.110),
-      velocityRotate: (index % 2 === 0 ? 1 : -1) * (baseLayer ? 0.055 + Math.random() * 0.070 : 0.080 + Math.random() * 0.120),
+      velocityX: Math.cos(angle + Math.PI / 2) * (baseLayer ? 0.075 + Math.random() * 0.090 : 0.110 + Math.random() * 0.140),
+      velocityY: Math.sin(angle + Math.PI / 2) * (baseLayer ? 0.075 + Math.random() * 0.090 : 0.110 + Math.random() * 0.140),
+      velocityRotate: (index % 2 === 0 ? 1 : -1) * (baseLayer ? 0.075 + Math.random() * 0.090 : 0.105 + Math.random() * 0.150),
       lift: 0,
       zIndex: baseLayer ? index : 120 + index,
     };
@@ -242,7 +242,7 @@ export function applyTableCurrent(
     const tangentY = (dx / distance) * spinDirection;
     const radialX = dx / distance;
     const radialY = dy / distance;
-    const band = baseLayer ? 0.15 + ((index % 9) / 58) : 0.22 + ((index % 11) / 36);
+    const band = baseLayer ? 0.20 + ((index % 9) / 48) : 0.30 + ((index % 11) / 30);
     const current = intensity * pulse * band;
     const laneShift = Math.sin(tick / 920 + index * 1.17 + card.rotate * 0.022) * 7.2;
     const desiredDistance = getWashRadius(index, baseLayer, laneShift);
@@ -256,8 +256,8 @@ export function applyTableCurrent(
 
     return {
       ...card,
-      x: clampFieldX(card.x + (card.velocityX ?? 0) * velocityCarry + tangentX * current * (baseLayer ? 0.042 : 0.050) + radialX * ringPull * 0.08 + orbitPullX + homePullX),
-      y: clampFieldY(card.y + (card.velocityY ?? 0) * velocityCarry + tangentY * current * (baseLayer ? 0.040 : 0.048) + radialY * ringPull * 0.08 + orbitPullY + homePullY),
+      x: clampFieldX(card.x + (card.velocityX ?? 0) * velocityCarry + tangentX * current * (baseLayer ? 0.058 : 0.070) + radialX * ringPull * 0.10 + orbitPullX * 1.15 + homePullX),
+      y: clampFieldY(card.y + (card.velocityY ?? 0) * velocityCarry + tangentY * current * (baseLayer ? 0.054 : 0.066) + radialY * ringPull * 0.10 + orbitPullY * 1.15 + homePullY),
       rotate: rotation,
       rotation,
       velocityX: (card.velocityX ?? 0) * (baseLayer ? 0.42 : 0.48) + tangentX * current * (baseLayer ? 0.007 : 0.010),
