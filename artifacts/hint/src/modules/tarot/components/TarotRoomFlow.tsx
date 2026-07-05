@@ -5,8 +5,9 @@ import {
   type CSSProperties,
   type PointerEvent,
   type ReactNode,
+  type WheelEvent,
 } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -200,14 +201,31 @@ const ROOM_DESIGNS: RoomDesign[] = [
   },
 ];
 
-function hapticTick(duration = 8) {
-  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-    navigator.vibrate(duration);
+let lastTarotHapticAt = 0;
+
+function canUseTarotHaptic(minGap = 28) {
+  if (typeof navigator === "undefined" || !("vibrate" in navigator)) return false;
+  if (typeof document !== "undefined" && document.hidden) return false;
+  if (
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return false;
+  }
+  const now = Date.now();
+  if (now - lastTarotHapticAt < minGap) return false;
+  lastTarotHapticAt = now;
+  return true;
+}
+
+function hapticTick(duration = 8, minGap = 28) {
+  if (canUseTarotHaptic(minGap)) {
+    navigator.vibrate(Math.min(18, Math.max(2, duration)));
   }
 }
 
-function hapticPulse(pattern: number | number[] = [6, 28, 10]) {
-  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+function hapticPulse(pattern: number | number[] = [6, 28, 10], minGap = 86) {
+  if (canUseTarotHaptic(minGap)) {
     navigator.vibrate(pattern);
   }
 }
@@ -1075,15 +1093,88 @@ function RoomBackground({
 }: {
   design?: RoomDesign;
 }) {
+  const reducedMotion = useReducedMotion();
+
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <div
         className="absolute inset-0"
         style={{ background: design.background }}
       />
-      <div className="absolute inset-0 opacity-55 [background-image:radial-gradient(circle_at_18%_24%,rgba(255,255,255,0.86)_0_1px,transparent_1px),radial-gradient(circle_at_78%_16%,rgba(205,158,82,0.44)_0_1px,transparent_1px),radial-gradient(circle_at_68%_76%,rgba(148,111,188,0.42)_0_1px,transparent_1px)] [background-size:118px_138px]" />
+      <motion.div
+        aria-hidden
+        className="absolute inset-0 opacity-55"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 18% 24%,rgba(255,255,255,0.86) 0 1px,transparent 1px),radial-gradient(circle at 78% 16%,rgba(205,158,82,0.44) 0 1px,transparent 1px),radial-gradient(circle at 68% 76%,rgba(148,111,188,0.42) 0 1px,transparent 1px)",
+          backgroundSize: "118px 138px",
+        }}
+        animate={
+          reducedMotion
+            ? undefined
+            : {
+                backgroundPosition: [
+                  "0px 0px, 0px 0px, 0px 0px",
+                  "18px 14px, -12px 10px, 8px -16px",
+                  "0px 0px, 0px 0px, 0px 0px",
+                ],
+              }
+        }
+        transition={
+          reducedMotion
+            ? undefined
+            : { duration: 18, repeat: Infinity, ease: "easeInOut" }
+        }
+      />
+      <div
+        className="absolute inset-0 opacity-55 mix-blend-soft-light"
+        style={{
+          background:
+            "linear-gradient(180deg,rgba(255,255,255,0.20),transparent 28%,rgba(255,255,255,0.10) 58%,transparent)",
+        }}
+      />
       <div className="absolute inset-x-[-20%] bottom-[-16%] h-[48%] rounded-[50%] bg-[radial-gradient(ellipse_at_50%_35%,rgba(255,255,255,0.72),rgba(239,215,224,0.32)_42%,transparent_70%)]" />
     </div>
+  );
+}
+
+const TAROT_STEP_EASE = [0.18, 0.78, 0.18, 1] as const;
+
+function StepTransitionVeil() {
+  const reducedMotion = useReducedMotion();
+
+  if (reducedMotion) return null;
+
+  return (
+    <motion.div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-[70] overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 1, 0] }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.82, ease: TAROT_STEP_EASE }}
+    >
+      <motion.div
+        className="absolute left-[-38%] top-[18%] h-[38%] w-[176%] -rotate-6"
+        style={{
+          background:
+            "linear-gradient(90deg,transparent 8%,rgba(255,244,250,0.18) 35%,rgba(255,226,166,0.16) 50%,rgba(214,183,255,0.14) 64%,transparent 92%)",
+        }}
+        initial={{ x: "-12%" }}
+        animate={{ x: "12%" }}
+        transition={{ duration: 0.82, ease: TAROT_STEP_EASE }}
+      />
+      <motion.div
+        className="absolute inset-x-6 top-[calc(var(--hint-safe-top)+3.1rem)] h-px rounded-full"
+        style={{
+          background:
+            "linear-gradient(90deg,transparent,rgba(255,232,178,0.78),rgba(246,187,207,0.56),transparent)",
+        }}
+        initial={{ opacity: 0, scaleX: 0.42 }}
+        animate={{ opacity: [0, 0.76, 0], scaleX: [0.42, 1, 0.7] }}
+        transition={{ duration: 0.74, ease: TAROT_STEP_EASE }}
+      />
+    </motion.div>
   );
 }
 
@@ -1111,15 +1202,36 @@ function PrimaryButton({
 }
 
 function StepShell({ children }: { children: ReactNode }) {
+  const reducedMotion = useReducedMotion();
+
   return (
     <motion.section
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -14 }}
-      transition={{ duration: 0.42, ease: [0.22, 0.74, 0.2, 1] }}
-      className="hint-app-scroll absolute inset-0 z-10 flex w-full flex-col px-5 pb-[calc(var(--hint-safe-bottom)+1.25rem)] pt-[calc(var(--hint-safe-top)+4rem)]"
+      initial={reducedMotion ? false : { opacity: 0, y: 18, scale: 0.986 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={reducedMotion ? undefined : { opacity: 0, y: -14, scale: 1.006 }}
+      transition={{ duration: reducedMotion ? 0 : 0.54, ease: TAROT_STEP_EASE }}
+      className="hint-app-scroll absolute inset-0 z-10 flex w-full transform-gpu flex-col px-5 pb-[calc(var(--hint-safe-bottom)+1.25rem)] pt-[calc(var(--hint-safe-top)+4rem)]"
     >
-      {children}
+      {!reducedMotion ? (
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-5 top-[calc(var(--hint-safe-top)+4.15rem)] z-0 h-16 rounded-full opacity-0"
+          style={{
+            background:
+              "linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,244,250,0.08),transparent)",
+          }}
+          animate={{ opacity: [0, 0.42, 0.18], y: [-8, 0, 6] }}
+          transition={{ duration: 0.82, ease: TAROT_STEP_EASE }}
+        />
+      ) : null}
+      <motion.div
+        className="relative z-10 flex min-h-0 flex-1 flex-col"
+        initial={reducedMotion ? false : { opacity: 0.88, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reducedMotion ? 0 : 0.44, ease: TAROT_STEP_EASE }}
+      >
+        {children}
+      </motion.div>
     </motion.section>
   );
 }
@@ -2140,36 +2252,73 @@ function PrepareStep({
   design: RoomDesign;
   onDone: () => void;
 }) {
+  const reducedMotion = useReducedMotion();
+
   useEffect(() => {
-    const timer = window.setTimeout(onDone, 1300);
+    const timer = window.setTimeout(onDone, reducedMotion ? 520 : 1320);
     return () => window.clearTimeout(timer);
-  }, [onDone]);
+  }, [onDone, reducedMotion]);
 
   return (
     <StepShell>
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
+      <motion.div
+        className="flex flex-1 flex-col items-center justify-center text-center"
+        initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reducedMotion ? 0 : 0.52, ease: TAROT_STEP_EASE }}
+      >
         <motion.div
-          className="grid h-40 w-40 place-items-center rounded-full border border-[#f2d6e2]/72 bg-white/36 shadow-[0_0_70px_rgba(246,186,209,0.42)]"
-          animate={{ scale: [0.92, 1.08, 0.92], opacity: [0.72, 1, 0.72] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          className="relative grid h-40 w-40 place-items-center rounded-full border border-[#f2d6e2]/72 bg-white/36 shadow-[0_0_70px_rgba(246,186,209,0.42)]"
+          initial={reducedMotion ? false : { scale: 0.88, opacity: 0.72 }}
+          animate={
+            reducedMotion
+              ? { scale: 1, opacity: 1 }
+              : { scale: [0.9, 1.035, 0.97], opacity: [0.72, 1, 0.88] }
+          }
+          transition={{ duration: 3.15, repeat: Infinity, ease: "easeInOut" }}
         >
+          <motion.span
+            aria-hidden
+            className="absolute inset-[-10px] rounded-full border border-[#f1d390]/38"
+            animate={
+              reducedMotion
+                ? undefined
+                : { rotate: [0, 360], opacity: [0.34, 0.72, 0.34] }
+            }
+            transition={{ duration: 6.8, repeat: Infinity, ease: "linear" }}
+          />
           <TarotBack cardBackId={design.cardBackId} className="h-28 w-[72px]" />
         </motion.div>
-        <h1 className="mt-10 font-serif text-[34px] leading-none text-[#332d45]">
+        <motion.h1
+          className="mt-10 font-serif text-[34px] leading-none text-[#332d45]"
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reducedMotion ? 0 : 0.48, delay: reducedMotion ? 0 : 0.12, ease: TAROT_STEP_EASE }}
+        >
           Hold your question in your mind.
-        </h1>
-        <p className="mt-4 max-w-[20rem] text-[15px] font-semibold leading-relaxed text-[#746276]">
+        </motion.h1>
+        <motion.p
+          className="mt-4 max-w-[20rem] text-[15px] font-semibold leading-relaxed text-[#746276]"
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reducedMotion ? 0 : 0.48, delay: reducedMotion ? 0 : 0.2, ease: TAROT_STEP_EASE }}
+        >
           Move the cards in one slow circle. Release when it feels enough.
-        </p>
-        <div className="mt-8 w-full max-w-[340px] rounded-[24px] border border-white/62 bg-white/38 p-4 text-left backdrop-blur-xl">
+        </motion.p>
+        <motion.div
+          className="mt-8 w-full max-w-[340px] rounded-[24px] border border-white/62 bg-white/38 p-4 text-left backdrop-blur-xl"
+          initial={reducedMotion ? false : { opacity: 0, y: 10, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: reducedMotion ? 0 : 0.5, delay: reducedMotion ? 0 : 0.28, ease: TAROT_STEP_EASE }}
+        >
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#a28191]">
             {spread.label}
           </p>
           <p className="mt-2 text-[14px] font-semibold leading-relaxed text-[#4a4050]">
             {question}
           </p>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </StepShell>
   );
 }
@@ -2180,6 +2329,9 @@ function createFlowDeckState(deck: RitualCard[]): FlowDeckState {
     ritualCards: deck,
   };
 }
+
+const CLOCKWISE_WASH_DIRECTION: 1 | -1 = 1;
+const AUTO_WASH_DURATION_MS = 4200;
 
 function RitualShuffleStep({
   design,
@@ -2197,12 +2349,20 @@ function RitualShuffleStep({
     "placed" | "washing" | "gathering" | "cutReady" | "cutting"
   >("placed");
   const [washScore, setWashScore] = useState(0);
-  const [washDirection, setWashDirection] = useState<1 | -1>(1);
+  const [washDirection, setWashDirection] = useState<1 | -1>(CLOCKWISE_WASH_DIRECTION);
+  const [autoWashActive, setAutoWashActive] = useState(false);
   const deckStateRef = useRef(deckState);
+  const stageRef = useRef(stage);
   const timers = useRef<number[]>([]);
+  const pendingWashPointerRef = useRef<WashPointer | null>(null);
+  const washFrameRef = useRef<number | null>(null);
+  const washDirectionRef = useRef<1 | -1>(washDirection);
+  const autoWashPhaseRef = useRef(0);
+  const autoWashStartedAtRef = useRef<number | null>(null);
+  const autoWashLastPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastWashHapticAtRef = useRef(0);
   const lastStrongWashHapticAtRef = useRef(0);
-  const washCompleteScore = 104;
+  const washCompleteScore = 136;
   const washProgress = Math.min(1, washScore / washCompleteScore);
   const theme = getWashTheme(design);
   const displayRitualCards = deckState.ritualCards;
@@ -2225,22 +2385,45 @@ function RitualShuffleStep({
   }, [deckState]);
 
   useEffect(() => {
-    return () => clearTimers();
+    stageRef.current = stage;
+  }, [stage]);
+
+  useEffect(() => {
+    washDirectionRef.current = washDirection;
+  }, [washDirection]);
+
+  useEffect(() => {
+    return () => {
+      clearTimers();
+      if (washFrameRef.current !== null) {
+        window.cancelAnimationFrame(washFrameRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
-    if (stage !== "placed" && stage !== "washing") return undefined;
+    if (stage !== "washing" && autoWashActive) {
+      setAutoWashActive(false);
+    }
+    if (stage !== "washing") {
+      autoWashStartedAtRef.current = null;
+      autoWashLastPointRef.current = null;
+    }
+  }, [autoWashActive, stage]);
+
+  useEffect(() => {
+    if (stage !== "washing") return undefined;
     let frame = 0;
     let last = performance.now();
     const tick = (now: number) => {
-      if (now - last > 32) {
+      if (now - last > 54) {
         last = now;
         updateDeckState((current) => ({
           ...current,
           ritualCards: applyTableCurrent(
-            settleWashedDeck(current.ritualCards),
+            settleWashedDeck(current.ritualCards, washDirection),
             now,
-            stage === "placed" ? 0.22 : 0.9,
+            autoWashActive ? 0.20 : 0.24,
             washDirection,
           ),
         }));
@@ -2249,30 +2432,143 @@ function RitualShuffleStep({
     };
     frame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(frame);
-  }, [stage, washDirection]);
+  }, [autoWashActive, stage, washDirection]);
+
+  useEffect(() => {
+    if (!autoWashActive || stage !== "washing") return undefined;
+
+    washDirectionRef.current = CLOCKWISE_WASH_DIRECTION;
+    setWashDirection(CLOCKWISE_WASH_DIRECTION);
+    autoWashStartedAtRef.current = performance.now();
+    autoWashLastPointRef.current = null;
+
+    let frame = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      if (stageRef.current !== "washing") {
+        setAutoWashActive(false);
+        return;
+      }
+
+      if (now - last >= 52) {
+        last = now;
+        const startedAt = autoWashStartedAtRef.current ?? now;
+        autoWashStartedAtRef.current = startedAt;
+        const elapsed = now - startedAt;
+        const width = Math.min(Math.max(window.innerWidth || 430, 320), 430);
+        const height = Math.min(Math.max((window.innerHeight || 932) * 0.68, 420), 640);
+        const centerX = width / 2;
+        const centerY = height * 0.50;
+        const radiusX = width * 0.31;
+        const radiusY = height * 0.245;
+        autoWashPhaseRef.current += 0.030;
+        const phase = autoWashPhaseRef.current;
+        const x =
+          centerX +
+          Math.cos(phase) * radiusX +
+          Math.sin(phase * 2.25) * width * 0.026;
+        const y =
+          centerY +
+          Math.sin(phase) * radiusY +
+          Math.cos(phase * 1.85) * height * 0.020;
+        const previous =
+          autoWashLastPointRef.current ?? {
+            x:
+              centerX +
+              Math.cos(phase - 0.030) * radiusX +
+              Math.sin((phase - 0.030) * 2.25) * width * 0.026,
+            y:
+              centerY +
+              Math.sin(phase - 0.030) * radiusY +
+              Math.cos((phase - 0.030) * 1.85) * height * 0.020,
+          };
+
+        autoWashLastPointRef.current = { x, y };
+        applyWashPointer(
+          {
+            x,
+            y,
+            movementX: x - previous.x,
+            movementY: y - previous.y,
+            width,
+            height,
+            spinDirection: CLOCKWISE_WASH_DIRECTION,
+            forceScale: 0.16,
+          },
+          0,
+          false,
+        );
+        const timedProgress =
+          elapsed >= AUTO_WASH_DURATION_MS
+            ? 1
+            : Math.min(0.96, 0.04 + (elapsed / AUTO_WASH_DURATION_MS) * 0.92);
+        setWashScore((score) =>
+          Math.max(score, timedProgress * washCompleteScore),
+        );
+      }
+
+      frame = window.requestAnimationFrame(tick);
+    };
+
+    frame = window.requestAnimationFrame(tick);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      autoWashStartedAtRef.current = null;
+      autoWashLastPointRef.current = null;
+    };
+  }, [autoWashActive, stage]);
+
+  useEffect(() => {
+    if (!autoWashActive || stage !== "washing" || washProgress < 0.99) return undefined;
+    const elapsed =
+      autoWashStartedAtRef.current === null
+        ? AUTO_WASH_DURATION_MS
+        : performance.now() - autoWashStartedAtRef.current;
+    const releaseDelay = Math.max(120, AUTO_WASH_DURATION_MS - elapsed + 120);
+    const timer = window.setTimeout(() => {
+      if (stageRef.current === "washing") {
+        finishWash();
+      }
+    }, releaseDelay);
+
+    return () => window.clearTimeout(timer);
+  }, [autoWashActive, stage, washProgress]);
 
   function beginWash() {
-    if (stage !== "placed" && stage !== "washing") return;
+    const currentStage = stageRef.current;
+    if (currentStage !== "placed" && currentStage !== "washing") return;
     hapticPulse([6, 22, 8]);
-    setStage("washing");
-    updateDeckState((current) => ({
-      ...current,
-      ritualCards: loosenDeckForWash(current.ritualCards),
-    }));
-    setWashScore((score) => Math.max(score, 4));
+    washDirectionRef.current = CLOCKWISE_WASH_DIRECTION;
+    setWashDirection(CLOCKWISE_WASH_DIRECTION);
+    if (currentStage === "placed") {
+      stageRef.current = "washing";
+      setStage("washing");
+      updateDeckState((current) => ({
+        ...current,
+        ritualCards: loosenDeckForWash(current.ritualCards),
+      }));
+    }
+    setWashScore((score) => Math.max(score, 3));
   }
 
-  function wash(pointer: WashPointer) {
-    if (stage !== "washing") return;
-    setWashDirection(pointer.spinDirection);
+  function applyWashPointer(pointer: WashPointer, progressScale = 1, emitHaptics = true) {
+    const clockwisePointer = {
+      ...pointer,
+      spinDirection: CLOCKWISE_WASH_DIRECTION,
+    };
+    if (washDirectionRef.current !== CLOCKWISE_WASH_DIRECTION) {
+      washDirectionRef.current = CLOCKWISE_WASH_DIRECTION;
+      setWashDirection(CLOCKWISE_WASH_DIRECTION);
+    }
     const now = Date.now();
-    if (now - lastWashHapticAtRef.current > 88) {
+    if (emitHaptics && now - lastWashHapticAtRef.current > 88) {
       lastWashHapticAtRef.current = now;
-      hapticTick(pointer.spinDirection === 1 ? 4 : 3);
+      hapticTick(4);
     }
     updateDeckState((current) => {
-      const result = applyWashForce(current.ritualCards, pointer);
+      const result = applyWashForce(current.ritualCards, clockwisePointer);
       if (
+        emitHaptics &&
         result.movementScore > 9 &&
         now - lastStrongWashHapticAtRef.current > 320
       ) {
@@ -2280,7 +2576,10 @@ function RitualShuffleStep({
         hapticPulse([4, 18, 5]);
       }
       setWashScore((score) =>
-        Math.min(washCompleteScore, score + result.movementScore * 0.18 + 0.12),
+        Math.min(
+          washCompleteScore,
+          score + (result.movementScore * 0.11 + 0.05) * progressScale,
+        ),
       );
       return {
         ...current,
@@ -2289,14 +2588,36 @@ function RitualShuffleStep({
     });
   }
 
+  function flushPendingWashPointer() {
+    washFrameRef.current = null;
+    const pointer = pendingWashPointerRef.current;
+    pendingWashPointerRef.current = null;
+    if (!pointer || stageRef.current !== "washing") return;
+    applyWashPointer(pointer);
+  }
+
+  function wash(pointer: WashPointer) {
+    if (stageRef.current !== "washing") return;
+    pendingWashPointerRef.current = pointer;
+    if (washFrameRef.current !== null) return;
+    washFrameRef.current = window.requestAnimationFrame(flushPendingWashPointer);
+  }
+
   function startCutDeck() {
-    const secondCutDirection: 1 | -1 = washDirection === 1 ? -1 : 1;
+    if (stageRef.current === "cutting") return;
+    const currentWashDirection = washDirectionRef.current;
+    const secondCutDirection: 1 | -1 = currentWashDirection === 1 ? -1 : 1;
+    stageRef.current = "cutting";
     setStage("cutting");
     hapticPulse([10, 42, 12]);
     updateDeckState((current) => ({
       ...current,
       hiddenDeckOrder: cutHiddenOrder(current.hiddenDeckOrder, 0.42),
-      ritualCards: cutDeckIntoPackets(current.ritualCards, washDirection, 0),
+      ritualCards: cutDeckIntoPackets(
+        current.ritualCards,
+        currentWashDirection,
+        0,
+      ),
     }));
     clearTimers();
     timers.current = [
@@ -2304,9 +2625,13 @@ function RitualShuffleStep({
         hapticTick(8);
         updateDeckState((current) => ({
           ...current,
-          ritualCards: transferCutPacket(current.ritualCards, washDirection, 0),
+          ritualCards: transferCutPacket(
+            current.ritualCards,
+            currentWashDirection,
+            0,
+          ),
         }));
-      }, 460),
+      }, 420),
       window.setTimeout(() => {
         hapticTick(6);
         updateDeckState((current) => ({
@@ -2318,7 +2643,7 @@ function RitualShuffleStep({
             1,
           ),
         }));
-      }, 920),
+      }, 860),
       window.setTimeout(() => {
         hapticTick(8);
         updateDeckState((current) => ({
@@ -2329,25 +2654,32 @@ function RitualShuffleStep({
             1,
           ),
         }));
-      }, 1380),
+      }, 1280),
       window.setTimeout(() => {
         hapticPulse([7, 34, 9]);
         updateDeckState((current) => ({
           ...current,
           ritualCards: mergeCutDeckAtCenter(current.ritualCards),
         }));
-      }, 1840),
+      }, 1640),
       window.setTimeout(() => {
         onComplete(deckStateRef.current.hiddenDeckOrder);
-      }, 2320),
+      }, 2060),
     ];
   }
 
   function finishWash() {
-    if (stage !== "washing") return;
+    if (stageRef.current !== "washing") return;
     hapticPulse([8, 34, 10]);
+    setAutoWashActive(false);
     setWashScore(washCompleteScore);
+    stageRef.current = "gathering";
     setStage("gathering");
+    pendingWashPointerRef.current = null;
+    if (washFrameRef.current !== null) {
+      window.cancelAnimationFrame(washFrameRef.current);
+      washFrameRef.current = null;
+    }
     updateDeckState((current) => ({
       ...current,
       hiddenDeckOrder: washHiddenOrder(current.hiddenDeckOrder),
@@ -2360,12 +2692,24 @@ function RitualShuffleStep({
           ...current,
           ritualCards: squareDeckAtCenter(current.ritualCards),
         }));
-      }, 360),
+      }, 380),
       window.setTimeout(() => {
+        stageRef.current = "cutReady";
         setStage("cutReady");
-      }, 620),
+      }, 640),
       window.setTimeout(startCutDeck, 780),
     ];
+  }
+
+  function toggleAutoWash() {
+    const currentStage = stageRef.current;
+    if (currentStage === "gathering" || currentStage === "cutReady" || currentStage === "cutting") return;
+    washDirectionRef.current = CLOCKWISE_WASH_DIRECTION;
+    setWashDirection(CLOCKWISE_WASH_DIRECTION);
+    if (currentStage === "placed") {
+      beginWash();
+    }
+    setAutoWashActive((current) => !current);
   }
 
   return (
@@ -2374,10 +2718,12 @@ function RitualShuffleStep({
       ritualCards={displayRitualCards}
       washProgress={washProgress}
       theme={theme}
+      autoWashActive={autoWashActive}
       onBeginWash={beginWash}
       onWash={wash}
       onWashRelease={finishWash}
       onCutDeck={startCutDeck}
+      onAutoWashToggle={toggleAutoWash}
       showControls
     />
   );
@@ -2410,7 +2756,7 @@ function ShuffleStep({
     setDragging(false);
     lastPoint.current = null;
     hapticTick(12);
-    window.setTimeout(onDone, 720);
+    window.setTimeout(onDone, 520);
   }
 
   function autoShuffle() {
@@ -2420,7 +2766,7 @@ function ShuffleStep({
     window.setTimeout(() => {
       setAuto(false);
       finish();
-    }, 4200);
+    }, 3200);
   }
 
   return (
@@ -2549,7 +2895,7 @@ function CutStep({
     if (animating) return;
     setAnimating(true);
     hapticTick(14);
-    window.setTimeout(onDone, 1300);
+    window.setTimeout(onDone, 980);
   }
 
   return (
@@ -2575,7 +2921,7 @@ function CutStep({
                 : { x: 0, y: 0, rotate: 0 }
             }
             transition={{
-              duration: 1.15,
+              duration: 0.96,
               times: [0, 0.42, 0.72, 1],
               ease: "easeInOut",
             }}
@@ -2607,7 +2953,7 @@ function CutStep({
                 : { x: 4, y: -12, rotate: 2 }
             }
             transition={{
-              duration: 1.15,
+              duration: 0.96,
               times: [0, 0.42, 0.72, 1],
               ease: "easeInOut",
             }}
@@ -2684,8 +3030,8 @@ type StageSize = {
 const TAROT_PHONE_FRAME_MAX_WIDTH = 440;
 const PICK_WHEEL_CARD_W = 84;
 const PICK_WHEEL_CARD_H = 134;
-const PICK_WHEEL_CARD_W_ZOOM = 102;
-const PICK_WHEEL_CARD_H_ZOOM = 162;
+const PICK_WHEEL_CARD_W_ZOOM = 124;
+const PICK_WHEEL_CARD_H_ZOOM = 198;
 const PICK_WHEEL_DRAG_SENSITIVITY = 0.0048;
 const PICK_WHEEL_STEP_SCALE = 0.74;
 
@@ -2702,6 +3048,11 @@ type PickWheelLayout = {
   rotate: number;
   zIndex: number;
   angle: number;
+};
+
+type PickWheelLocalPoint = {
+  x: number;
+  y: number;
 };
 
 function pickWheelStep(total: number) {
@@ -2724,13 +3075,13 @@ function getTarotPhoneStageSize(): StageSize {
   };
 }
 
-function getPickWheelGeometry(size: StageSize, zoomed = false): PickWheelGeometry {
+function getPickWheelGeometry(size: StageSize, _zoomed = false): PickWheelGeometry {
   const shorter = Math.min(size.width, size.height);
   const baseRadius = shorter * 0.95;
   return {
     centerX: size.width,
     centerY: size.height + baseRadius * 0.43,
-    radius: baseRadius * (zoomed ? 1.08 : 1),
+    radius: baseRadius,
     startAngle: -Math.PI * 0.86,
   };
 }
@@ -2763,20 +3114,44 @@ function isPointInsidePickWheelCard(
   clientY: number,
   padding = 14,
 ) {
+  const localPoint = getPickWheelCardLocalPoint(
+    layout,
+    radialOffset,
+    clientX,
+    clientY,
+  );
+  return isLocalPointInsidePickWheelCard(localPoint, width, height, padding);
+}
+
+function getPickWheelCardLocalPoint(
+  layout: PickWheelLayout,
+  radialOffset: number,
+  clientX: number,
+  clientY: number,
+): PickWheelLocalPoint {
   const originX = layout.x + Math.cos(layout.angle) * radialOffset;
   const originY = layout.y + Math.sin(layout.angle) * radialOffset;
   const dx = clientX - originX;
   const dy = clientY - originY;
   const cos = Math.cos(layout.rotate);
   const sin = Math.sin(layout.rotate);
-  const localX = dx * cos + dy * sin;
-  const localY = -dx * sin + dy * cos;
+  return {
+    x: dx * cos + dy * sin,
+    y: -dx * sin + dy * cos,
+  };
+}
 
+function isLocalPointInsidePickWheelCard(
+  point: PickWheelLocalPoint,
+  width: number,
+  height: number,
+  padding = 14,
+) {
   return (
-    localX >= -width / 2 - padding &&
-    localX <= width / 2 + padding &&
-    localY >= -height - padding &&
-    localY <= padding
+    point.x >= -width / 2 - padding &&
+    point.x <= width / 2 + padding &&
+    point.y >= -height - padding &&
+    point.y <= padding
   );
 }
 
@@ -2808,10 +3183,16 @@ function PickStep({
     startX: number;
     startY: number;
     startRotation: number;
+    startVisualId: string | null;
     moved: boolean;
   } | null>(null);
   const wheelRotationFrameRef = useRef<number | null>(null);
   const pendingWheelRotationRef = useRef<number | null>(null);
+  const activeWheelPointersRef = useRef<Map<number, { x: number; y: number }>>(
+    new Map(),
+  );
+  const pinchStartDistanceRef = useRef<number | null>(null);
+  const pinchStartZoomedRef = useRef(false);
   const suppressNextClickRef = useRef(false);
   const lastWheelHapticNumberRef = useRef<number | null>(null);
   const lastWheelHapticAtRef = useRef(0);
@@ -2821,7 +3202,8 @@ function PickStep({
   const wheelGeometry = getPickWheelGeometry(stageSize, zoomed);
   const wheelCardWidth = zoomed ? PICK_WHEEL_CARD_W_ZOOM : PICK_WHEEL_CARD_W;
   const wheelCardHeight = zoomed ? PICK_WHEEL_CARD_H_ZOOM : PICK_WHEEL_CARD_H;
-  const armedLift = zoomed ? 30 : 22;
+  const armedLift = zoomed ? 12 : 14;
+  const armedScale = zoomed ? 1.035 : 1.055;
   const cardBackImageUrl = getTarotCardBackImage(design.cardBackId);
   const pickTarget = {
     x: stageSize.width * 0.52,
@@ -2872,7 +3254,6 @@ function PickStep({
   const activeIndex = positiveModulo(fallbackVirtualIndex, deck.length);
   const activeCard = activeWheelCard?.card ?? deck[activeIndex];
   const activeNumber = wheelDisplayNumber(fallbackVirtualIndex, deck.length);
-  const activeVisualId = activeCard?.visualId ?? null;
 
   useEffect(() => {
     if (lastWheelHapticNumberRef.current === null) {
@@ -2933,6 +3314,7 @@ function PickStep({
       if (wheelRotationFrameRef.current !== null) {
         window.cancelAnimationFrame(wheelRotationFrameRef.current);
       }
+      activeWheelPointersRef.current.clear();
     };
   }, []);
 
@@ -2956,6 +3338,13 @@ function PickStep({
     const pendingRotation = pendingWheelRotationRef.current;
     pendingWheelRotationRef.current = null;
     setFanRotation(pendingRotation);
+  }
+
+  function getPointerDistance() {
+    const points = Array.from(activeWheelPointersRef.current.values());
+    if (points.length < 2) return 0;
+    const [first, second] = points;
+    return Math.hypot(second.x - first.x, second.y - first.y);
   }
 
   function choose(card = activeCard, force = false) {
@@ -3008,6 +3397,34 @@ function PickStep({
     return topCard?.card ?? null;
   }
 
+  function findIntendedCardAtPoint(
+    localX: number,
+    localY: number,
+    directVisualId: string | null,
+  ) {
+    const padding = zoomed ? 10 : 8;
+    let intended: { card: RitualCard; score: number } | null = null;
+    for (const item of candidateWheelCards) {
+      const { card, layout } = item;
+      if (!card || selectedIds.has(card.visualId)) continue;
+      const offset = armedCardId === card.visualId ? armedLift : 0;
+      const point = getPickWheelCardLocalPoint(layout, offset, localX, localY);
+      if (!isLocalPointInsidePickWheelCard(point, wheelCardWidth, wheelCardHeight, padding)) {
+        continue;
+      }
+
+      const normalizedX = point.x / (wheelCardWidth / 2);
+      const normalizedY = (point.y + wheelCardHeight / 2) / (wheelCardHeight / 2);
+      const targetBias = directVisualId === card.visualId ? -0.08 : 0;
+      const armedBias = armedCardId === card.visualId ? -0.04 : 0;
+      const score = normalizedX ** 2 + normalizedY ** 2 + targetBias + armedBias;
+      if (!intended || score < intended.score) {
+        intended = { card, score };
+      }
+    }
+    return intended?.card ?? null;
+  }
+
   function findNearestCard(localX: number, localY: number) {
     const threshold = zoomed ? 132 : 104;
     let nearest: { card: RitualCard; distance: number } | null = null;
@@ -3026,18 +3443,62 @@ function PickStep({
 
   function handleWheelPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (done) return;
+    event.preventDefault();
+    const targetElement = event.target instanceof HTMLElement ? event.target : null;
+    const targetButton = targetElement?.closest<HTMLButtonElement>("button[data-visual-id]");
+    activeWheelPointersRef.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    if (activeWheelPointersRef.current.size >= 2) {
+      pinchStartDistanceRef.current = getPointerDistance();
+      pinchStartZoomedRef.current = zoomed;
+      wheelDragRef.current = null;
+      if (armedCardId) setArmedCardId(null);
+      hapticTick(3);
+      return;
+    }
+
     hapticTick(3);
     wheelDragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       startRotation: fanRotation,
+      startVisualId: targetButton?.dataset.visualId ?? null,
       moved: false,
     };
-    event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function handleWheelPointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (activeWheelPointersRef.current.has(event.pointerId)) {
+      activeWheelPointersRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+    }
+
+    if (activeWheelPointersRef.current.size >= 2) {
+      const startDistance =
+        pinchStartDistanceRef.current || getPointerDistance();
+      pinchStartDistanceRef.current = startDistance;
+      const currentDistance = getPointerDistance();
+      const ratio = startDistance > 0 ? currentDistance / startDistance : 1;
+      if (ratio > 1.08 && !pinchStartZoomedRef.current) {
+        hapticPulse([4, 18, 5]);
+        setArmedCardId(null);
+        setZoomed(true);
+      }
+      if (ratio < 0.92 && pinchStartZoomedRef.current) {
+        hapticPulse([4, 18, 5]);
+        setArmedCardId(null);
+        setZoomed(false);
+      }
+      return;
+    }
+
     const drag = wheelDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     const deltaX = event.clientX - drag.startX;
@@ -3055,12 +3516,28 @@ function PickStep({
   }
 
   function handleWheelPointerUp(event: PointerEvent<HTMLDivElement>) {
-    const drag = wheelDragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    flushScheduledFanRotation();
+    const wasPinching =
+      activeWheelPointersRef.current.size >= 2 ||
+      pinchStartDistanceRef.current !== null;
+    activeWheelPointersRef.current.delete(event.pointerId);
+    if (activeWheelPointersRef.current.size < 2) {
+      pinchStartDistanceRef.current = null;
+    }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    if (wasPinching) {
+      suppressNextClickRef.current = true;
+      window.setTimeout(() => {
+        suppressNextClickRef.current = false;
+      }, 0);
+      wheelDragRef.current = null;
+      return;
+    }
+
+    const drag = wheelDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    flushScheduledFanRotation();
     if (drag.moved) {
       suppressNextClickRef.current = true;
       window.setTimeout(() => {
@@ -3072,14 +3549,16 @@ function PickStep({
       const localY = event.clientY - rect.top;
       const targetElement = event.target instanceof HTMLElement ? event.target : null;
       const targetButton = targetElement?.closest<HTMLButtonElement>("button[data-visual-id]");
-      const targetVisualId = targetButton?.dataset.visualId;
+      const targetVisualId = drag.startVisualId ?? targetButton?.dataset.visualId;
       const directCard = targetVisualId
         ? deck.find((card) => card.visualId === targetVisualId)
         : undefined;
+      const directAvailable =
+        directCard && !selectedIds.has(directCard.visualId) ? directCard : undefined;
       const armedItem = armedCardId
         ? candidateWheelCards.find((item) => item.card.visualId === armedCardId)
         : undefined;
-      const armedCard =
+      const armedConfirmCard =
         armedItem &&
         !selectedIds.has(armedItem.card.visualId) &&
         isPointInsidePickWheelCard(
@@ -3089,15 +3568,21 @@ function PickStep({
           armedLift,
           localX,
           localY,
-          zoomed ? 24 : 18,
+          zoomed ? 30 : 24,
         )
           ? armedItem.card
           : undefined;
-      const card = armedCard ??
+      const intendedCard = findIntendedCardAtPoint(
+        localX,
+        localY,
+        targetVisualId ?? null,
+      );
+      const card =
+        armedConfirmCard ??
+        directAvailable ??
+        intendedCard ??
         findTopCardAtPoint(localX, localY) ??
-        (directCard && !selectedIds.has(directCard.visualId)
-          ? directCard
-          : findNearestCard(localX, localY));
+        findNearestCard(localX, localY);
       if (card) {
         suppressNextClickRef.current = true;
         window.setTimeout(() => {
@@ -3107,6 +3592,21 @@ function PickStep({
       }
     }
     wheelDragRef.current = null;
+  }
+
+  function handleWheelPointerCancel(event: PointerEvent<HTMLDivElement>) {
+    activeWheelPointersRef.current.delete(event.pointerId);
+    if (activeWheelPointersRef.current.size < 2) {
+      pinchStartDistanceRef.current = null;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    wheelDragRef.current = null;
+    suppressNextClickRef.current = true;
+    window.setTimeout(() => {
+      suppressNextClickRef.current = false;
+    }, 0);
   }
 
   function handleWheelScroll(deltaY: number) {
@@ -3119,6 +3619,17 @@ function PickStep({
     setFanRotation((current) => current - deltaY * 0.0012);
   }
 
+  function handleWheelGesture(event: WheelEvent<HTMLDivElement>) {
+    if (event.cancelable) event.preventDefault();
+    if (event.ctrlKey || event.metaKey) {
+      hapticPulse([4, 18, 5]);
+      setArmedCardId(null);
+      setZoomed(event.deltaY < 0);
+      return;
+    }
+    handleWheelScroll(event.deltaY);
+  }
+
   const visibleWheelCards = candidateWheelCards.filter(({ card, layout }) => {
     if (selectedIds.has(card.visualId)) return false;
     const topLimit = stageSize.height * (zoomed ? 0.30 : 0.36);
@@ -3129,25 +3640,6 @@ function PickStep({
       layout.y < stageSize.height + 320
     );
   });
-  const visibleWheelNumberBadges = zoomed
-    ? visibleWheelCards.flatMap(({ card, virtualIndex, displayNumber, layout }) => {
-        const isActiveTarget = card.visualId === activeVisualId;
-        const isArmed = armedCardId === card.visualId;
-        if (!isActiveTarget && !isArmed) return [];
-        const offset = isArmed ? armedLift : 0;
-        return [{
-          visualId: card.visualId,
-          virtualIndex,
-          displayNumber,
-          isActiveTarget,
-          isArmed,
-          x: layout.x + Math.cos(layout.angle) * offset,
-          y: layout.y + Math.sin(layout.angle) * offset,
-          rotate: layout.rotate,
-          zIndex: layout.zIndex + 220,
-        }];
-      })
-    : [];
   const spreadPreviewPoints = spread.layout.slice(0, spread.cardCount);
 
   return (
@@ -3230,11 +3722,8 @@ function PickStep({
           onPointerDown={handleWheelPointerDown}
           onPointerMove={handleWheelPointerMove}
           onPointerUp={handleWheelPointerUp}
-          onPointerCancel={handleWheelPointerUp}
-          onWheel={(event) => {
-            if (event.cancelable) event.preventDefault();
-            handleWheelScroll(event.deltaY);
-          }}
+          onPointerCancel={handleWheelPointerCancel}
+          onWheel={handleWheelGesture}
           aria-label="Rotating tarot deck wheel"
         >
           <div
@@ -3250,7 +3739,7 @@ function PickStep({
             ({ card, index, virtualIndex, displayNumber, layout }) => {
               const selectedInWheel = selectedIds.has(card.visualId);
               const isArmed = armedCardId === card.visualId;
-              const isActiveTarget = zoomed && card.visualId === activeVisualId;
+              const emphasized = isArmed;
               const cardWidth = wheelCardWidth;
               const cardHeight = wheelCardHeight;
               const cardOpacity = selectedInWheel ? 0.68 : 1;
@@ -3280,20 +3769,20 @@ function PickStep({
                     top: cardY,
                     width: cardWidth,
                     height: cardHeight,
-                    zIndex: layout.zIndex + (isActiveTarget || isArmed ? 80 : 0),
+                    zIndex: layout.zIndex,
                     opacity: cardOpacity,
                     backgroundColor: "#251d35",
                     backgroundImage: `url("${cardBackImageUrl}")`,
                     backgroundPosition: "center",
                     backgroundSize: "cover",
-                    borderColor: isActiveTarget || isArmed
+                    borderColor: emphasized
                       ? "rgba(241,211,144,0.86)"
                       : "rgba(241,211,144,0.42)",
-                    boxShadow: isActiveTarget || isArmed
-                      ? "0 14px 30px rgba(78,56,92,0.20), 0 0 0 2px rgba(255,244,216,0.62), 0 0 34px rgba(241,211,144,0.26)"
+                    boxShadow: emphasized
+                      ? "0 24px 52px rgba(78,56,92,0.28), 0 0 0 2px rgba(255,244,216,0.72), 0 0 42px rgba(241,211,144,0.34)"
                       : "0 9px 18px rgba(78,56,92,0.13)",
-                    filter: isActiveTarget || isArmed
-                      ? "brightness(1.04) saturate(1.34) contrast(1.16)"
+                    filter: emphasized
+                      ? "brightness(1.08) saturate(1.38) contrast(1.18)"
                       : "brightness(0.96) saturate(1.22) contrast(1.14)",
                     transformOrigin: "50% 100%",
                   }}
@@ -3301,19 +3790,34 @@ function PickStep({
                     x: "-50%",
                     y: "-100%",
                     rotate: `${layout.rotate}rad`,
-                    scale: 1,
+                    scale: isArmed ? armedScale : 1,
                   }}
                   transition={{
                     type: "spring",
-                    stiffness: 420,
-                    damping: 34,
-                    mass: 0.78,
+                    stiffness: 310,
+                    damping: 31,
+                    mass: 0.86,
                   }}
                 >
+                  {zoomed ? (
+                    <span
+                      aria-hidden
+                      className={`pointer-events-none absolute left-1/2 top-[-2.45rem] z-30 grid h-8 min-w-8 place-items-center rounded-full border px-2 font-serif text-[14px] font-black leading-none shadow-[0_12px_24px_rgba(80,60,90,0.18)] backdrop-blur-xl ${
+                        emphasized
+                          ? "border-[#e2b45f]/82 bg-[#fff4d4]/96 text-[#6a461d]"
+                          : "border-[#e8c27a]/84 bg-[#fff8e6]/94 text-[#4a3422]"
+                      }`}
+                      style={{
+                        transform: `translateX(-50%) rotate(${-layout.rotate}rad)`,
+                      }}
+                    >
+                      {displayNumber}
+                    </span>
+                  ) : null}
                   <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-[16px]">
                     <span className="absolute inset-[8px] rounded-[11px] border border-white/18" />
                     <span className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.05),transparent_28%),linear-gradient(140deg,rgba(255,255,255,0.04),transparent_42%)]" />
-                    {isActiveTarget || isArmed ? (
+                    {emphasized ? (
                       <span className="absolute inset-0 rounded-[16px] bg-[radial-gradient(circle_at_50%_12%,rgba(255,246,215,0.20),transparent_35%)]" />
                     ) : null}
                   </span>
@@ -3321,49 +3825,23 @@ function PickStep({
               );
             },
           )}
-          {visibleWheelNumberBadges.map((badge) => (
-            <div
-              key={`wheel-number-${badge.visualId}-${badge.virtualIndex}`}
-              className="pointer-events-none absolute"
-              style={{
-                left: badge.x,
-                top: badge.y,
-                width: wheelCardWidth,
-                height: wheelCardHeight,
-                zIndex: badge.zIndex,
-                transform: `translate(-50%, -100%) rotate(${badge.rotate}rad)`,
-                transformOrigin: "50% 100%",
+        </div>
+        {zoomed ? (
+          <div className="absolute bottom-[5.25rem] left-5 z-50 flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Close expanded deck"
+              className="h-11 rounded-full border border-white/75 bg-white/84 px-5 text-[11px] font-black uppercase tracking-[0.14em] text-[#654f6d] shadow-[0_14px_32px_rgba(78,56,92,0.14)] backdrop-blur-xl transition active:scale-95"
+              onClick={() => {
+                hapticPulse([4, 18, 5]);
+                setArmedCardId(null);
+                setZoomed(false);
               }}
             >
-              <span
-                className={`absolute left-1/2 top-[-2.35rem] grid h-8 min-w-8 place-items-center rounded-full border px-2 font-serif text-[14px] font-black leading-none shadow-[0_12px_24px_rgba(80,60,90,0.18)] backdrop-blur-xl ${
-                  badge.isArmed
-                    ? "border-[#e2b45f]/80 bg-[#fff4d4]/96 text-[#6a461d]"
-                    : "border-[#e8c27a]/84 bg-[#fff8e6]/96 text-[#4a3422]"
-                }`}
-                style={{
-                  transform: `translateX(-50%) rotate(${-badge.rotate}rad)`,
-                }}
-              >
-                {badge.displayNumber}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="absolute bottom-[5.25rem] left-5 z-50 flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={zoomed ? "Close expanded deck" : "Expand deck"}
-            className="h-11 rounded-full border border-white/75 bg-white/84 px-5 text-[11px] font-black uppercase tracking-[0.14em] text-[#654f6d] shadow-[0_14px_32px_rgba(78,56,92,0.14)] backdrop-blur-xl transition active:scale-95"
-            onClick={() => {
-              hapticPulse([4, 18, 5]);
-              setArmedCardId(null);
-              setZoomed((current) => !current);
-            }}
-          >
-            {zoomed ? "Close" : "Expand"}
-          </button>
-        </div>
+              Close
+            </button>
+          </div>
+        ) : null}
         <div className="pointer-events-none absolute inset-x-5 bottom-4 z-50">
           {done ? (
             <PrimaryButton
@@ -3387,7 +3865,7 @@ function TarotPhoneFrame({ children }: { children: ReactNode }) {
     >
       <div
         data-testid="tarot-phone-frame"
-        className="relative h-full min-h-0 w-full max-w-[var(--hint-app-width)] transform-gpu overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.55),0_24px_80px_rgba(82,62,91,0.12)]"
+        className="relative h-full min-h-0 w-full max-w-[440px] transform-gpu overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.55),0_24px_80px_rgba(82,62,91,0.12)]"
       >
         {children}
       </div>
@@ -3481,7 +3959,11 @@ export function TarotRoomFlow() {
           Tarot Room
         </div>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false}>
+          <StepTransitionVeil key={`tarot-transition-${step}`} />
+        </AnimatePresence>
+
+        <AnimatePresence initial={false}>
           {step === "question" && (
             <QuestionStep
               key="question"
@@ -3579,10 +4061,10 @@ export function TarotRoomFlow() {
             <motion.div
               key="reveal"
               className="absolute inset-0 z-30"
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.36, ease: "easeOut" }}
+              initial={{ opacity: 0, y: 18, scale: 0.986 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -14, scale: 1.006 }}
+              transition={{ duration: 0.54, ease: TAROT_STEP_EASE }}
             >
               <ReadingReveal
                 selectedCards={selectedCards}
