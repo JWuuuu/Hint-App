@@ -344,27 +344,51 @@ function getSignalLanguage(signalType: StructuredSignalType) {
   }
 }
 
-function questionLead() {
-  return "For this question, ";
+function formatQuestionLead(question?: string) {
+  const clean = question?.replace(/\s+/g, " ").trim();
+  if (!clean) return "For this question";
+  return `For "${compactSentence(clean, 72)}"`;
 }
 
-function buildOverallReading(cards: RitualCard[]): { signalType: StructuredSignalType; text: string } {
+function buildOverallReading(
+  cards: RitualCard[],
+  question?: string,
+): { signalType: StructuredSignalType; text: string } {
   const signalType = getReadingSignal(cards);
   const signal = getSignalLanguage(signalType);
   return {
     signalType,
-    text: `${questionLead()}the answer is: ${signal.direction}.`,
+    text: `${formatQuestionLead(question)}, this spread gives ${signal.label}: ${signal.direction}.`,
   };
+}
+
+function buildPositionFrame(position: string, index: number, cardCount: number) {
+  const normalized = position.toLowerCase();
+  if (/past|before|root|arrival/.test(normalized)) {
+    return "This shows what shaped the situation before now";
+  }
+  if (/present|now|signal|approach|draw|challenge/.test(normalized)) {
+    return "This shows the pressure or truth active right now";
+  }
+  if (/future|next|direction|gain|outcome/.test(normalized)) {
+    return "This points to the direction opening next";
+  }
+  if (cardCount === 3 && index === 0) return "This shows what brought you here";
+  if (cardCount === 3 && index === 1) return "This shows what is active right now";
+  if (cardCount === 3 && index === 2) return "This points to the next movement";
+  return `In the ${position} position, this is the part asking for attention`;
 }
 
 function buildCardMeaning(card: RitualCard, index: number, spread: SpreadChoice): StructuredCardMeaning {
   const position = getSpreadPositionLabel(spread, index);
   const orientation = card.orientation === "reversed" ? "reversed" : "upright";
+  const positionFrame = buildPositionFrame(position, index, spread.cardCount);
+  const cardMeaning = compactSentence(getReadableCardMeaning(card).sentence, 120);
   return {
     position,
     card_name: card.name,
     orientation,
-    meaning: compactSentence(getReadableCardMeaning(card).sentence, 145),
+    meaning: compactSentence(`${positionFrame}: ${cardMeaning}`, 170),
   };
 }
 
@@ -387,12 +411,12 @@ function buildFinalGuidance(signalType: StructuredSignalType) {
 function buildFollowUpInvitation(question?: string, focusLabel?: string) {
   const lower = `${question ?? ""} ${focusLabel ?? ""}`.toLowerCase();
   if (/love|relationship|dating|connection|reconcile|breakup|their|him|her|them/.test(lower)) {
-    return "Ask about any card if you want the deeper layer of this connection.";
+    return "If you tell me what has been happening between you two, I can read where this connection is actually stuck.";
   }
   if (/work|job|career|exam|school|application|offer/.test(lower)) {
-    return "Ask about any card if you want the deeper layer of this decision.";
+    return "If you tell me what decision is in front of you, I can help you see which card is giving the strongest signal.";
   }
-  return "Ask about any card if you want the deeper layer.";
+  return "If you tell me the part that feels hardest to read, I can help you follow where these cards are pointing next.";
 }
 
 function buildLocalStructuredReading(
@@ -402,7 +426,7 @@ function buildLocalStructuredReading(
   story?: string,
   focusLabel?: string,
 ): StructuredTarotReading {
-  const overall = buildOverallReading(cards);
+  const overall = buildOverallReading(cards, question);
   return {
     signal_type: overall.signalType,
     overall_summary: overall.text,
@@ -433,11 +457,11 @@ function buildFollowUpReply(question: string, cards: RitualCard[]) {
 
 function structuredReadingToText(reading: StructuredTarotReading) {
   return [
-    `Answer: ${reading.overall_summary}`,
-    "Cards:",
+    `Overall Reading: ${reading.overall_summary}`,
+    "Card Breakdown:",
     ...reading.cards.map((card) => `${card.position} - ${card.card_name} (${card.orientation}): ${card.meaning}`),
-    `Next Step: ${reading.final_action_advice}`,
-    `Ask More: ${reading.follow_up_invitation}`,
+    `Final Guidance: ${reading.final_action_advice}`,
+    `Follow Up: ${reading.follow_up_invitation}`,
   ].join("\n\n");
 }
 
@@ -801,12 +825,12 @@ export function TarotHintReadingChat({
               </p>
               <div className="mt-3 space-y-3">
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Answer</h3>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Overall Reading</h3>
                   <p className="mt-1.5 font-sans text-[15px] leading-6 text-[#f7ead0]/92 sm:text-[16px]">{reading.overall_summary}</p>
                 </section>
                 <section>
                   <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">
-                    Cards
+                    Card Breakdown
                   </h3>
                   <div className="mt-2 grid gap-2 md:grid-cols-2">
                     {reading.cards.map((card, index) => (
@@ -825,11 +849,11 @@ export function TarotHintReadingChat({
                   </div>
                 </section>
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Next step</h3>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Final Guidance</h3>
                   <p className="mt-1.5 font-sans text-[13.5px] leading-6 text-[#f7ead0]/88 sm:text-sm">{reading.final_action_advice}</p>
                 </section>
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Want more?</h3>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Follow Up</h3>
                   <p className="mt-1.5 font-serif text-[15px] italic leading-6 text-[#f7ead0]/88 sm:text-[16px]">{reading.follow_up_invitation}</p>
                 </section>
               </div>
