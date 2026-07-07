@@ -120,10 +120,10 @@ const REFERENCE_HOME_COPY = {
 } as const;
 
 const REFERENCE_CARD_BACKGROUND =
-  "radial-gradient(circle at 18% -8%, rgba(255,255,255,0.62), transparent 46%), radial-gradient(circle at 84% 112%, rgba(219,186,169,0.12), transparent 54%), linear-gradient(145deg, rgba(255,254,251,0.70), rgba(249,243,236,0.46))";
-const REFERENCE_CARD_BORDER = "rgba(185, 153, 128, 0.15)";
+  "radial-gradient(circle at 18% -8%, rgba(255,255,255,0.74), transparent 46%), radial-gradient(circle at 92% 112%, rgba(211, 176, 216, 0.13), transparent 52%), radial-gradient(circle at -10% 108%, rgba(226, 178, 121, 0.09), transparent 48%), linear-gradient(145deg, rgba(255,254,251,0.76), rgba(249,243,236,0.52))";
+const REFERENCE_CARD_BORDER = "rgba(185, 153, 128, 0.18)";
 const REFERENCE_CARD_SHADOW =
-  "0 18px 44px rgba(93, 72, 58, 0.055), 0 4px 14px rgba(151,112,154,0.025), inset 0 1px 0 rgba(255,255,255,0.64), inset 0 -18px 42px rgba(190,142,122,0.028)";
+  "0 22px 54px rgba(93, 72, 58, 0.068), 0 8px 22px rgba(151,112,154,0.034), inset 0 1px 0 rgba(255,255,255,0.72), inset 0 -18px 42px rgba(190,142,122,0.034)";
 
 const LOCALE_BY_LANGUAGE: Record<string, string> = {
   en: "en-US",
@@ -1460,7 +1460,7 @@ function DailyHintSection({
             )}
             {lockNotice && (
               <p className="mt-3 rounded-full border px-3 py-2 font-sans text-[10px] font-semibold leading-tight" style={{ color: "var(--hint-muted)", background: "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)", borderColor: "var(--hint-border)" }}>
-                Offline daily lock active. This result will use local fallback until the API returns.
+                Saved on this device for today. The same card will stay open until tomorrow's sky changes.
               </p>
             )}
           </div>
@@ -2227,7 +2227,7 @@ function AppActionList({ cards }: { cards: RoomShortcutData[] }) {
           const Icon = card.icon;
           return (
             <motion.div
-              key={card.title}
+              key={card.href}
               initial={{ opacity: 0, y: 8 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.45 }}
@@ -2383,7 +2383,7 @@ function ReferenceFloatingHintCard({
       }
       onClick={onActivate}
       className="hint-pressable pointer-events-auto absolute z-10 border-0 bg-transparent p-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#fff1cf] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-wait disabled:opacity-85"
-      style={{ position: "absolute", overflow: "visible", right: 62, top: 38, height: 190, width: 88 }}
+      style={{ position: "absolute", overflow: "visible", right: 50, top: 32, height: 202, width: 94 }}
       whileTap={receiptReady && !revealing ? { scale: 0.985 } : undefined}
     >
       <motion.span
@@ -2400,24 +2400,24 @@ function ReferenceFloatingHintCard({
         }}
         style={{
           transformStyle: "preserve-3d",
-          filter: "drop-shadow(0 34px 44px rgba(72,45,98,0.19)) drop-shadow(0 0 58px rgba(255,240,207,0.82))",
+          filter: "drop-shadow(0 38px 48px rgba(72,45,98,0.22)) drop-shadow(0 0 68px rgba(255,240,207,0.88))",
         }}
       >
       <span
         aria-hidden
         className="absolute inset-[-10px] rounded-[20px]"
         style={{
-          background: "linear-gradient(90deg, rgba(255,249,224,0.74), rgba(255,246,232,0.20))",
-          filter: "blur(9px)",
+          background: "linear-gradient(90deg, rgba(255,249,224,0.82), rgba(255,246,232,0.23))",
+          filter: "blur(10px)",
           transform: "translateX(7px)",
         }}
       />
       <motion.span
         aria-hidden
-        className="absolute left-1/2 top-1/2 h-[180px] w-[158px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        className="absolute left-1/2 top-1/2 h-[198px] w-[174px] -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           background:
-            "conic-gradient(from 45deg, transparent 0deg, rgba(255,244,211,0.34) 54deg, transparent 92deg, rgba(205,169,219,0.20) 168deg, transparent 228deg, rgba(255,244,211,0.30) 306deg, transparent 360deg)",
+            "conic-gradient(from 45deg, transparent 0deg, rgba(255,244,211,0.40) 54deg, transparent 92deg, rgba(205,169,219,0.23) 168deg, transparent 228deg, rgba(255,244,211,0.35) 306deg, transparent 360deg)",
           filter: "blur(7px)",
           mixBlendMode: "screen",
         }}
@@ -2436,7 +2436,7 @@ function ReferenceFloatingHintCard({
         aria-hidden
         className="absolute -right-[8px] top-[12px] h-[calc(100%-16px)] w-[82%] rounded-[13px] border"
         style={{
-          background: "linear-gradient(155deg, rgba(255,237,221,0.44), rgba(132,92,161,0.30))",
+          background: "linear-gradient(155deg, rgba(255,237,221,0.52), rgba(132,92,161,0.35))",
           borderColor: "rgba(255,238,209,0.24)",
           transform: "skewY(0.8deg)",
           boxShadow: "12px 16px 28px rgba(77,50,105,0.12)",
@@ -2457,7 +2457,7 @@ function ReferenceFloatingHintCard({
         transition={{ duration: 0.52, ease: "easeOut" }}
         style={{
           background:
-            "radial-gradient(circle at 52% 51%, rgba(255,239,175,0.82), transparent 17%), radial-gradient(circle at 48% 36%, rgba(255,255,255,0.54), transparent 25%), radial-gradient(circle at 82% 14%, rgba(255,255,255,0.28), transparent 20%), linear-gradient(158deg, rgba(237,214,233,0.78), rgba(178,129,193,0.70) 48%, rgba(110,83,153,0.78) 100%)",
+            "radial-gradient(circle at 52% 51%, rgba(255,239,175,0.88), transparent 17%), radial-gradient(circle at 48% 36%, rgba(255,255,255,0.62), transparent 25%), radial-gradient(circle at 82% 14%, rgba(255,255,255,0.32), transparent 20%), linear-gradient(158deg, rgba(239,217,235,0.86), rgba(178,129,193,0.78) 48%, rgba(105,77,150,0.88) 100%)",
           backgroundPosition: "center",
           backgroundSize: "cover",
           borderColor: "rgba(255,240,213,0.86)",
@@ -2587,15 +2587,15 @@ function ReferenceHeroArt({
         className="absolute inset-y-0 right-0 w-full"
         style={{
           background:
-            "linear-gradient(90deg, rgba(250,224,235,0) 0%, rgba(228,197,224,0.08) 34%, rgba(174,133,190,0.30) 66%, rgba(134,97,168,0.64) 100%)",
+            "linear-gradient(90deg, rgba(250,224,235,0) 0%, rgba(238,205,226,0.13) 34%, rgba(185,139,199,0.38) 66%, rgba(119,82,158,0.72) 100%)",
         }}
       />
       <span
         aria-hidden
-        className="absolute inset-0 opacity-[0.70]"
+        className="absolute inset-0 opacity-[0.78]"
         style={{
           background:
-            "radial-gradient(circle at 72% 58%, rgba(255,247,205,0.30), transparent 25%), radial-gradient(circle at 83% 24%, rgba(255,255,255,0.17), transparent 18%), radial-gradient(circle at 61% 42%, rgba(214,174,218,0.14), transparent 48%), linear-gradient(90deg, rgba(253,226,236,0) 0%, rgba(239,204,224,0.06) 32%, rgba(126,90,160,0.56) 100%)",
+            "radial-gradient(circle at 72% 58%, rgba(255,247,205,0.36), transparent 25%), radial-gradient(circle at 83% 24%, rgba(255,255,255,0.22), transparent 18%), radial-gradient(circle at 61% 42%, rgba(214,174,218,0.18), transparent 48%), linear-gradient(90deg, rgba(253,226,236,0) 0%, rgba(239,204,224,0.09) 32%, rgba(126,90,160,0.62) 100%)",
         }}
       />
       <svg viewBox="0 0 208 232" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
@@ -2654,9 +2654,9 @@ function ReferenceHeroArt({
       />
       <span
         aria-hidden
-        className="absolute bottom-[24px] right-[36px] h-[50px] w-[174px] rounded-full"
+        className="absolute bottom-[22px] right-[28px] h-[54px] w-[194px] rounded-full"
         style={{
-          background: "radial-gradient(ellipse, rgba(255,248,222,0.66), rgba(255,229,190,0.22) 52%, transparent 74%)",
+          background: "radial-gradient(ellipse, rgba(255,248,222,0.72), rgba(255,229,190,0.27) 52%, transparent 74%)",
           filter: "blur(1.4px)",
         }}
       />
@@ -2724,13 +2724,13 @@ function ReferenceHero({
 
   return (
     <section
-      className="relative mb-2.5 overflow-hidden rounded-[30px] border"
+      className="relative mb-2.5 overflow-hidden rounded-[31px] border"
       style={{
-        minHeight: 264,
+        minHeight: 270,
         background:
-          "radial-gradient(circle at 73% 72%, rgba(255,235,194,0.24), transparent 30%), linear-gradient(105deg, rgba(255,248,244,0.92) 0%, rgba(250,228,236,0.72) 44%, rgba(174,132,188,0.60) 100%)",
-        borderColor: "rgba(204, 142, 183, 0.22)",
-        boxShadow: "0 22px 54px rgba(116, 80, 120, 0.075), 0 1px 0 rgba(255,255,255,0.78) inset, inset 0 -20px 48px rgba(107,76,119,0.036)",
+          "radial-gradient(circle at 72% 72%, rgba(255,235,194,0.31), transparent 30%), radial-gradient(circle at 82% 20%, rgba(255,255,255,0.20), transparent 18%), linear-gradient(105deg, rgba(255,248,244,0.95) 0%, rgba(250,228,236,0.76) 44%, rgba(174,132,188,0.66) 100%)",
+        borderColor: "rgba(204, 142, 183, 0.26)",
+        boxShadow: "0 26px 62px rgba(116, 80, 120, 0.092), 0 1px 0 rgba(255,255,255,0.84) inset, inset 0 -22px 52px rgba(107,76,119,0.042)",
       }}
     >
       <span
@@ -2743,14 +2743,14 @@ function ReferenceHero({
         className="absolute bottom-[-4rem] right-[5.5rem] h-36 w-36 rounded-full blur-2xl"
         style={{ background: "rgba(255,235,197,0.18)" }}
       />
-      <div className="relative min-h-[264px]">
-        <div className="relative z-10 flex min-h-[264px] w-[58%] flex-col pl-7 pr-0 pt-[50px]">
-          <h2 className="font-serif text-[34px] leading-[1.04]" style={{ color: "#2f2b37" }}>
+      <div className="relative min-h-[270px]">
+        <div className="relative z-10 flex min-h-[270px] w-[58%] flex-col pl-7 pr-0 pt-[48px]">
+          <h2 className="font-serif text-[35px] leading-[1.04]" style={{ color: "#2f2b37" }}>
             Your Hint<br />
             is <span className="italic" style={{ color: "#a982b0" }}>waiting.</span>
           </h2>
           <p
-            className="mt-3 max-w-[9.5rem] font-serif text-[13.5px] leading-snug"
+            className="mt-3 max-w-[9.75rem] font-serif text-[14px] leading-snug"
             style={{ color: "#4c4650" }}
           >
             The universe left you a little note.
@@ -2761,12 +2761,12 @@ function ReferenceHero({
             onClick={handleRevealClick}
             aria-busy={revealing ? "true" : "false"}
             className={[
-              "hint-pressable mt-4 inline-flex h-[40px] w-full max-w-[172px] items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 font-serif text-[13px] active:scale-[0.98] disabled:opacity-75",
+              "hint-pressable mt-4 inline-flex h-[42px] w-full max-w-[178px] items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 font-serif text-[13.5px] active:scale-[0.98] disabled:opacity-75",
             ].join(" ")}
             style={{
               color: "#fff8f4",
               background: "linear-gradient(145deg, #9b78ac 0%, #805f95 48%, #684879 100%)",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.36), inset 0 -8px 16px rgba(67,42,80,0.14), 0 16px 28px rgba(104,72,119,0.22)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -8px 16px rgba(67,42,80,0.16), 0 18px 32px rgba(104,72,119,0.25)",
             }}
           >
             {revealing ? "Opening Today’s Hint" : receiptReady ? "Reveal Today’s Hint" : "Preparing Today’s Hint"}
@@ -2826,7 +2826,10 @@ function ReferenceEnergyValue({ score }: { score: number }) {
         ✦
       </span>
       <div className="absolute left-0 top-[9px] flex items-end">
-        <span className="font-serif text-[52px] leading-[0.78] tabular-nums" style={{ color: "#b783aa" }}>
+        <span
+          className="font-serif text-[52px] leading-[0.78] tabular-nums"
+          style={{ color: "#b17ca7", textShadow: "0 10px 22px rgba(177,124,167,0.12)" }}
+        >
           {score}
         </span>
         <span className="mb-[4px] ml-1 font-sans text-[12px] font-semibold leading-none" style={{ color: "#777079" }}>
@@ -2844,7 +2847,7 @@ function ReferenceMoonScene() {
       className="relative size-[76px] shrink-0 overflow-hidden rounded-full"
       style={{
         background: "linear-gradient(145deg, rgba(60, 38, 80, 0.72), rgba(34, 28, 54, 0.92))",
-        boxShadow: "0 16px 26px rgba(72, 46, 84, 0.10), inset 0 1px 0 rgba(255,255,255,0.18)",
+        boxShadow: "0 18px 30px rgba(72, 46, 84, 0.13), inset 0 1px 0 rgba(255,255,255,0.20), inset 0 0 0 1px rgba(255,255,255,0.08)",
       }}
     >
       <SafeImage
@@ -2921,11 +2924,11 @@ function ReferenceEnergyPanel({
         }}
         aria-expanded={detailsOpen}
         aria-label="Tap to see more details"
-        className="hint-pressable relative mt-3 flex w-full items-center gap-2 rounded-[19px] border px-2 py-2 text-left active:scale-[0.99]"
+        className="hint-pressable relative mt-3 flex w-full items-center gap-2 rounded-[20px] border px-2 py-2 text-left active:scale-[0.99]"
         style={{
-          background: "linear-gradient(145deg, rgba(255,252,248,0.72), rgba(250,242,236,0.44))",
-          borderColor: "rgba(199, 160, 128, 0.17)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.68), 0 12px 24px rgba(96, 75, 61, 0.035)",
+          background: "linear-gradient(145deg, rgba(255,252,248,0.80), rgba(250,242,236,0.50))",
+          borderColor: "rgba(199, 160, 128, 0.20)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.74), 0 14px 26px rgba(96, 75, 61, 0.042)",
         }}
       >
         <div className="grid min-w-0 flex-1 grid-cols-5 items-center">
@@ -3078,7 +3081,7 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
 
   return (
     <section
-      className="relative mb-2.5 rounded-[22px] border px-5 py-2.5"
+      className="relative mb-2.5 overflow-hidden rounded-[23px] border px-5 py-3"
       style={{
         background: REFERENCE_CARD_BACKGROUND,
         borderColor: REFERENCE_CARD_BORDER,
@@ -3090,7 +3093,7 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
         className="absolute inset-x-10 top-0 h-px rounded-full"
         style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.48), transparent)" }}
       />
-      <div className="min-h-[58px] pr-[98px]">
+      <div className="min-h-[60px] pr-[98px]">
         <div className="min-w-0">
           <h3 className="font-serif text-[17px] leading-none" style={{ color: "#2f2b37" }}>
             Why this hint?
@@ -3099,7 +3102,7 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
             {evidenceLabels.map((label, index) => (
               <span
                 key={`${label}-${index}`}
-                className="inline-flex min-h-[24px] max-w-full min-w-0 items-center gap-1.5 rounded-full border px-2.5 font-sans text-[8.6px] leading-none"
+                className="inline-flex min-h-[24px] max-w-full min-w-0 items-center gap-1.5 rounded-full border px-2.5 font-sans text-[8.8px] leading-none"
                 style={{
                   color: "#777077",
                   background: "rgba(255, 250, 246, 0.56)",
@@ -3196,7 +3199,7 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
 
 function ReferenceSpaces({ cards }: { cards: RoomShortcutData[] }) {
   return (
-    <section className="mb-3">
+    <section className="mb-3.5">
       <div className="mb-2 flex items-center gap-3 px-2">
         <p className="shrink-0 font-sans text-[10.5px] font-black uppercase tracking-[0.18em]" style={{ color: "#8d8284" }}>
           Your spaces
@@ -3209,7 +3212,7 @@ function ReferenceSpaces({ cards }: { cards: RoomShortcutData[] }) {
           const Icon = card.icon;
           return (
             <motion.div
-              key={card.title}
+              key={card.href}
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.35 }}
@@ -3217,11 +3220,11 @@ function ReferenceSpaces({ cards }: { cards: RoomShortcutData[] }) {
             >
               <Link href={card.href} onPointerDown={() => triggerFeedback("select")} className="block h-full">
                 <div
-                  className="hint-pressable relative isolate flex h-[128px] flex-col overflow-hidden rounded-[18px] border px-2.5 py-2.5 active:scale-[0.98]"
+                  className="hint-pressable relative isolate flex h-[122px] flex-col overflow-hidden rounded-[19px] border px-2.5 py-2.5 active:scale-[0.98]"
                   style={{
                     background: REFERENCE_CARD_BACKGROUND,
                     borderColor: REFERENCE_CARD_BORDER,
-                    boxShadow: "0 12px 30px rgba(100,77,60,0.028), inset 0 1px 0 rgba(255,255,255,0.52)",
+                    boxShadow: "0 16px 34px rgba(100,77,60,0.044), 0 5px 12px rgba(151,112,154,0.020), inset 0 1px 0 rgba(255,255,255,0.58)",
                   }}
                 >
                   <span
@@ -3235,7 +3238,7 @@ function ReferenceSpaces({ cards }: { cards: RoomShortcutData[] }) {
                       color: card.color,
                       background: `radial-gradient(circle at 33% 24%, rgba(255,255,255,0.70), transparent 34%), radial-gradient(circle at 70% 78%, color-mix(in srgb, ${card.color} 20%, transparent), transparent 52%), ${card.tint}`,
                       borderColor: `color-mix(in srgb, ${card.color} 9%, rgba(188,156,132,0.08))`,
-                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.34), 0 8px 16px color-mix(in srgb, ${card.color} 5%, transparent)`,
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.40), 0 10px 18px color-mix(in srgb, ${card.color} 7%, transparent)`,
                     }}
                   >
                     <span
@@ -3245,10 +3248,17 @@ function ReferenceSpaces({ cards }: { cards: RoomShortcutData[] }) {
                     />
                     <Icon size={22} strokeWidth={1.35} />
                   </span>
-                  <h3 className="mt-2 whitespace-nowrap font-serif text-[11.5px] leading-tight" style={{ color: "#2f2b37" }}>
+                  <span
+                    aria-hidden
+                    className="absolute right-3 top-[56px] text-[13px]"
+                    style={{ color: "rgba(214, 160, 95, 0.38)" }}
+                  >
+                    ✦
+                  </span>
+                  <h3 className="mt-2 whitespace-nowrap font-serif text-[11.7px] leading-tight" style={{ color: "#2f2b37" }}>
                     {card.title}
                   </h3>
-                  <p className="mt-1 line-clamp-3 font-sans text-[8.2px] leading-[1.16]" style={{ color: "#777077" }}>
+                  <p className="mt-1 line-clamp-2 font-sans text-[8.4px] leading-[1.2]" style={{ color: "#777077" }}>
                     {card.body}
                   </p>
                 </div>
@@ -3285,7 +3295,7 @@ function ReferenceHomePage({
       className="relative h-full w-full overflow-y-auto overscroll-none pb-[calc(7.25rem+var(--hint-safe-bottom))]"
       style={{
         background:
-          "radial-gradient(520px 380px at 8% -4%, rgba(237,222,213,0.48), transparent 72%), radial-gradient(460px 340px at 94% 4%, rgba(230,203,167,0.32), transparent 74%), radial-gradient(560px 480px at 52% 55%, rgba(216,196,185,0.13), transparent 76%), linear-gradient(180deg, #fbf7f0 0%, #f8f1e9 52%, #f4ede5 100%)",
+          "radial-gradient(520px 380px at 8% -4%, rgba(237,222,213,0.52), transparent 72%), radial-gradient(460px 340px at 94% 4%, rgba(230,203,167,0.36), transparent 74%), radial-gradient(430px 360px at 90% 44%, rgba(205,176,215,0.16), transparent 70%), radial-gradient(560px 480px at 52% 55%, rgba(216,196,185,0.16), transparent 76%), linear-gradient(180deg, #fbf7f0 0%, #f8f1e9 52%, #f4ede5 100%)",
       }}
     >
       <ReferenceOrbitBackdrop />

@@ -606,7 +606,7 @@ export function CardWashRitual({
             type="button"
             data-testid="tarot-auto-wash"
             aria-pressed={autoWashActive}
-            className={`pointer-events-auto h-12 min-w-[12.5rem] rounded-full border px-5 text-[11px] font-black uppercase tracking-[0.16em] shadow-[0_18px_38px_rgba(0,0,0,0.24)] backdrop-blur-xl transition active:scale-95 ${
+            className={`pointer-events-auto relative h-12 min-w-[12.5rem] overflow-hidden rounded-full border px-5 text-[11px] font-black uppercase tracking-[0.16em] shadow-[0_18px_38px_rgba(0,0,0,0.24)] backdrop-blur-xl transition active:scale-95 ${
               autoWashActive
                 ? "border-[#ffe1a6]/72 bg-[#ffe1a6]/20 text-[#fff2cf]"
                 : "border-white/24 bg-white/13 text-[#f5dde6]/88"
@@ -617,7 +617,20 @@ export function CardWashRitual({
               onAutoWashToggle();
             }}
           >
-            {autoWashActive ? "Stop auto" : "Auto wash"}
+            {autoWashActive ? (
+              <motion.span
+                aria-hidden
+                className="absolute inset-y-0 left-0 w-1/2 bg-[linear-gradient(90deg,transparent,rgba(255,242,207,0.32),transparent)]"
+                initial={reducedMotion ? false : { x: "-110%" }}
+                animate={reducedMotion ? { opacity: 0.18, x: 0 } : { x: "220%" }}
+                transition={{
+                  duration: reducedMotion ? 0 : 0.86,
+                  repeat: reducedMotion ? 0 : Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+            ) : null}
+            <span className="relative z-10">{autoWashActive ? "Stop auto" : "Auto wash"}</span>
           </button>
         </motion.div>
       ) : null}

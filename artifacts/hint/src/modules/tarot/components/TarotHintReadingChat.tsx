@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { History, Home, SendHorizontal } from "lucide-react";
 import { useLocation } from "wouter";
 import { useSendTarotChatMessage, type TarotCardDraw } from "@workspace/api-client-react";
 import { apiUrl } from "../../../lib/api";
+import { triggerFeedback } from "../../../lib/feedback";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { getCardKeywords, type RitualCard } from "../logic/createHiddenDeck";
 import type { TarotCardArtId } from "../logic/cardImageMap";
@@ -50,9 +51,9 @@ type StructuredTarotReading = {
 };
 
 const FOLLOW_UPS = [
-  "What should I do next?",
-  "What should I stop holding?",
-  "What is the quiet truth here?",
+  { label: "Next step", prompt: "What should I do next?" },
+  { label: "Hidden block", prompt: "What should I stop holding?" },
+  { label: "Quiet truth", prompt: "What is the quiet truth here?" },
 ];
 
 const MAJOR_MEANINGS: Record<string, { keywords: string[]; upright: string; reversed: string }> = {
@@ -452,7 +453,10 @@ function compactStructuredReading(reading: StructuredTarotReading): StructuredTa
 function buildFollowUpReply(question: string, cards: RitualCard[]) {
   const anchor = cards[0];
   const cleanQuestion = question.replace(/\s+/g, " ").trim();
-  return `For "${cleanQuestion}", the cards are still pointing back to the whole pattern, not only one card. ${anchor ? getReadableCardMeaning(anchor).sentence : "Name what is true, then choose the smallest action that matches it."} Tell me the part that feels hardest to read, and I can stay with that thread.`;
+  const anchorLine = anchor
+    ? compactSentence(getReadableCardMeaning(anchor).sentence, 150)
+    : "Name what is true, then choose the smallest action that matches it.";
+  return `For "${compactSentence(cleanQuestion, 88)}", the useful signal is the whole spread pattern, not only one card. ${anchorLine} The clean move is to name the pressure, then choose the smallest action that does not betray what you already know.`;
 }
 
 function structuredReadingToText(reading: StructuredTarotReading) {
@@ -511,6 +515,7 @@ export function TarotHintReadingChat({
   archiveOnOpen = true,
 }: TarotHintReadingChatProps) {
   const [, navigate] = useLocation();
+  const shouldReduceMotion = useReducedMotion();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -642,6 +647,7 @@ export function TarotHintReadingChat({
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || chatMutation.isPending) return;
+    triggerFeedback("tap");
     setError(null);
     const userMessage: LocalChatMessage = {
       id: newMessageId(),
@@ -678,6 +684,7 @@ export function TarotHintReadingChat({
           content: reply.message,
         },
       ]);
+      triggerFeedback("success");
     } catch {
       setError("The live reading line is quiet right now, so this reply used the local reading context.");
       setMessages([
@@ -688,6 +695,7 @@ export function TarotHintReadingChat({
           content: buildFollowUpReply(trimmed, selectedCards),
         },
       ]);
+      triggerFeedback("soft");
     }
   }
 
@@ -699,6 +707,7 @@ export function TarotHintReadingChat({
   }
 
   function leaveTo(path: string) {
+    triggerFeedback("soft");
     setSaveNotice(true);
     if (leaveTimerRef.current !== null) {
       window.clearTimeout(leaveTimerRef.current);
@@ -735,7 +744,7 @@ export function TarotHintReadingChat({
         )}
       </AnimatePresence>
 
-      <header className="relative z-10 border-b border-[#e4c174]/10 px-5 py-3 pl-16 sm:px-7 sm:py-3.5 sm:pl-20">
+      <header className="relative z-10 border-b border-[#e4c174]/10 px-5 pb-3 pl-16 pt-[calc(var(--hint-safe-top)+0.75rem)] sm:px-7 sm:pb-3.5 sm:pl-20">
         <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-[#e4c174]/70">Tarot room</p>
         <h1 className="mt-1 font-serif text-[26px] leading-tight text-[#f7ead0] sm:text-[34px]">
           Read my Hint
@@ -774,7 +783,7 @@ export function TarotHintReadingChat({
           <motion.section
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.36, ease: "easeOut" }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.42, ease: [0.22, 1, 0.36, 1] }}
             className="w-full rounded-[14px] border border-[#e4c174]/14 bg-[#201426]/56 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.20)] backdrop-blur-sm"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -785,10 +794,10 @@ export function TarotHintReadingChat({
                 {selectedCards.length} cards
               </p>
             </div>
-            <div className="overflow-x-auto pb-2 [scrollbar-width:none]">
+            <div className="snap-x snap-mandatory overflow-x-auto pb-2 [scrollbar-width:none]">
               <div className={`mx-auto flex ${selectedCards.length === 1 ? "justify-center" : "justify-start"} gap-3 sm:gap-4`}>
                 {selectedCards.map((card, index) => (
-                  <div key={card.visualId} className={`${previewItemWidth} shrink-0 text-center`}>
+                  <div key={card.visualId} className={`${previewItemWidth} shrink-0 snap-center text-center`}>
                     <TarotCardVisual
                       card={card}
                       faceDown={false}
@@ -817,7 +826,7 @@ export function TarotHintReadingChat({
             <motion.article
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.34, ease: "easeOut" }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="rounded-[14px] border border-[#e4c174]/14 bg-[#201426]/48 p-3.5 shadow-[0_14px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm sm:p-4"
             >
               <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#e4c174]/76">
@@ -864,7 +873,7 @@ export function TarotHintReadingChat({
                 key={message.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.24, ease: "easeOut" }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.24, ease: "easeOut" }}
                 className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
@@ -882,7 +891,7 @@ export function TarotHintReadingChat({
         </div>
       </div>
 
-      <div className="relative z-20 border-t border-[#e4c174]/10 bg-[#140d1c]/90 px-5 pb-4 pt-2.5 backdrop-blur-md sm:px-7">
+      <div className="relative z-20 border-t border-[#e4c174]/10 bg-[#140d1c]/90 px-5 pb-[calc(var(--hint-safe-bottom)+1rem)] pt-2.5 backdrop-blur-md sm:px-7">
         <div className="mx-auto max-w-4xl">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="font-sans text-[11px] text-[#d8c7a6]/54">
@@ -908,15 +917,15 @@ export function TarotHintReadingChat({
             </div>
           </div>
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-            {FOLLOW_UPS.map((question) => (
+            {FOLLOW_UPS.map((followUp) => (
               <button
-                key={question}
+                key={followUp.label}
                 type="button"
-                onClick={() => void send(question)}
+                onClick={() => void send(followUp.prompt)}
                 disabled={chatMutation.isPending}
                 className="shrink-0 rounded-full border border-[#e4c174]/18 bg-white/[0.035] px-3.5 py-2 font-serif text-[13px] italic text-[#d8c7a6]/82 transition-colors hover:border-[#e4c174]/36 hover:text-[#ffe8aa] disabled:cursor-wait disabled:opacity-55"
               >
-                {question}
+                {followUp.label}
               </button>
             ))}
           </div>

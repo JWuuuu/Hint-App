@@ -82,10 +82,11 @@ export function RecordsGrid({
           const card = (
             <motion.div
               key={r.label}
-              initial={{ opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 8, scale: 0.994 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.45, delay: Math.min(i, 6) * 0.04, ease: "easeOut" }}
+              transition={{ duration: 0.3, delay: Math.min(i, 4) * 0.025, ease: [0.2, 0.78, 0.2, 1] }}
+              className="transform-gpu"
             >
               {r.href ? (
                 <Link href={r.href} className="block h-full">

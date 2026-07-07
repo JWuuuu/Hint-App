@@ -45,7 +45,7 @@ function DetailLine({
   value: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 py-3">
+    <div className="flex min-w-0 transform-gpu items-center gap-3 py-3">
       <span
         className="grid size-8 shrink-0 place-items-center rounded-[10px]"
         style={{
@@ -67,6 +67,34 @@ function DetailLine({
   );
 }
 
+function SignalStat({
+  label,
+  value,
+  tone = ACCENT.gold,
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+}) {
+  return (
+    <div
+      className="min-w-0 transform-gpu rounded-[14px] border px-2.5 py-2.5 text-center transition-transform duration-200 ease-out hover:-translate-y-0.5"
+      style={{
+        background: "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)",
+        borderColor: "color-mix(in srgb, var(--hint-gold) 18%, var(--hint-border))",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)",
+      }}
+    >
+      <p className="truncate font-sans text-[8.5px] font-black uppercase tracking-[0.12em]" style={{ color: GLASS.faint }}>
+        {label}
+      </p>
+      <p className="mt-1 truncate font-sans text-[13px] font-black leading-none" style={{ color: tone }}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
 export function ProfileCard({
   profile,
   onEdit,
@@ -82,31 +110,35 @@ export function ProfileCard({
   const accountDetail = account
     ? `${providerLabel(account.provider)} - ${accountLabel(account)}`
     : t("account.guestSession");
+  const signalLabel = sign ?? "Add birth";
+  const accessLabel = account ? "Verified" : "Guest";
+  const memoryLabel = profile?.birthDate ? "Personal" : "General";
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: "easeOut" }}
+      initial={{ opacity: 0, y: 8, scale: 0.992 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.34, ease: [0.2, 0.78, 0.2, 1] }}
+      className="transform-gpu"
     >
-      <GlassPanel hero className="hint-shimmer-border">
+      <GlassPanel hero>
         <div className="flex items-start gap-3">
           <div
-            className="grid size-14 shrink-0 place-items-center rounded-[20px]"
+            className="grid size-12 shrink-0 place-items-center rounded-[16px]"
             style={{
               background: "var(--hint-me-avatar-bg)",
               border: `1px solid ${GLASS.borderStrong}`,
               boxShadow: "var(--hint-me-avatar-shadow)",
             }}
           >
-            <span className="font-serif text-[20px]" style={{ color: GLASS.text }}>
+            <span className="font-sans text-[17px] font-black" style={{ color: GLASS.text }}>
               {initials}
             </span>
           </div>
 
           <div className="min-w-0 flex-1 pt-0.5">
             <div className="flex min-w-0 items-center gap-2">
-              <h2 className="min-w-0 truncate font-serif text-[25px] leading-none" style={{ color: GLASS.text }}>
+              <h2 className="min-w-0 truncate font-sans text-[22px] font-black leading-none" style={{ color: GLASS.text }}>
                 {name}
               </h2>
               {account ? <ShieldCheck size={16} color="var(--hint-rose)" className="shrink-0" /> : null}
@@ -119,7 +151,7 @@ export function ProfileCard({
           <button
             type="button"
             onClick={onEdit}
-            className="hint-tap-sparkle grid size-10 shrink-0 place-items-center rounded-full border"
+            className="hint-tap-sparkle grid size-10 shrink-0 transform-gpu place-items-center rounded-full border transition-transform duration-150 active:scale-[0.96]"
             style={{
               background: "color-mix(in srgb, var(--hint-surface-soft) 86%, transparent)",
               borderColor: "color-mix(in srgb, var(--hint-gold) 24%, var(--hint-border))",
@@ -136,24 +168,14 @@ export function ProfileCard({
           <div className="mt-4 grid grid-cols-2 gap-2.5">
             <Link
               href="/app/signup"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border font-sans text-[11.5px] font-black uppercase tracking-[0.1em]"
-              style={{
-                background: "rgba(203,168,102,0.16)",
-                borderColor: "rgba(203,168,102,0.38)",
-                color: ACCENT.gold,
-              }}
+              className="hint-soft-button hint-pressable inline-flex h-10 items-center justify-center gap-2 rounded-full font-sans text-[11.5px] font-black uppercase tracking-[0.1em]"
             >
               <UserPlus size={15} />
               {t("account.signup")}
             </Link>
             <Link
               href="/app/login?mode=login"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border font-sans text-[11.5px] font-black uppercase tracking-[0.1em]"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                borderColor: GLASS.border,
-                color: GLASS.muted,
-              }}
+              className="hint-ghost-button hint-pressable inline-flex h-10 items-center justify-center gap-2 rounded-full font-sans text-[11.5px] font-black uppercase tracking-[0.1em]"
             >
               <LogIn size={15} />
               {t("account.login")}
@@ -161,7 +183,13 @@ export function ProfileCard({
           </div>
         ) : null}
 
-        <div className="mt-4 border-t" style={{ borderColor: GLASS.border }}>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <SignalStat label="Signal" value={signalLabel} tone={ACCENT.aqua} />
+          <SignalStat label="Access" value={accessLabel} />
+          <SignalStat label="Memory" value={memoryLabel} tone="var(--hint-rose)" />
+        </div>
+
+        <div className="mt-3 border-t" style={{ borderColor: GLASS.border }}>
           <DetailLine
             icon={CalendarDays}
             label={t("account.birthProfile")}

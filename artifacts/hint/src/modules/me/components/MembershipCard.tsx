@@ -23,10 +23,10 @@ export function MembershipCard() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.05, ease: "easeOut" }}
-      className="relative rounded-[8px] overflow-hidden p-5"
+      initial={{ opacity: 0, y: 8, scale: 0.992 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.34, delay: 0.03, ease: [0.2, 0.78, 0.2, 1] }}
+      className="relative transform-gpu overflow-hidden rounded-[8px] p-5"
       style={{
         background: "var(--hint-me-plus-surface)",
         border: "1px solid var(--hint-me-plus-border)",

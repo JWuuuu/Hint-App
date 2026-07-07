@@ -17,10 +17,10 @@ import { useLanguage } from "../../lib/i18n";
 export function AppScreen({ children }: { children: ReactNode }) {
   return (
     <div
-      className="hint-app-scroll h-full w-full flex flex-col items-center pb-[calc(7.75rem+var(--hint-safe-bottom))] scroll-pt-[calc(1.25rem+var(--hint-safe-top))]"
+      className="hint-app-scroll h-full w-full flex flex-col items-center pb-[calc(7.5rem+var(--hint-safe-bottom))] scroll-pt-[calc(1.25rem+var(--hint-safe-top))]"
       style={{ background: "transparent" }}
     >
-      <div className="w-full max-w-[var(--hint-app-width)] px-3.5 pt-[calc(1rem+var(--hint-safe-top))] sm:px-4">
+      <div className="w-full max-w-[var(--hint-app-width)] px-4 pt-[calc(0.95rem+var(--hint-safe-top))] sm:px-5">
         {children}
       </div>
     </div>
@@ -75,8 +75,8 @@ export function ScreenHeader({
     <motion.header
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, ease: "easeOut" }}
-      className="mb-5"
+      transition={{ duration: 0.36, ease: [0.2, 0.78, 0.2, 1] }}
+      className="mb-5 transform-gpu"
     >
       {showBack ? (
         <div className="mb-3">
@@ -86,13 +86,13 @@ export function ScreenHeader({
       <div className="flex items-center gap-3">
         {Sigil && (
           <div
-            className="hint-glass-card hint-app-card hint-shimmer-border flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px]"
+            className="hint-glass-card hint-app-card flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px]"
             style={{
               background: "var(--hint-liquid-panel-strong)",
               border: "1px solid var(--hint-liquid-border)",
             }}
           >
-            <div className="w-6 h-6">
+            <div className="h-5 w-5">
               <Sigil />
             </div>
           </div>
@@ -107,7 +107,7 @@ export function ScreenHeader({
             </p>
           )}
           <h1
-            className="hint-app-title font-serif text-[29px] font-normal leading-none"
+            className="hint-app-title font-sans text-[25px] font-black leading-[0.98] tracking-normal"
             style={{ color: "var(--hint-text)" }}
           >
             {title}
@@ -117,7 +117,10 @@ export function ScreenHeader({
       {subtitle && (
         <p
           className="mt-2.5 max-w-md font-sans text-[13px] leading-relaxed"
-          style={{ color: "var(--hint-muted)" }}
+          style={{
+            color: "var(--hint-muted)",
+            textShadow: "0 1px 12px rgba(12, 8, 18, 0.42)",
+          }}
         >
           {subtitle}
         </p>
@@ -140,7 +143,7 @@ export function GlassPanel({
 }) {
   return (
     <div
-      className={`hint-glass-card hint-app-card hint-card-lift relative overflow-hidden rounded-[26px] ${padded ? "p-4" : ""} ${className}`}
+      className={`hint-glass-card hint-app-card hint-card-lift relative overflow-hidden rounded-[18px] ${padded ? "p-4" : ""} ${className}`}
       style={{
         background: hero
           ? "var(--hint-surface-strong)"

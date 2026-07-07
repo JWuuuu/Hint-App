@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { ACCENT, GLASS } from "../hold/atmosphere";
 import { AppScreen, GlassPanel, ScreenHeader, SectionLabel } from "../../components/app/AppChrome";
 import { InnerTypeSigil } from "../home/data/sigils";
@@ -59,6 +60,13 @@ type ResultCopy = {
 
 const STORAGE_KEY = "hint.personalities.result.v2";
 const ANSWERS_STORAGE_KEY = "hint.personalities.answers.v2";
+const MOTION_EASE = [0.2, 0.78, 0.2, 1] as const;
+const PANEL_MOTION = {
+  initial: { opacity: 0, y: 10, scale: 0.992 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -6, scale: 0.996 },
+  transition: { duration: 0.32, ease: MOTION_EASE },
+} as const;
 
 const AXES: QuizAxis[] = ["avoid", "delulu", "control", "mess", "please", "think", "escape", "vision"];
 
@@ -741,27 +749,21 @@ export function PersonalitiesView() {
             {progress}%
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full" style={{ background: "rgba(0,0,0,0.18)" }}>
+        <div className="h-2 overflow-hidden rounded-full" style={{ background: "var(--hint-control-bg)" }}>
           <div
-            className="h-full rounded-full transition-all duration-500"
+            className="h-full origin-left rounded-full transition-transform duration-500 ease-out will-change-transform"
             style={{
-              width: `${progress}%`,
-              background: "linear-gradient(90deg, rgba(206,178,110,0.95), rgba(178,152,216,0.9), rgba(94,174,179,0.9))",
+              transform: `scaleX(${progress / 100})`,
+              background: "var(--hint-special-action-bg)",
             }}
           />
         </div>
         {resultName ? (
-          <div
-            className="mt-4 rounded-[14px] border px-3 py-2"
-            style={{
-              borderColor: "rgba(178,152,216,0.28)",
-              background: "rgba(178,152,216,0.1)",
-            }}
-          >
+          <div className="hint-subtle-card mt-4 rounded-[18px] px-3 py-2">
             <p className="font-sans text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: ACCENT.lavender }}>
               Result
             </p>
-            <p className="mt-1 font-serif text-[20px] leading-tight" style={{ color: "var(--hint-text)" }}>
+              <p className="mt-1 font-sans text-[18px] font-black leading-tight" style={{ color: "var(--hint-text)" }}>
               {resultName}
             </p>
           </div>
@@ -771,8 +773,10 @@ export function PersonalitiesView() {
         </p>
       </GlassPanel>
 
-      {result && resultName ? (
-        <GlassPanel hero className="mb-5">
+      <AnimatePresence mode="wait">
+        {result && resultName ? (
+        <motion.div key="result" {...PANEL_MOTION} className="transform-gpu">
+          <GlassPanel hero className="mb-5">
           <div className="relative rounded-[22px] p-1">
             <div
               aria-label={`${resultName} character`}
@@ -782,19 +786,19 @@ export function PersonalitiesView() {
                 backgroundPosition: personalityIconPosition(resultName),
                 backgroundSize: "600% 300%",
                 backgroundRepeat: "no-repeat",
-                backgroundColor: "rgba(255,255,255,0.45)",
-                borderColor: "rgba(178,152,216,0.28)",
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.42), 0 18px 42px rgba(78,64,101,0.12)",
+                backgroundColor: "var(--hint-control-bg-strong)",
+                borderColor: "var(--hint-control-border)",
+                boxShadow: "var(--hint-field-shadow)",
               }}
             />
             <div className="mb-4 min-h-28 pr-28 sm:min-h-32 sm:pr-36">
               <p className="mb-2 font-sans text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT.gold }}>
                 Your assigned personality
               </p>
-              <h2 className="font-serif text-[29px] leading-none sm:text-[34px]" style={{ color: "var(--hint-text)" }}>
+              <h2 className="font-sans text-[25px] font-black leading-none sm:text-[28px]" style={{ color: "var(--hint-text)" }}>
                 {resultName}
               </h2>
-              <p className="mt-2 font-serif text-[15px] italic leading-snug" style={{ color: GLASS.text }}>
+              <p className="mt-2 font-sans text-[13px] font-bold leading-snug" style={{ color: GLASS.text }}>
                 {result.subtitle}
               </p>
             </div>
@@ -809,12 +813,7 @@ export function PersonalitiesView() {
             {result.traits.map((trait) => (
               <span
                 key={trait}
-                className="rounded-full border px-3 py-1.5 font-sans text-[10px] font-black uppercase tracking-[0.14em]"
-                style={{
-                  borderColor: "var(--hint-border)",
-                  background: "rgba(255,255,255,0.08)",
-                  color: ACCENT.lavender,
-                }}
+                className="hint-segment rounded-full px-3 py-1.5 font-sans text-[10px] font-black uppercase tracking-[0.14em]"
               >
                 {trait}
               </span>
@@ -824,12 +823,7 @@ export function PersonalitiesView() {
           <button
             type="button"
             onClick={() => void shareResult()}
-            className="mt-5 h-11 w-full rounded-[8px] border font-sans text-[11px] font-black uppercase tracking-[0.18em]"
-            style={{
-              borderColor: "rgba(94,174,179,0.35)",
-              background: "rgba(94,174,179,0.12)",
-              color: ACCENT.aqua,
-            }}
+            className="hint-soft-button hint-pressable mt-5 h-11 w-full rounded-full font-sans text-[11px] font-black uppercase tracking-[0.18em]"
           >
             Share result
           </button>
@@ -841,72 +835,73 @@ export function PersonalitiesView() {
           <button
             type="button"
             onClick={restart}
-            className="mt-5 h-11 w-full rounded-[8px] border font-sans text-[11px] font-black uppercase tracking-[0.18em]"
-            style={{
-              borderColor: "rgba(178,152,216,0.35)",
-              background: "rgba(178,152,216,0.12)",
-              color: ACCENT.lavender,
-            }}
+            className="hint-ghost-button hint-pressable mt-5 h-11 w-full rounded-full font-sans text-[11px] font-black uppercase tracking-[0.18em]"
           >
             Retake quiz
           </button>
-        </GlassPanel>
+          </GlassPanel>
+        </motion.div>
       ) : (
-        <GlassPanel hero className="mb-5">
+        <motion.div key={`question-${usableAnswers.length}`} {...PANEL_MOTION} className="transform-gpu">
+          <GlassPanel hero className="mb-5">
           <SectionLabel>Choose what feels most like you</SectionLabel>
-          <h2 className="mb-4 font-serif text-[23px] leading-tight" style={{ color: "var(--hint-text)" }}>
+          <h2 className="mb-4 font-sans text-[24px] font-black leading-tight" style={{ color: "var(--hint-text)" }}>
             {currentQuestion.prompt}
           </h2>
           <div className="flex flex-col gap-2.5">
-            {currentQuestion.options.map((option) => (
-              <button
+            {currentQuestion.options.map((option, index) => (
+              <motion.button
                 key={option.label}
                 type="button"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.22, delay: index * 0.035, ease: MOTION_EASE }}
+                whileTap={{ scale: 0.985 }}
                 onClick={() => chooseAnswer(option.axis)}
-                className="min-h-14 rounded-[12px] border px-4 py-3 text-left font-sans text-[13px] font-bold leading-snug transition active:scale-[0.99]"
-                style={{
-                  borderColor: "var(--hint-border)",
-                  background: "rgba(255,255,255,0.08)",
-                  color: "var(--hint-text)",
-                }}
+                className="hint-subtle-card min-h-12 transform-gpu rounded-[16px] px-4 py-3 text-left font-sans text-[13px] font-bold leading-snug transition-[background,border-color,transform] duration-200 ease-out hover:-translate-y-0.5"
               >
                 {option.label}
-              </button>
+              </motion.button>
             ))}
           </div>
-        </GlassPanel>
+          </GlassPanel>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       <GlassPanel className="mb-4">
         <p className="mb-3 font-sans text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: ACCENT.aqua }}>
           Quiz pattern
         </p>
         <div className="flex flex-col gap-2.5">
-          {patternEntries.map(({ axis, percent }) => {
+          {patternEntries.map(({ axis, percent }, index) => {
             return (
-              <div
+              <motion.div
                 key={axis}
-                className="rounded-[12px] border px-3 py-2.5"
-                style={{ borderColor: GLASS.border, background: "rgba(0,0,0,0.1)" }}
+                initial={{ opacity: 0, y: 6 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.35 }}
+                transition={{ duration: 0.24, delay: index * 0.025, ease: MOTION_EASE }}
+                className="hint-subtle-card transform-gpu rounded-[18px] px-3 py-2.5"
               >
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <p className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ACCENT.lavender }}>
                     {AXIS_LABELS[axis]}
                   </p>
-                  <p className="font-serif text-[18px] leading-none" style={{ color: "var(--hint-text)" }}>
+                  <p className="font-sans text-[16px] font-black leading-none" style={{ color: "var(--hint-text)" }}>
                     {percent}%
                   </p>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full" style={{ background: "rgba(0,0,0,0.14)" }}>
+                <div className="h-2 overflow-hidden rounded-full" style={{ background: "var(--hint-control-bg)" }}>
                   <div
-                    className="h-full rounded-full transition-all duration-500"
+                    className="h-full origin-left rounded-full transition-transform duration-500 ease-out will-change-transform"
                     style={{
-                      width: `${percent}%`,
-                      background: "linear-gradient(90deg, rgba(178,152,216,0.94), rgba(94,174,179,0.88))",
+                      transform: `scaleX(${percent / 100})`,
+                      background: "linear-gradient(90deg, var(--hint-lavender), var(--hint-aqua))",
                     }}
                   />
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

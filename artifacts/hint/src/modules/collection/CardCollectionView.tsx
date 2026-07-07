@@ -179,7 +179,7 @@ export function CardCollectionView() {
         rewardOpened={selectedRareCardId === rewardCardId ? rewardOpened : selectedRareCard.unlocked}
         lockedMessage={
           selectedRareCardId === rewardCardId
-            ? `Today's reward stays in your deck once opened. Next reset: ${formatDate(dailyReward?.expiresAt ?? fallbackReward.expiresAt)}.${dailyReward?.source === "local-fallback" ? " Backend lock is unavailable, so this is using local fallback state." : ""}`
+            ? `Today's reward stays in your deck once opened. Next reset: ${formatDate(dailyReward?.expiresAt ?? fallbackReward.expiresAt)}.`
             : "Unlocked cards can replay the moment. Locked rare cards wait for their own daily reward."
         }
       />

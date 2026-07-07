@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { motion } from "framer-motion";
+import { createPortal } from "react-dom";
 import { Link } from "wouter";
-import { Activity, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleDot, Compass, Copy, ExternalLink, FileText, HeartHandshake, Link2, LockKeyhole, MapPin, Orbit, Radar, RefreshCw, Search, Share2, ShieldCheck, UserRound } from "lucide-react";
+import { Activity, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleDot, Compass, Copy, Download, Ellipsis, ExternalLink, Facebook, FileText, HeartHandshake, Instagram, Link2, LockKeyhole, LogIn, MapPin, MessageCircle, Orbit, Radar, RefreshCw, Search, Send, Share2, ShieldCheck, Sparkles, UserPlus, UserRound, X } from "lucide-react";
 import { BirthProfileCard } from "../../components/astro/BirthProfileCard";
 import { BirthProfileForm } from "../../components/astro/BirthProfileForm";
 import { RealSkyTodayCard } from "../../components/astro/RealSkyTodayCard";
@@ -16,7 +17,6 @@ import { apiUrl } from "../../lib/api";
 import { useLocalAccount, type LocalAccount } from "../../lib/auth";
 import { useLanguage, type HintLanguage } from "../../lib/i18n";
 import { useProfile } from "../../lib/useProfile";
-import { AppScreen } from "../../components/app/AppChrome";
 import type { AstroProviderStatus, AstroSynastryResponse, AstroTransitsResponse, AstrologyReport, BirthProfile, NatalChart, NormalizedTransit, PlanetBody, PlanetPlacement, RelationshipAstrology, ZodiacSign } from "../../types/astrology";
 
 type AstrologyTab = "signs" | "chart" | "transits" | "birth" | "together" | "reports";
@@ -86,6 +86,47 @@ const ASTRO_WHEEL_GLOW_EDGE = "var(--astro-wheel-glow-edge)";
 const ASTRO_WHEEL_LINE = "var(--astro-wheel-line)";
 const ASTRO_WHEEL_AXIS = "var(--astro-wheel-axis)";
 const SAVED_NATAL_CHART_PREFIX = "hint.astrology.savedNatalChart.v1";
+const ASTROLOGY_HOME_STYLE = {
+  background: "var(--hint-page-bg)",
+  color: ASTRO_TEXT,
+  "--astro-text": "var(--hint-text)",
+  "--astro-text-strong": "var(--hint-text)",
+  "--astro-muted": "var(--hint-muted)",
+  "--astro-faint": "var(--hint-faint)",
+  "--astro-gold": "var(--hint-gold)",
+  "--astro-gold-bright": "var(--hint-gold-bright)",
+  "--astro-aqua": "var(--hint-aqua)",
+  "--astro-rose": "var(--hint-rose)",
+  "--astro-lavender": "var(--hint-lavender)",
+  "--astro-green": "color-mix(in srgb, var(--hint-aqua) 58%, var(--hint-gold))",
+  "--astro-orange": "var(--hint-ember)",
+  "--astro-border": "color-mix(in srgb, var(--hint-rose) 16%, var(--hint-border))",
+  "--astro-stroke": "color-mix(in srgb, var(--hint-rose) 24%, var(--hint-border-strong))",
+  "--astro-surface": "var(--hint-liquid-panel)",
+  "--astro-hero": "var(--hint-liquid-panel-strong)",
+  "--astro-inner": "var(--hint-control-bg)",
+  "--astro-locked": "var(--hint-subtle-card-bg)",
+  "--astro-panel": "var(--hint-liquid-panel)",
+  "--astro-panel-inner": "var(--hint-control-bg)",
+  "--astro-tile": "var(--hint-control-bg)",
+  "--astro-tile-border": "var(--hint-control-border)",
+  "--astro-input": "var(--hint-field-bg)",
+  "--astro-chart-panel": "var(--hint-liquid-panel)",
+  "--astro-chart-header": "var(--hint-control-bg-strong)",
+  "--astro-wheel-outer": "var(--hint-control-bg-strong)",
+  "--astro-wheel-core": "color-mix(in srgb, var(--hint-surface-soft) 74%, transparent)",
+  "--astro-wheel-dot-bg": "var(--hint-field-bg)",
+  "--astro-wheel-glow-center": "color-mix(in srgb, var(--hint-aqua) 18%, transparent)",
+  "--astro-wheel-glow-mid": "color-mix(in srgb, var(--hint-gold) 14%, transparent)",
+  "--astro-wheel-glow-edge": "color-mix(in srgb, var(--hint-surface) 84%, transparent)",
+  "--astro-wheel-line": "color-mix(in srgb, var(--hint-text) 18%, transparent)",
+  "--astro-wheel-axis": "color-mix(in srgb, var(--hint-text) 28%, transparent)",
+  "--astro-button": "var(--hint-special-action-bg)",
+  "--astro-button-text": "var(--hint-special-action-text)",
+  "--astro-shadow": "var(--hint-liquid-shadow)",
+  "--astro-shadow-soft": "var(--hint-liquid-shadow)",
+  "--astro-button-shadow": "0 12px 24px color-mix(in srgb, var(--hint-rose) 12%, transparent)",
+} as CSSProperties;
 
 const FALLBACK_PROVIDER_STATUS: AstroProviderStatus = {
   astrology: {
@@ -750,7 +791,7 @@ const ASTRO_UI_COPY: Record<HintLanguage, AstrologyUiCopy> = {
 function readInitialAstrologyTab(): AstrologyTab {
   if (typeof window === "undefined") return "chart";
   const tab = new URLSearchParams(window.location.search).get("tab");
-  if (tab === "signs" || tab === "code") return "signs";
+  if (tab === "signs" || tab === "code" || tab === "placements") return "signs";
   if (tab === "transits" || tab === "today") return "transits";
   if (tab === "chart" || tab === "birth" || tab === "together" || tab === "reports") return tab;
   return "chart";
@@ -762,9 +803,49 @@ function writeAstrologyTab(tab: AstrologyTab) {
   if (tab === "chart") {
     url.searchParams.delete("tab");
   } else {
-    url.searchParams.set("tab", tab === "signs" ? "code" : tab === "transits" ? "today" : tab);
+    url.searchParams.set("tab", tab === "signs" ? "placements" : tab === "transits" ? "today" : tab);
   }
   window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function astrologyShareUrl(tab: AstrologyTab) {
+  if (typeof window === "undefined") return "/app/astrology";
+  const url = new URL("/app/astrology", window.location.origin);
+  if (tab !== "chart") {
+    url.searchParams.set("tab", tab === "signs" ? "placements" : tab === "transits" ? "today" : tab);
+  }
+  return url.toString();
+}
+
+function astrologyShareMessage(profile: BirthProfile | null, tab: AstrologyTab, hasSavedChart: boolean) {
+  const room = tabDisplayName(tab).toLowerCase();
+  const name = profile?.name?.trim() || "me";
+  if (hasSavedChart) {
+    return `Open my Hint astrology ${room} room with ${name}. Compare your chart with me and ask Hint what it means.`;
+  }
+  return "Open Hint with me and build an astrology room from birth data, signs, and chart insights.";
+}
+
+function fallbackCopyText(value: string) {
+  if (typeof document === "undefined") return false;
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, value.length);
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  } finally {
+    textarea.remove();
+  }
+  return copied;
 }
 
 function accountStorageKey(account: LocalAccount | null, anonId: string) {
@@ -810,13 +891,62 @@ function writeSavedNatalChart(account: LocalAccount | null, anonId: string, prof
   }
 }
 
+function buildFallbackNatalResponse(profile: BirthProfile, chart: NatalChart): AstroNatalResponse {
+  const fetchedAt = chart.calculatedAt || new Date().toISOString();
+  return {
+    source: "fallback",
+    mode: "fallback",
+    cached: false,
+    fetchedAt,
+    profileHash: chart.id || `fallback-${profile.id}`,
+    validation: {
+      partial: false,
+      message: "Local chart preview generated from saved birth details.",
+    },
+    chart: {
+      placements: chart.placements.map((placement) => ({
+        body: placement.body,
+        sign: placement.sign,
+        degree: placement.degree,
+        house: placement.house,
+        retrograde: placement.retrograde,
+        element: placement.element,
+        modality: placement.modality,
+      })),
+      houses: chart.houses.map((house) => ({
+        house: house.house,
+        sign: house.sign,
+        degree: house.degree,
+        theme: house.theme,
+      })),
+      aspects: chart.aspects.map((aspect) => ({
+        from: aspect.from,
+        to: aspect.to,
+        type: aspect.type,
+        orb: aspect.orb,
+        strength: aspect.strength,
+      })),
+      elementBalance: chart.elementBalance,
+      modalityBalance: chart.modalityBalance,
+      dominantElement: chart.elementBalance.dominant,
+      dominantModality: chart.modalityBalance.dominant,
+      summary: {
+        headline: chart.summary.headline,
+        summary: chart.summary.short,
+        strengths: chart.summary.strengths,
+        watchOut: chart.summary.watch,
+      },
+    },
+  };
+}
+
 function titleCase(value?: string) {
-  if (!value) return "Open";
+  if (!value) return "Pending";
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function signLabel(sign?: ZodiacSign) {
-  return sign ? SIGN_LABELS[sign] : "Open";
+  return sign ? SIGN_LABELS[sign] : "Pending";
 }
 
 function uiCopy(language: HintLanguage) {
@@ -844,6 +974,91 @@ function bodyLabel(body: string) {
   return BODY_LABELS[body as PlanetBody] ?? titleCase(body);
 }
 
+function tabDisplayName(tab: AstrologyTab) {
+  switch (tab) {
+    case "signs":
+      return "Zodiac";
+    case "chart":
+      return "Chart";
+    case "transits":
+      return "Today";
+    case "birth":
+      return "Birth data";
+    case "together":
+      return "Together";
+    case "reports":
+      return "Reports";
+    default:
+      return titleCase(tab);
+  }
+}
+
+function tabGuideCopy(tab: AstrologyTab) {
+  switch (tab) {
+    case "signs":
+      return {
+        eyebrow: "Zodiac layer",
+        title: "Signs, translated into strengths",
+        body: "Start with the quick snapshot. Deeper placements stay behind View details so the page stays readable.",
+        nextTab: "transits" as AstrologyTab,
+        nextLabel: "Today",
+        color: ASTRO_ROSE,
+        icon: CircleDot,
+      };
+    case "transits":
+      return {
+        eyebrow: "Today layer",
+        title: "The sky, ranked for right now",
+        body: "Use the strongest transit first. The timeline and real-sky visual are optional details.",
+        nextTab: "reports" as AstrologyTab,
+        nextLabel: "Reports",
+        color: "var(--astro-lavender)",
+        icon: Activity,
+      };
+    case "birth":
+      return {
+        eyebrow: "Source data",
+        title: "One saved profile powers everything",
+        body: "Birthday, time, and place unlock chart, zodiac, today, reports, and pair readings.",
+        nextTab: "chart" as AstrologyTab,
+        nextLabel: "Chart",
+        color: ASTRO_GOLD_BRIGHT,
+        icon: CalendarDays,
+      };
+    case "together":
+      return {
+        eyebrow: "Pair mode",
+        title: "Compare charts only with consent",
+        body: "Create a private invite or enter partner data. Keep heavier synastry receipts folded until needed.",
+        nextTab: "reports" as AstrologyTab,
+        nextLabel: "Reports",
+        color: ASTRO_AQUA,
+        icon: HeartHandshake,
+      };
+    case "reports":
+      return {
+        eyebrow: "Report room",
+        title: "Deep reads stay intentional",
+        body: "Preview the theme first, then ask Hint or unlock a specific report when the user wants more.",
+        nextTab: "chart" as AstrologyTab,
+        nextLabel: "Chart",
+        color: ASTRO_GOLD_BRIGHT,
+        icon: FileText,
+      };
+    case "chart":
+    default:
+      return {
+        eyebrow: "Chart map",
+        title: "Start with Sun, Moon, and Rising",
+        body: "The wheel is the source. The readable summary and strengths should answer the first question fast.",
+        nextTab: "signs" as AstrologyTab,
+        nextLabel: "Zodiac",
+        color: ASTRO_AQUA,
+        icon: Orbit,
+      };
+  }
+}
+
 function astroColor(index: number) {
   return [ASTRO_GOLD_BRIGHT, ASTRO_AQUA, ASTRO_ROSE, "var(--astro-lavender)", "var(--astro-green)", "var(--astro-orange)"][index % 6]!;
 }
@@ -861,6 +1076,7 @@ type ModalityKey = "cardinal" | "fixed" | "mutable";
 
 const ELEMENT_KEYS: ElementKey[] = ["fire", "earth", "air", "water"];
 const STORY_BODIES: PlanetBody[] = ["sun", "moon", "rising", "mercury", "venus", "mars", "jupiter", "saturn"];
+const PLACEMENT_INDEX_BODIES: PlanetBody[] = ["sun", "moon", "rising", "mercury", "venus", "mars", "jupiter", "saturn"];
 const SOCIAL_PLANETS: PlanetBody[] = ["mercury", "venus", "mars", "jupiter", "saturn"];
 
 const ELEMENT_META: Record<ElementKey, { label: string; role: string; color: string; soft: string; line: string }> = {
@@ -1028,6 +1244,21 @@ const SIGN_ELEMENT: Record<ZodiacSign, ElementKey> = {
   pisces: "water",
 };
 
+const SIGN_RULERS: Record<ZodiacSign, PlanetBody> = {
+  aries: "mars",
+  taurus: "venus",
+  gemini: "mercury",
+  cancer: "moon",
+  leo: "sun",
+  virgo: "mercury",
+  libra: "venus",
+  scorpio: "pluto",
+  sagittarius: "jupiter",
+  capricorn: "saturn",
+  aquarius: "uranus",
+  pisces: "neptune",
+};
+
 function balanceEntries(chart: NatalChart) {
   const values = ELEMENT_KEYS.map((key) => [key, chart.elementBalance[key]] as const);
   const total = values.reduce((sum, [, value]) => sum + value, 0) || 1;
@@ -1045,6 +1276,34 @@ function dominantElementLine(chart: NatalChart) {
   const elementLine = ELEMENT_META[element].line;
   const modalityLine = MODALITY_META[modality].line;
   return `${titleCase(element)} dominant, ${titleCase(modality)} rhythm. ${elementLine} ${modalityLine}`;
+}
+
+function chartRulerPlacement(chart: NatalChart) {
+  const risingSign = corePlacement(chart, "rising")?.sign ?? chart.risingSign;
+  if (!risingSign) return undefined;
+  const ruler = SIGN_RULERS[risingSign];
+  return corePlacement(chart, ruler);
+}
+
+function chartRulerLine(chart: NatalChart, language: HintLanguage) {
+  const risingSign = corePlacement(chart, "rising")?.sign ?? chart.risingSign;
+  if (!risingSign) return "Rising sign needed";
+  const ruler = SIGN_RULERS[risingSign];
+  const placement = corePlacement(chart, ruler);
+  const sign = signName(placement?.sign, language);
+  return `${bodyName(ruler, language)} through ${sign}`;
+}
+
+function strongestAspectLine(chart: NatalChart) {
+  const aspect = chart.aspects.slice().sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0) || (a.orb ?? 99) - (b.orb ?? 99))[0];
+  if (!aspect) return "No major aspect yet";
+  return `${bodyLabel(aspect.from)} ${aspect.type} ${bodyLabel(aspect.to)}`;
+}
+
+function retrogradeLine(chart: NatalChart) {
+  const retrogrades = chart.placements.filter((placement) => placement.retrograde);
+  if (!retrogrades.length) return "No major retrograde emphasis";
+  return retrogrades.slice(0, 2).map((placement) => bodyLabel(placement.body)).join(" / ");
 }
 
 function placementOneLine(placement?: PlanetPlacement) {
@@ -1185,6 +1444,126 @@ function selfSecretCards(chart: NatalChart, language: HintLanguage, ui: Astrolog
   ];
 }
 
+function placementStrengthScore(placement: PlanetPlacement | undefined, offset = 0) {
+  const signSeed = placement?.sign ? ZODIAC_SIGNS.indexOf(placement.sign) + 1 : 5;
+  const houseSeed = placement?.house ?? 4;
+  return 62 + ((signSeed * 7 + houseSeed * 5 + offset) % 32);
+}
+
+function zodiacStrengthRows(chart: NatalChart, language: HintLanguage) {
+  const sun = corePlacement(chart, "sun");
+  const moon = corePlacement(chart, "moon");
+  const rising = corePlacement(chart, "rising");
+  const mercury = corePlacement(chart, "mercury");
+  const venus = corePlacement(chart, "venus");
+  const mars = corePlacement(chart, "mars");
+  const jupiter = corePlacement(chart, "jupiter");
+  const saturn = corePlacement(chart, "saturn");
+  const neptune = corePlacement(chart, "neptune");
+  return [
+    {
+      label: "Communication",
+      value: mercury ? `${bodyName("mercury", language)} · ${signName(mercury.sign, language)}` : "Mercury",
+      score: placementStrengthScore(mercury, chart.elementBalance.air),
+      color: BODY_COLORS.mercury,
+    },
+    {
+      label: "Emotional rhythm",
+      value: moon ? `${bodyName("moon", language)} · ${signName(moon.sign, language)}` : "Moon",
+      score: placementStrengthScore(moon, chart.elementBalance.water),
+      color: BODY_COLORS.moon,
+    },
+    {
+      label: "Love and bonding",
+      value: venus ? `${bodyName("venus", language)} · ${signName(venus.sign, language)}` : "Venus",
+      score: placementStrengthScore(venus, chart.elementBalance.earth),
+      color: BODY_COLORS.venus,
+    },
+    {
+      label: "Discipline",
+      value: saturn ? `${bodyName("saturn", language)} · ${signName(saturn.sign, language)}` : "Saturn",
+      score: placementStrengthScore(saturn, chart.elementBalance.earth),
+      color: BODY_COLORS.saturn,
+    },
+    {
+      label: "Creativity",
+      value: sun ? `${bodyName("sun", language)} · ${signName(sun.sign, language)}` : "Sun",
+      score: Math.round((placementStrengthScore(sun, 4) + placementStrengthScore(jupiter, 6)) / 2),
+      color: BODY_COLORS.sun,
+    },
+    {
+      label: "Social presence",
+      value: rising ? `${bodyName("rising", language)} · ${signName(rising.sign, language)}` : "Rising",
+      score: placementStrengthScore(rising, chart.elementBalance.air),
+      color: BODY_COLORS.rising,
+    },
+    {
+      label: "Intuition",
+      value: neptune ? `${bodyName("neptune", language)} · ${signName(neptune.sign, language)}` : "Neptune",
+      score: Math.round((placementStrengthScore(neptune, 9) + placementStrengthScore(moon, 12)) / 2),
+      color: BODY_COLORS.neptune,
+    },
+    {
+      label: "Leadership",
+      value: mars ? `${bodyName("mars", language)} · ${signName(mars.sign, language)}` : "Mars",
+      score: Math.round((placementStrengthScore(mars, 10) + placementStrengthScore(sun, 14)) / 2),
+      color: BODY_COLORS.mars,
+    },
+  ];
+}
+
+function zodiacModuleItems(chart: NatalChart, language: HintLanguage): AstroModuleItem[] {
+  const sun = corePlacement(chart, "sun");
+  const moon = corePlacement(chart, "moon");
+  const rising = corePlacement(chart, "rising");
+  const mercury = corePlacement(chart, "mercury");
+  const venus = corePlacement(chart, "venus");
+  const mars = corePlacement(chart, "mars");
+  return [
+    {
+      label: "Strength snapshot",
+      value: traitPill(chart),
+      note: "A quick read on what tends to come naturally.",
+      color: ELEMENT_META[chart.elementBalance.dominant].color,
+    },
+    {
+      label: "Personality stack",
+      value: `${signName(sun?.sign, language)} / ${signName(moon?.sign, language)}`,
+      note: "Core self and inner weather, without needing the full wheel.",
+      color: BODY_COLORS.sun,
+    },
+    {
+      label: "Mind style",
+      value: mercury ? signName(mercury.sign, language) : "Mercury needed",
+      note: "How thoughts, language, and curiosity usually move.",
+      color: BODY_COLORS.mercury,
+    },
+    {
+      label: "Love style",
+      value: venus ? signName(venus.sign, language) : "Venus needed",
+      note: "How trust, taste, and closeness become readable.",
+      color: BODY_COLORS.venus,
+    },
+    {
+      label: "Drive style",
+      value: mars ? signName(mars.sign, language) : "Mars needed",
+      note: "Where action, frustration, and desire pick up speed.",
+      color: BODY_COLORS.mars,
+    },
+    {
+      label: "Social pattern",
+      value: rising ? signName(rising.sign, language) : "Rising needed",
+      note: "First impression and the way others read the entrance.",
+      color: BODY_COLORS.rising,
+    },
+  ];
+}
+
+function topStrengthReceipts(chart: NatalChart) {
+  const receipts = chart.summary.strengths.filter(Boolean);
+  return receipts.length ? receipts.slice(0, 3) : [dominantElementLine(chart), chart.summary.short, "Use the chart as a practical mirror, not a verdict."];
+}
+
 function wheelPlacementRows(chart: NatalChart, language: HintLanguage, ui: AstrologyUiCopy) {
   return chart.placements.slice(0, 11).map((placement) => ({
     placement,
@@ -1227,7 +1606,7 @@ function liveProfileHint(profile: BirthProfile | null) {
   if (missing.includes("profile")) return "Add birth details first.";
   if (missing.includes("birth time")) return "Birth time is needed for rising sign and houses.";
   if (missing.includes("birth place") || missing.includes("timezone")) return "Select a birth place so coordinates and timezone can be saved.";
-  return "Ready for one controlled AstrologyAPI natal test.";
+  return "Birth details are complete. Hint can calculate the full chart.";
 }
 
 function isLiveNatal(response: AstroNatalResponse | null): response is AstroNatalResponse & { source: "astrologyapi"; mode: "live" } {
@@ -1235,16 +1614,16 @@ function isLiveNatal(response: AstroNatalResponse | null): response is AstroNata
 }
 
 function chartSourceLabel(response: AstroNatalResponse | null, chart?: NatalChart | null) {
-  if (isLiveNatal(response) || chart?.source === "astrologyapi" || chart?.source === "api") return "AstrologyAPI live";
-  if (response?.mode === "partial" || chart?.validation?.partial) return "Partial local chart";
-  if (response || chart?.source === "fallback") return "Local fallback chart";
+  if (isLiveNatal(response) || chart?.source === "astrologyapi" || chart?.source === "api") return "Live chart";
+  if (response?.mode === "partial" || chart?.validation?.partial) return "Partial preview";
+  if (response || chart?.source === "fallback") return "Saved preview";
   return "Profile preview";
 }
 
 function transitSourceLabel(transits: AstroTransitsResponse | null) {
-  if (transits?.source === "astrologyapi" && transits.mode === "live") return "AstrologyAPI live";
-  if (transits?.source === "fallback") return "Local fallback";
-  return "Sample fallback";
+  if (transits?.source === "astrologyapi" && transits.mode === "live") return "Live timing";
+  if (transits?.source === "fallback") return "Saved timing";
+  return "Preview timing";
 }
 
 function useAstrologyData(profile: BirthProfile | null) {
@@ -1292,7 +1671,7 @@ function useAstroBackendStatus() {
           online: false,
           loading: false,
           checkedAt: new Date().toISOString(),
-          error: "Backend offline",
+          error: "Live sky service unavailable",
         });
       });
     return () => {
@@ -1377,20 +1756,62 @@ function useReportPreviewBullets(requestId: number, reports: AstrologyReport[], 
   return { mode, bulletsByReport, loading, error };
 }
 
+function AstrologyHomeBackdrop() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <svg
+        className="absolute -left-20 top-8 h-[22rem] w-[30rem] opacity-[0.22]"
+        viewBox="0 0 520 360"
+        fill="none"
+      >
+        <path d="M24 212 C136 98 312 68 488 132" stroke="rgba(209,165,111,0.42)" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M2 244 C148 312 340 292 520 182" stroke="rgba(163,107,154,0.22)" strokeWidth="1" strokeLinecap="round" />
+        <path d="M88 66 C222 132 344 236 438 338" stroke="rgba(109,156,153,0.22)" strokeWidth="1" strokeLinecap="round" />
+      </svg>
+      <svg
+        className="absolute -right-28 top-[18rem] h-[24rem] w-[28rem] opacity-[0.20]"
+        viewBox="0 0 500 420"
+        fill="none"
+      >
+        <path d="M42 292 C156 174 320 112 486 98" stroke="rgba(209,165,111,0.38)" strokeWidth="1.1" strokeLinecap="round" />
+        <path d="M16 142 C154 214 274 286 398 398" stroke="rgba(143,122,174,0.24)" strokeWidth="1" strokeLinecap="round" />
+      </svg>
+      <span className="absolute left-[12%] top-[8.5rem] text-[13px]" style={{ color: "rgba(209,165,111,0.42)" }}>✦</span>
+      <span className="absolute right-[14%] top-[15rem] text-[10px]" style={{ color: "rgba(143,122,174,0.34)" }}>✦</span>
+      <span className="absolute left-[58%] top-[4.8rem] h-1.5 w-1.5 rounded-full" style={{ background: "rgba(209,165,111,0.42)" }} />
+      <span className="absolute right-[22%] top-[31rem] h-1 w-1 rounded-full" style={{ background: "rgba(109,156,153,0.38)" }} />
+    </div>
+  );
+}
+
 function TopTabs({ activeTab, onChange }: { activeTab: AstrologyTab; onChange: (tab: AstrologyTab) => void }) {
+  const activeButtonRef = useRef<HTMLButtonElement | null>(null);
   const tabs: Array<{ tab: AstrologyTab; compact: string; full: string; icon: typeof Orbit }> = [
-    { tab: "chart", compact: "Chart", full: "Chart wheel", icon: Orbit },
-    { tab: "signs", compact: "Code", full: "Sign code", icon: CircleDot },
+    { tab: "chart", compact: "Chart", full: "Birth chart", icon: Orbit },
+    { tab: "signs", compact: "Zodiac", full: "Zodiac placements", icon: CircleDot },
     { tab: "transits", compact: "Today", full: "Live transits", icon: Activity },
-    { tab: "birth", compact: "Birth", full: "Birth profile", icon: CalendarDays },
-    { tab: "together", compact: "Together", full: "Together invite", icon: HeartHandshake },
+    { tab: "birth", compact: "Data", full: "Birth data", icon: CalendarDays },
+    { tab: "together", compact: "Pair", full: "Shared chart", icon: HeartHandshake },
     { tab: "reports", compact: "Reports", full: "Reports", icon: FileText },
   ];
 
+  useEffect(() => {
+    const node = activeButtonRef.current;
+    if (!node) return;
+    const behavior: ScrollBehavior =
+      document.documentElement.dataset.hintReduceMotion === "true" ? "auto" : "smooth";
+    node.scrollIntoView({ block: "nearest", inline: "center", behavior });
+  }, [activeTab]);
+
   return (
     <nav
-      className="grid grid-cols-3 gap-1 py-1 font-sans text-[10px] font-black min-[560px]:grid-cols-6"
-      style={{ color: ASTRO_TEXT }}
+      className="flex gap-1 overflow-x-auto rounded-[14px] border p-1 font-sans [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      style={{
+        color: ASTRO_TEXT,
+        background: "color-mix(in srgb, var(--hint-control-bg) 84%, transparent)",
+        borderColor: "color-mix(in srgb, var(--hint-control-border) 46%, transparent)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
+      }}
       aria-label="Astrology sections"
     >
       {tabs.map((item) => {
@@ -1399,19 +1820,23 @@ function TopTabs({ activeTab, onChange }: { activeTab: AstrologyTab; onChange: (
         return (
           <button
             key={item.tab}
+            ref={(node) => {
+              if (active) activeButtonRef.current = node;
+            }}
             type="button"
             onClick={() => onChange(item.tab)}
             aria-label={item.full}
             aria-pressed={active}
-            className="relative inline-flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-[8px] border px-2 transition-[opacity,transform] duration-200 active:scale-[0.98]"
+            className="relative inline-flex h-8 min-w-[72px] shrink-0 items-center justify-center gap-1 rounded-[10px] border px-2 text-[10px] font-black leading-none transition-[opacity,transform] duration-200 active:scale-[0.98]"
             style={{
               opacity: active ? 1 : 0.78,
               color: active ? ASTRO_BUTTON_TEXT : ASTRO_MUTED,
-              background: active ? ASTRO_BUTTON : ASTRO_INNER,
-              borderColor: active ? ASTRO_TILE_BORDER : ASTRO_BORDER,
+              background: active ? ASTRO_BUTTON : "transparent",
+              borderColor: active ? "color-mix(in srgb, var(--hint-gold) 30%, var(--hint-border-strong))" : "transparent",
+              boxShadow: active ? "0 8px 18px color-mix(in srgb, var(--hint-rose) 10%, transparent), inset 0 1px 0 rgba(255,255,255,0.42)" : "none",
             }}
           >
-            <Icon size={13} />
+            <Icon size={12} />
             {item.compact}
           </button>
         );
@@ -1425,8 +1850,8 @@ function DataStatusRow({ hasProfile, hasSavedChart, natalResponse }: { hasProfil
   const rows = live
     ? ["Saved chart", "Live sky"]
     : hasSavedChart
-      ? ["Local chart", "Fallback sky"]
-      : [hasProfile ? "Birth profile saved" : "Birth profile needed", "Chart not saved"];
+      ? ["Saved chart", "Preview timing"]
+      : [hasProfile ? "Birth profile saved" : "Birth profile needed", "Chart not calculated"];
   return (
     <section className="rounded-[8px] border px-3 py-2" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
       <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: live ? ASTRO_AQUA : ASTRO_FAINT }}>
@@ -1438,6 +1863,610 @@ function DataStatusRow({ hasProfile, hasSavedChart, natalResponse }: { hasProfil
         ))}
       </div>
     </section>
+  );
+}
+
+function accountShortLabel(account: LocalAccount | null) {
+  if (!account) return "Guest";
+  if (account.name?.trim()) return account.name.trim();
+  if (account.email) return account.email.split("@")[0] || account.email;
+  if (account.phone) return account.phone;
+  return account.identifier;
+}
+
+function AstrologyShareCardPreview({
+  chart,
+  profileLabel,
+  activeTab,
+  hasSavedChart,
+  language,
+  ui,
+}: {
+  chart: NatalChart;
+  profileLabel: string;
+  activeTab: AstrologyTab;
+  hasSavedChart: boolean;
+  language: HintLanguage;
+  ui: AstrologyUiCopy;
+}) {
+  const coreRows = (["sun", "moon", "rising"] as PlanetBody[]).map((body) => {
+    const placement = corePlacement(chart, body);
+    return {
+      body,
+      label: bodyName(body, language),
+      value: signName(placement?.sign, language),
+      color: BODY_COLORS[body],
+    };
+  });
+  const headline = chartSignatureTitle(chart, language, ui);
+
+  return (
+    <article
+      aria-label="Astrology share card preview"
+      className="relative overflow-hidden rounded-[18px] border p-3"
+      style={{
+        background:
+          "radial-gradient(circle at 20% 18%, rgba(255, 205, 225, 0.34), transparent 32%), radial-gradient(circle at 86% 12%, rgba(158, 239, 241, 0.24), transparent 30%), linear-gradient(145deg, rgba(54, 42, 68, 0.96), rgba(24, 23, 36, 0.98))",
+        borderColor: ASTRO_TILE_BORDER,
+        color: ASTRO_TEXT,
+      }}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-50"
+        style={{
+          background:
+            "linear-gradient(110deg, transparent 0 38%, rgba(255,255,255,0.12) 39% 40%, transparent 41% 100%), radial-gradient(circle at 58% 58%, rgba(255,255,255,0.18), transparent 1px)",
+          backgroundSize: "100% 100%, 38px 38px",
+        }}
+      />
+      <div className="relative grid grid-cols-[minmax(0,1fr)_94px] gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.13em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_GOLD_BRIGHT }}>
+              Hint astrology
+            </span>
+            <span className="rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.13em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_AQUA }}>
+              {tabDisplayName(activeTab)}
+            </span>
+          </div>
+          <h3 className="mt-3 line-clamp-2 font-serif text-[22px] leading-[1.02]" style={{ color: ASTRO_TEXT_STRONG }}>
+            {headline}
+          </h3>
+          <p className="mt-2 line-clamp-2 text-[11px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>
+            {profileLabel}'s {hasSavedChart ? "saved chart" : "chart preview"} · {traitPill(chart)}
+          </p>
+        </div>
+        <div className="grid aspect-square place-items-center overflow-hidden rounded-[16px] border" style={{ background: ASTRO_CHART_PANEL, borderColor: ASTRO_TILE_BORDER }}>
+          <AstroWheel chart={chart} language={language} className="aspect-square w-[138%] max-w-[138px]" />
+        </div>
+      </div>
+      <div className="relative mt-3 grid gap-1.5" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+        {coreRows.map((item) => (
+          <div key={item.body} className="min-w-0 rounded-[10px] border px-2 py-2" style={{ background: "rgba(255,255,255,0.055)", borderColor: ASTRO_TILE_BORDER }}>
+            <p className="truncate text-[8px] font-black uppercase tracking-[0.1em]" style={{ color: ASTRO_FAINT }}>{item.label}</p>
+            <p className="mt-1 truncate text-[12px] font-black" style={{ color: item.color }}>{item.value}</p>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function AstrologyTopBar({
+  account,
+  profile,
+  chart,
+  hasSavedChart,
+  activeTab,
+  language,
+  ui,
+  onEditProfile,
+}: {
+  account: LocalAccount | null;
+  profile: BirthProfile | null;
+  chart: NatalChart;
+  hasSavedChart: boolean;
+  activeTab: AstrologyTab;
+  language: HintLanguage;
+  ui: AstrologyUiCopy;
+  onEditProfile: () => void;
+}) {
+  const [shareOpen, setShareOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [shareStatus, setShareStatus] = useState("");
+  const [sharingImage, setSharingImage] = useState(false);
+  const shareCardRef = useRef<HTMLDivElement | null>(null);
+  const profileLabel = profile?.name?.trim() || accountShortLabel(account);
+  const profileMeta = profile ? [profile.birthDate, profile.birthPlace].filter(Boolean).join(" · ") : "Add birthday and place";
+  const accountLabel = accountShortLabel(account);
+  const shareUrl = astrologyShareUrl(activeTab);
+  const shareTitle = `Hint astrology ${tabDisplayName(activeTab)}`;
+  const shareText = astrologyShareMessage(profile, activeTab, hasSavedChart);
+  const shareCopy = `${shareText} ${shareUrl}`;
+  const encodedUrl = encodeURIComponent(shareUrl);
+  const encodedCopy = encodeURIComponent(shareCopy);
+  const encodedText = encodeURIComponent(shareText);
+  const shareTargets = [
+    {
+      label: "Instagram",
+      helper: "Copy + open",
+      icon: Instagram,
+      color: ASTRO_ROSE,
+      href: "https://www.instagram.com/",
+      copyFirst: true,
+    },
+    {
+      label: "Facebook",
+      helper: "Post link",
+      icon: Facebook,
+      color: "#7CA7FF",
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      copyFirst: false,
+    },
+    {
+      label: "LINE",
+      helper: "Send chat",
+      icon: MessageCircle,
+      color: "var(--astro-green)",
+      href: `https://social-plugins.line.me/lineit/share?url=${encodedUrl}&text=${encodedText}`,
+      copyFirst: false,
+    },
+    {
+      label: "Messages",
+      helper: "Text invite",
+      icon: MessageCircle,
+      color: ASTRO_AQUA,
+      href: `sms:?&body=${encodedCopy}`,
+      copyFirst: false,
+    },
+    {
+      label: "WhatsApp",
+      helper: "Send chat",
+      icon: MessageCircle,
+      color: "var(--astro-green)",
+      href: `https://wa.me/?text=${encodedCopy}`,
+      copyFirst: false,
+    },
+    {
+      label: "Telegram",
+      helper: "Send link",
+      icon: Send,
+      color: "var(--astro-lavender)",
+      href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
+      copyFirst: false,
+    },
+  ];
+
+  async function copyShareText(value = shareUrl, status = "Link copied") {
+    if (typeof window === "undefined") return;
+    setShareStatus(status);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else if (!fallbackCopyText(value)) {
+        setShareStatus("Link ready above");
+      }
+    } catch {
+      if (!fallbackCopyText(value)) {
+        setShareStatus("Link ready above");
+      }
+    }
+    window.setTimeout(() => setShareStatus(""), 1800);
+  }
+
+  async function shareWithSystemSheet() {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      await navigator.share({ title: shareTitle, text: shareText, url: shareUrl }).catch(() => undefined);
+      setShareStatus("Share sheet opened");
+      return;
+    }
+    await copyShareText(shareCopy, "Copied for sharing");
+  }
+
+  async function shareCardImage() {
+    if (typeof window === "undefined" || typeof document === "undefined" || !shareCardRef.current) return;
+    setSharingImage(true);
+    setShareStatus("Preparing image...");
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const canvas = await html2canvas(shareCardRef.current, {
+        backgroundColor: null,
+        logging: false,
+        scale: Math.min(2, window.devicePixelRatio || 2),
+        useCORS: true,
+      });
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png", 0.95));
+      if (!blob) throw new Error("Could not render astrology share card.");
+
+      const slug = tabDisplayName(activeTab).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "card";
+      const file = new File([blob], `hint-astrology-${slug}.png`, { type: "image/png" });
+      const shareData = { title: shareTitle, text: shareText, url: shareUrl, files: [file] } as ShareData & { files: File[] };
+      const navigatorWithFiles = navigator as Navigator & { canShare?: (data: ShareData & { files?: File[] }) => boolean };
+
+      if (navigator.share && (!navigatorWithFiles.canShare || navigatorWithFiles.canShare(shareData))) {
+        await navigator.share(shareData).catch(() => undefined);
+        setShareStatus("Image share opened");
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(blob);
+      try {
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setShareStatus("Image saved");
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+      }
+    } catch (error) {
+      console.error("Could not create astrology share card", error);
+      await copyShareText(shareCopy, "Copied instead");
+    } finally {
+      setSharingImage(false);
+      window.setTimeout(() => setShareStatus(""), 1800);
+    }
+  }
+
+  async function openShareTarget(href: string, copyFirst: boolean, label: string) {
+    if (typeof window === "undefined") return;
+    if (copyFirst) {
+      await copyShareText(shareCopy, `Copied for ${label}`);
+    }
+    setShareOpen(false);
+    if (href.startsWith("sms:")) {
+      window.location.href = href;
+      return;
+    }
+    const opened = window.open(href, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      window.location.href = href;
+    }
+  }
+
+  function openProfileEditor() {
+    setProfileOpen(false);
+    setMembersOpen(false);
+    onEditProfile();
+  }
+
+  const sheetBackdrop = "color-mix(in srgb, var(--hint-obsidian, #161020) 58%, transparent)";
+  const sheetBaseStyle: CSSProperties = {
+    left: "12px",
+    right: "12px",
+    bottom: "calc(6.35rem + var(--hint-safe-bottom, 0px))",
+    background: ASTRO_PREMIUM_PANEL,
+    borderColor: ASTRO_STROKE,
+    color: ASTRO_TEXT,
+    boxShadow: "var(--astro-shadow)",
+    backdropFilter: "blur(28px) saturate(1.18)",
+    WebkitBackdropFilter: "blur(28px) saturate(1.18)",
+  };
+
+  return (
+    <>
+    <header className="relative z-30 grid grid-cols-[38px_minmax(0,1fr)_82px] items-center gap-1.5">
+      <Link
+        href="/app"
+        aria-label="Back to main page"
+        className="grid h-[38px] w-[38px] place-items-center rounded-[13px] border transition active:scale-[0.98]"
+        style={{ background: "color-mix(in srgb, var(--hint-control-bg) 82%, transparent)", borderColor: "color-mix(in srgb, var(--hint-control-border) 48%, transparent)", color: ASTRO_TEXT, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)" }}
+      >
+        <ChevronLeft size={18} />
+      </Link>
+
+      <button
+        type="button"
+        aria-label="Open self profile"
+        aria-expanded={profileOpen}
+        onClick={() => {
+          setProfileOpen((value) => !value);
+          setMembersOpen(false);
+          setShareOpen(false);
+        }}
+        className="flex h-[38px] min-w-0 items-center justify-center gap-1.5 rounded-[13px] border px-3 text-center transition active:scale-[0.98]"
+        style={{ background: profileOpen ? ASTRO_BUTTON : "color-mix(in srgb, var(--hint-control-bg) 82%, transparent)", borderColor: profileOpen ? "color-mix(in srgb, var(--hint-gold) 30%, var(--hint-border-strong))" : "color-mix(in srgb, var(--hint-control-border) 48%, transparent)", color: profileOpen ? ASTRO_BUTTON_TEXT : ASTRO_TEXT, boxShadow: profileOpen ? "0 8px 18px color-mix(in srgb, var(--hint-rose) 10%, transparent), inset 0 1px 0 rgba(255,255,255,0.42)" : "inset 0 1px 0 rgba(255,255,255,0.16)" }}
+      >
+        <span className="min-w-0">
+          <span className="block truncate text-[11.5px] font-black leading-none">{profileLabel}</span>
+          <span className="mt-0.5 block truncate text-[7px] font-black uppercase tracking-[0.08em]" style={{ color: profileOpen ? "rgba(25,22,34,0.72)" : ASTRO_FAINT }}>
+            {profile ? "Self · birth data" : "Set self data"}
+          </span>
+        </span>
+        <ChevronDown className={`shrink-0 transition ${profileOpen ? "rotate-180" : ""}`} size={13} />
+      </button>
+
+      <div className="flex justify-end gap-1.5">
+        <button
+          type="button"
+          aria-label="Open profile list"
+          aria-expanded={membersOpen}
+          onClick={() => {
+            setMembersOpen((value) => !value);
+            setProfileOpen(false);
+            setShareOpen(false);
+          }}
+          className="grid h-[38px] w-[38px] place-items-center rounded-[13px] border transition active:scale-[0.98]"
+          style={{ background: membersOpen ? ASTRO_BUTTON : "color-mix(in srgb, var(--hint-control-bg) 82%, transparent)", borderColor: membersOpen ? "color-mix(in srgb, var(--hint-gold) 30%, var(--hint-border-strong))" : "color-mix(in srgb, var(--hint-control-border) 48%, transparent)", color: membersOpen ? ASTRO_BUTTON_TEXT : ASTRO_TEXT, boxShadow: membersOpen ? "0 8px 18px color-mix(in srgb, var(--hint-rose) 10%, transparent), inset 0 1px 0 rgba(255,255,255,0.42)" : "inset 0 1px 0 rgba(255,255,255,0.16)" }}
+        >
+          <UserRound size={16} />
+        </button>
+        <div className="relative">
+          <button
+            type="button"
+            aria-label="Open share options"
+            aria-expanded={shareOpen}
+            onClick={() => {
+              setShareOpen((value) => !value);
+              setProfileOpen(false);
+              setMembersOpen(false);
+            }}
+            className="grid h-[38px] w-[38px] place-items-center rounded-[13px] border transition active:scale-[0.98]"
+            style={{ background: shareOpen || shareStatus ? ASTRO_BUTTON : "color-mix(in srgb, var(--hint-control-bg) 82%, transparent)", borderColor: shareOpen || shareStatus ? "color-mix(in srgb, var(--hint-gold) 30%, var(--hint-border-strong))" : "color-mix(in srgb, var(--hint-control-border) 48%, transparent)", color: shareOpen || shareStatus ? ASTRO_BUTTON_TEXT : ASTRO_TEXT, boxShadow: shareOpen || shareStatus ? "0 8px 18px color-mix(in srgb, var(--hint-rose) 10%, transparent), inset 0 1px 0 rgba(255,255,255,0.42)" : "inset 0 1px 0 rgba(255,255,255,0.16)" }}
+          >
+            {shareStatus ? <CheckCircle2 size={16} /> : <Share2 size={16} />}
+          </button>
+          {shareOpen && typeof document !== "undefined" ? createPortal(
+            <>
+              <button
+                type="button"
+                aria-label="Dismiss share options"
+                onClick={() => setShareOpen(false)}
+                className="fixed inset-0 z-40 cursor-default"
+                style={{ background: sheetBackdrop, backdropFilter: "blur(4px)" }}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 28, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.22, ease: [0.2, 0.78, 0.2, 1] }}
+                className="fixed z-50 max-h-[min(82vh,720px)] overflow-y-auto rounded-[20px] border p-4"
+                style={{
+                  ...sheetBaseStyle,
+                  zIndex: 50,
+                }}
+              >
+                <div className="mx-auto mb-3 h-1.5 w-11 rounded-full" style={{ background: ASTRO_BORDER }} />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Share with friends</p>
+                    <h2 className="mt-1 truncate text-[17px] font-black" style={{ color: ASTRO_TEXT }}>Send your astrology card</h2>
+                    <p className="mt-1 line-clamp-2 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>Share the image preview, copy the link, or open any app on this phone.</p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Close share options"
+                    onClick={() => setShareOpen(false)}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-[8px] border"
+                    style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+                <div ref={shareCardRef} className="mt-3">
+                  <AstrologyShareCardPreview chart={chart} profileLabel={profileLabel} activeTab={activeTab} hasSavedChart={hasSavedChart} language={language} ui={ui} />
+                </div>
+                <button
+                  type="button"
+                  aria-label="Share or save astrology image"
+                  disabled={sharingImage}
+                  onClick={() => void shareCardImage()}
+                  className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border px-4 text-[12px] font-black uppercase tracking-[0.12em] transition active:scale-[0.99] disabled:opacity-70"
+                  style={{ background: ASTRO_BUTTON, borderColor: ASTRO_TILE_BORDER, color: ASTRO_BUTTON_TEXT }}
+                >
+                  <Download size={15} />
+                  {sharingImage ? "Preparing image" : "Share / save image"}
+                </button>
+                <section className="mt-3 rounded-[14px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Copy this link</p>
+                      <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.08em]" style={{ color: ASTRO_FAINT }}>No private birth data sent</p>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Copy astrology share link"
+                      onPointerDown={() => setShareStatus("Link copied")}
+                      onClick={() => void copyShareText(shareUrl)}
+                      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[8px] px-3 text-[11px] font-black"
+                      style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}
+                    >
+                      <Copy size={14} />
+                      Copy
+                    </button>
+                  </div>
+                  <div className="mt-3 rounded-[8px] border px-3 py-2" style={{ background: ASTRO_INPUT, borderColor: ASTRO_TILE_BORDER }}>
+                    <input
+                      aria-label="Astrology share link"
+                      readOnly
+                      value={shareUrl}
+                      onFocus={(event) => event.currentTarget.select()}
+                      className="w-full bg-transparent text-[11px] font-bold outline-none"
+                      style={{ color: ASTRO_MUTED }}
+                    />
+                  </div>
+                </section>
+                <section className="mt-3 rounded-[14px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Share using</p>
+                    <p className="truncate text-[10px] font-bold" style={{ color: ASTRO_FAINT }}>Installed apps appear in More</p>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    <button
+                      type="button"
+                      aria-label="Open native share sheet"
+                      onClick={() => void shareWithSystemSheet()}
+                      className="min-w-0 rounded-[12px] border p-2 text-center transition active:scale-[0.98]"
+                      style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+                    >
+                      <span className="mx-auto grid h-9 w-9 place-items-center rounded-full border" style={{ background: ASTRO_BUTTON, borderColor: ASTRO_TILE_BORDER, color: ASTRO_BUTTON_TEXT }}>
+                        <Ellipsis size={16} />
+                      </span>
+                      <span className="mt-1.5 block truncate text-[10px] font-black">More</span>
+                      <span className="block truncate text-[8px] font-black uppercase tracking-[0.06em]" style={{ color: ASTRO_FAINT }}>Apps</span>
+                    </button>
+                    {shareTargets.map((target) => {
+                      const Icon = target.icon;
+                      return (
+                        <button
+                          key={target.label}
+                          type="button"
+                          aria-label={`Share astrology on ${target.label}`}
+                          onClick={() => void openShareTarget(target.href, target.copyFirst, target.label)}
+                          className="min-w-0 rounded-[12px] border p-2 text-center transition active:scale-[0.98]"
+                          style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+                        >
+                          <span className="mx-auto grid h-9 w-9 place-items-center rounded-full border" style={{ background: `${target.color}18`, borderColor: `${target.color}55`, color: target.color }}>
+                            <Icon size={16} />
+                          </span>
+                          <span className="mt-1.5 block truncate text-[10px] font-black">{target.label}</span>
+                          <span className="block truncate text-[8px] font-black uppercase tracking-[0.06em]" style={{ color: ASTRO_FAINT }}>{target.helper}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+                <p className="mt-3 line-clamp-2 min-h-[16px] text-center text-[11px] font-black" style={{ color: shareStatus ? ASTRO_AQUA : ASTRO_FAINT }}>
+                  {shareStatus || shareText}
+                </p>
+              </motion.div>
+            </>,
+            document.body,
+          ) : null}
+        </div>
+      </div>
+    </header>
+    {profileOpen && typeof document !== "undefined" ? createPortal(
+      <>
+        <button
+          type="button"
+          aria-label="Close self profile"
+          onClick={() => setProfileOpen(false)}
+          className="fixed inset-0 cursor-default"
+          style={{ zIndex: 50, background: sheetBackdrop, backdropFilter: "blur(4px)" }}
+        />
+        <motion.div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Self profile"
+          initial={{ opacity: 0, y: 28, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.2, ease: [0.2, 0.78, 0.2, 1] }}
+          className="fixed max-h-[min(60vh,420px)] overflow-y-auto rounded-[20px] border p-4"
+          style={{
+            zIndex: 60,
+            ...sheetBaseStyle,
+          }}
+        >
+          <div className="mx-auto mb-3 h-1.5 w-11 rounded-full" style={{ background: ASTRO_BORDER }} />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Self profile</p>
+              <h2 className="mt-1 truncate text-[21px] font-black leading-tight" style={{ color: ASTRO_TEXT_STRONG }}>{profileLabel}</h2>
+              <p className="mt-1 line-clamp-2 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{profileMeta}</p>
+            </div>
+            <button
+              type="button"
+              aria-label="Close self profile"
+              onClick={() => setProfileOpen(false)}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] border"
+              style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+            >
+              <X size={15} />
+            </button>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {[
+              { label: "Profile", value: "Self" },
+              { label: "Birth data", value: profile ? "Saved" : "Needed" },
+              { label: "Chart", value: hasSavedChart ? "Saved" : "Preview" },
+            ].map((item) => (
+              <div key={`${item.label}-${item.value}`} className="min-w-0 rounded-[12px] border p-2.5" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+                <p className="truncate text-[8px] font-black uppercase tracking-[0.1em]" style={{ color: ASTRO_FAINT }}>{item.label}</p>
+                <p className="mt-1 truncate text-[12px] font-black" style={{ color: ASTRO_TEXT }}>{item.value}</p>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={openProfileEditor}
+            className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-[12px] px-4 text-[13px] font-black"
+            style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}
+          >
+            <CalendarDays size={16} />
+            Edit birthday / place
+          </button>
+        </motion.div>
+      </>,
+      document.body,
+    ) : null}
+    {membersOpen && typeof document !== "undefined" ? createPortal(
+      <>
+        <button
+          type="button"
+          aria-label="Close profile list"
+          onClick={() => setMembersOpen(false)}
+          className="fixed inset-0 cursor-default"
+          style={{ zIndex: 50, background: sheetBackdrop, backdropFilter: "blur(4px)" }}
+        />
+        <motion.div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Profile list"
+          initial={{ opacity: 0, y: 28, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.2, ease: [0.2, 0.78, 0.2, 1] }}
+          className="fixed max-h-[min(58vh,380px)] overflow-y-auto rounded-[20px] border p-4"
+          style={{
+            zIndex: 60,
+            ...sheetBaseStyle,
+          }}
+        >
+          <div className="mx-auto mb-3 h-1.5 w-11 rounded-full" style={{ background: ASTRO_BORDER }} />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Profiles</p>
+              <h2 className="mt-1 truncate text-[20px] font-black leading-tight" style={{ color: ASTRO_TEXT_STRONG }}>{accountLabel}</h2>
+              <p className="mt-1 text-[12px] font-semibold" style={{ color: ASTRO_MUTED }}>{profile ? "Current astrology member" : "No birth profile yet"}</p>
+            </div>
+            <button
+              type="button"
+              aria-label="Close profile list"
+              onClick={() => setMembersOpen(false)}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] border"
+              style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+            >
+              <X size={15} />
+            </button>
+          </div>
+          <div className="mt-4 rounded-[14px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_AQUA }}>
+                <UserRound size={18} />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-[14px] font-black" style={{ color: ASTRO_TEXT }}>{profileLabel}</p>
+                <p className="mt-0.5 truncate text-[11px] font-semibold" style={{ color: ASTRO_MUTED }}>{profileMeta}</p>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={openProfileEditor}
+            className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-[12px] px-4 text-[13px] font-black"
+            style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}
+          >
+            <UserRound size={16} />
+            Switch / add member
+          </button>
+        </motion.div>
+      </>,
+      document.body,
+    ) : null}
+    </>
   );
 }
 
@@ -1466,8 +2495,8 @@ function ProviderReadinessStrip({ state }: { state: BackendStatusState & { refre
   const providerLine = online
     ? status.astrology.configured
       ? "AstrologyAPI connected"
-      : "Backend connected - local astrology fallback"
-    : "Backend offline - local preview only";
+      : "Chart preview active"
+    : "Saved preview active";
 
   return (
     <section
@@ -1481,7 +2510,7 @@ function ProviderReadinessStrip({ state }: { state: BackendStatusState & { refre
             {loading && !checkedAt ? "Checking astrology API" : providerLine}
           </p>
           <p className="mt-0.5 text-[10px] font-semibold" style={{ color: ASTRO_FAINT }}>
-            {checkedAt ? `Checked ${new Date(checkedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Waiting for backend response"}
+            {checkedAt ? `Updated ${new Date(checkedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Preparing chart status"}
           </p>
         </div>
         <button
@@ -1492,7 +2521,7 @@ function ProviderReadinessStrip({ state }: { state: BackendStatusState & { refre
           style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
         >
           <RefreshCw size={12} />
-          {loading ? "Checking" : "Retry"}
+          {loading ? "Checking" : "Refresh"}
         </button>
       </div>
       <div className="grid grid-cols-3 gap-1.5">
@@ -1547,7 +2576,7 @@ function AstroFoldout({
             </p>
           </div>
           <span className="shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_FAINT }}>
-            Open
+            Details
           </span>
         </div>
       </summary>
@@ -1555,6 +2584,50 @@ function AstroFoldout({
         {children}
       </div>
     </details>
+  );
+}
+
+type AstroModuleItem = {
+  label: string;
+  value: string;
+  note: string;
+  color?: string;
+};
+
+function AstroModuleMap({
+  eyebrow,
+  title,
+  items,
+}: {
+  eyebrow: string;
+  title: string;
+  items: AstroModuleItem[];
+}) {
+  return (
+    <section className="min-w-0 rounded-[8px] border p-3 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{eyebrow}</p>
+          <h3 className="mt-1 font-serif text-[21px] leading-tight" style={{ color: ASTRO_TEXT }}>{title}</h3>
+        </div>
+        <span className="shrink-0 rounded-[8px] border px-2.5 py-1.5 text-[8px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_FAINT }}>
+          Guide
+        </span>
+      </div>
+      <div className="grid gap-2 min-[720px]:grid-cols-2">
+        {items.map((item, index) => {
+          const color = item.color ?? astroColor(index);
+          return (
+            <article key={item.label} className="min-w-0 rounded-[8px] border p-2.5" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+              <div className="mb-2 h-1 rounded-full" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
+              <p className="truncate text-[8px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>{item.label}</p>
+              <p className="mt-1 truncate text-[13px] font-black" style={{ color }}>{item.value}</p>
+              <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{item.note}</p>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -1579,6 +2652,7 @@ function AstrologyAppSummary({
 }) {
   const trio = (["sun", "moon", "rising"] as PlanetBody[]).map((body) => corePlacement(chart, body));
   const profileReady = liveProfileReady(profile);
+  const chartIsLive = chart.source === "astrologyapi" || chart.source === "api";
   const setupFacts = profile
     ? [
         { label: "Date", value: profile.birthDate, ready: true, tab: "birth" as AstrologyTab },
@@ -1599,24 +2673,24 @@ function AstrologyAppSummary({
       ];
   const chartFacts = [
     ...trio.map((placement) => ({
-      label: placement ? BODY_LENSES[placement.body].title : "Open",
+      label: placement ? BODY_LENSES[placement.body].title : "Pending",
       value: placement ? signName(placement.sign, language) : ui.pending,
       ready: Boolean(placement),
       tab: "chart" as AstrologyTab,
     })),
     {
       label: "Source",
-      value: chart.source === "astrologyapi" || chart.source === "api" ? "Live" : "Local",
+      value: chartIsLive ? "Live" : "Preview",
       ready: true,
       tab: "chart" as AstrologyTab,
     },
   ];
-  const statusLabel = hasSavedChart ? (chart.source === "astrologyapi" || chart.source === "api" ? "Personal chart" : "Local chart") : profile ? "Birth details ready" : "Birth details needed";
+  const statusLabel = hasSavedChart ? (chartIsLive ? "Personal chart" : "Chart preview") : profile ? "Birth details ready" : "Birth details needed";
   const primaryTarget: AstrologyTab = !profile ? "birth" : !hasSavedChart ? "chart" : "birth";
   const primaryLabel = !account ? "Log in to save chart" : !profile ? "Add birth details" : !hasSavedChart ? "Create chart" : "Edit birth data";
   const showSetupCta = !account || !profile || !hasSavedChart || activeTab === "birth";
   const factRows = hasSavedChart ? chartFacts : setupFacts;
-  const headline = hasSavedChart ? chartSignatureTitle(chart, language, ui) : profileReady ? "Ready to calculate your wheel" : "Add birth data once";
+  const headline = hasSavedChart ? chartSignatureTitle(chart, language, ui) : profileReady ? "Ready to create your birth chart" : "Add birth data once";
   const helper = hasSavedChart
     ? `${titleCase(chart.elementBalance.dominant)} / ${titleCase(chart.modalityBalance.dominant)} · ${chart.placements.length} placements`
     : profile
@@ -1650,7 +2724,7 @@ function AstrologyAppSummary({
                 </span>
                 <span aria-hidden style={{ color: ASTRO_FAINT }}>·</span>
                 <span className="truncate text-[9px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>
-                  {activeTab}
+                  {tabDisplayName(activeTab)}
                 </span>
               </div>
               <h1 className="mt-0.5 line-clamp-2 font-serif text-[18px] leading-tight" style={{ color: ASTRO_TEXT_STRONG }}>
@@ -1687,7 +2761,7 @@ function AstrologyAppSummary({
         <div className="grid grid-cols-2 gap-1.5 min-[560px]:grid-cols-4">
           {factRows.map((item) => (
             <button
-              key={item.label}
+              key={`${item.tab}-${item.label}`}
               type="button"
               onClick={() => onTabChange(item.tab)}
               className="min-w-0 rounded-[8px] border px-2 py-2 text-left active:scale-[0.98]"
@@ -1707,20 +2781,177 @@ function AstrologyAppSummary({
   );
 }
 
+function AstrologyMapOverview({
+  chart,
+  profile,
+  hasSavedChart,
+  activeTab,
+  language,
+  onTabChange,
+}: {
+  chart: NatalChart;
+  profile: BirthProfile | null;
+  hasSavedChart: boolean;
+  activeTab: AstrologyTab;
+  language: HintLanguage;
+  onTabChange: (tab: AstrologyTab) => void;
+}) {
+  const sun = corePlacement(chart, "sun");
+  const moon = corePlacement(chart, "moon");
+  const rising = corePlacement(chart, "rising");
+  const trio = [sun, moon, rising].filter(Boolean) as PlanetPlacement[];
+  const placementLine = trio.length
+    ? trio.map((placement) => `${bodySymbol(placement.body, language)} ${signName(placement.sign, language)}`).join(" / ")
+    : "Sun / Moon / Rising";
+  const birthReady = Boolean(profile?.birthDate && profile.birthTime && profile.birthPlace);
+  const fullBirthReady = Boolean(profile?.birthTime && profile.latitude !== undefined && profile.longitude !== undefined && profile.timezoneOffset !== undefined);
+  const lanes: Array<{
+    tab: AstrologyTab;
+    label: string;
+    title: string;
+    value: string;
+    icon: typeof Orbit;
+    tone: string;
+    ready: boolean;
+  }> = [
+    {
+      tab: "birth",
+      label: "Source",
+      title: "Birth data",
+      value: fullBirthReady ? "Time and place saved" : birthReady ? "Needs coordinates" : "Date, time, place",
+      icon: CalendarDays,
+      tone: ASTRO_GOLD_BRIGHT,
+      ready: birthReady,
+    },
+    {
+      tab: "chart",
+      label: "Map",
+      title: "Chart",
+      value: hasSavedChart ? `${chart.placements.length} placements` : "Create once",
+      icon: Orbit,
+      tone: ASTRO_AQUA,
+      ready: hasSavedChart,
+    },
+    {
+      tab: "signs",
+      label: "Layer",
+      title: "Zodiac",
+      value: placementLine,
+      icon: CircleDot,
+      tone: ASTRO_ROSE,
+      ready: Boolean(trio.length),
+    },
+    {
+      tab: "transits",
+      label: "Timing",
+      title: "Today",
+      value: hasSavedChart ? "Transits ranked" : "After chart",
+      icon: Activity,
+      tone: "var(--astro-lavender)",
+      ready: hasSavedChart,
+    },
+  ];
+
+  return (
+    <section className="rounded-[8px] border p-3 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_FAINT }}>Astrology map</p>
+          <h2 className="mt-1 font-serif text-[21px] leading-tight" style={{ color: ASTRO_TEXT }}>Chart and zodiac</h2>
+        </div>
+        <span className="shrink-0 rounded-[8px] border px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_AQUA }}>
+          {tabDisplayName(activeTab)}
+        </span>
+      </div>
+      <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+        {lanes.map((lane) => {
+          const Icon = lane.icon;
+          const active = activeTab === lane.tab;
+          return (
+            <button
+              key={lane.tab}
+              type="button"
+              onClick={() => onTabChange(lane.tab)}
+              className="min-w-0 rounded-[8px] border p-2.5 text-left transition-[transform,opacity] duration-200 active:scale-[0.98]"
+              style={{
+                background: active ? ASTRO_PREMIUM_INNER : ASTRO_INNER,
+                borderColor: active ? lane.tone : ASTRO_TILE_BORDER,
+                opacity: lane.ready || active ? 1 : 0.76,
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[8px] border" style={{ background: `${lane.tone}20`, borderColor: `${lane.tone}55`, color: lane.tone }}>
+                  <Icon size={15} />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-[8px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>{lane.label}</p>
+                  <p className="mt-0.5 truncate text-[13px] font-black leading-none" style={{ color: ASTRO_TEXT_STRONG }}>{lane.title}</p>
+                </div>
+              </div>
+              <p className="mt-2 truncate text-[11px] font-semibold" style={{ color: lane.ready ? lane.tone : ASTRO_MUTED }}>
+                {lane.value}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function AstrologyGuidedCard({ activeTab, onTabChange }: { activeTab: AstrologyTab; onTabChange: (tab: AstrologyTab) => void }) {
+  const guide = tabGuideCopy(activeTab);
+  const Icon = guide.icon;
+
+  return (
+    <section className="rounded-[8px] border p-3 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-3">
+        <span className="grid h-10 w-10 place-items-center rounded-[8px] border" style={{ background: `${guide.color}1f`, borderColor: `${guide.color}55`, color: guide.color }}>
+          <Icon size={18} />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: guide.color }}>{guide.eyebrow}</p>
+          <h2 className="mt-1 truncate text-[15px] font-black" style={{ color: ASTRO_TEXT_STRONG }}>{guide.title}</h2>
+          <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{guide.body}</p>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+        <Link
+          href="/app/ask"
+          className="inline-flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-[8px] px-3 text-[11px] font-black shadow-[var(--astro-button-shadow)]"
+          style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}
+        >
+          <Sparkles size={14} />
+          Ask Hint
+        </Link>
+        <button
+          type="button"
+          onClick={() => onTabChange(guide.nextTab)}
+          className="inline-flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-[8px] border px-3 text-[11px] font-black"
+          style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+        >
+          {guide.nextLabel}
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function lockedTabCopy(activeTab: AstrologyTab) {
   switch (activeTab) {
     case "signs":
       return {
-        label: "Signs",
-        title: "Create your sign code",
-        body: "Sign code uses the saved natal wheel, not a sample chart, so the core pattern stays personal.",
+        label: "Zodiac",
+        title: "Create your zodiac layer",
+        body: "The zodiac page reads the signs inside the saved chart: Sun, Moon, Rising, and each planet's sign, house, and degree.",
         after: "After chart",
       };
     case "transits":
       return {
         label: "Transits",
-        title: "Create your transit base",
-        body: "Transits need a saved natal wheel first, then Hint can rank live sky movement against it.",
+        title: "Create your timing base",
+        body: "Transits need a saved birth chart first, then Hint can rank live sky movement against it.",
         after: "After chart",
       };
     case "together":
@@ -1747,10 +2978,64 @@ function lockedTabCopy(activeTab: AstrologyTab) {
     case "chart":
     default:
       return {
-        label: "Studio",
-        title: "Create your chart wheel",
-        body: "Use your saved birth details to create the wheel once. Then every astrology tab can open from the same chart.",
-        after: "After chart",
+        label: "Chart",
+        title: "Set your sky once",
+        body: "Birth date, exact time, and place create the chart. The rest of Astrology stays summary-first until you ask Hint for depth.",
+        after: "Needed",
+      };
+  }
+}
+
+function lockedTabPreview(activeTab: AstrologyTab) {
+  switch (activeTab) {
+    case "signs":
+      return {
+        eyebrow: "Summary preview",
+        title: "What you are good at",
+        body: "Sun, moon, rising, and key planets become a short strengths snapshot first. Deeper placement notes stay behind Ask Hint.",
+        rows: ["Strengths", "Love style", "Mind style", "Growth edge", "Hidden skill"],
+        icon: Radar,
+      };
+    case "transits":
+      return {
+        eyebrow: "Today preview",
+        title: "What matters right now",
+        body: "Today ranks live timing into simple signals: act, wait, protect energy, or ask for more detail.",
+        rows: ["Current window", "Moon phase", "Transit hits", "Signal map", "Do / avoid"],
+        icon: Activity,
+      };
+    case "birth":
+      return {
+        eyebrow: "Data preview",
+        title: "One private profile",
+        body: "Date, time, and place stay in one saved profile, then power chart, zodiac, today, pair, and reports.",
+        rows: ["Date", "Time", "Place", "Accuracy", "House system", "Privacy"],
+        icon: CalendarDays,
+      };
+    case "together":
+      return {
+        eyebrow: "Pair preview",
+        title: "The space between two charts",
+        body: "Pair stays consent-first: invite a friend or add partner data before showing comfort, tension, and growth.",
+        rows: ["Comfort", "Tension", "Growth", "Love style", "Communication", "Timing"],
+        icon: HeartHandshake,
+      };
+    case "reports":
+      return {
+        eyebrow: "Report preview",
+        title: "Summary first, detail later",
+        body: "Reports show the topic and short bullets first. Long-form reads should open after Ask Hint or a token action.",
+        rows: ["Career", "Love", "Year ahead", "Money", "Shadow", "Timing"],
+        icon: FileText,
+      };
+    case "chart":
+    default:
+      return {
+        eyebrow: "Chart preview",
+        title: "Map first, interpretation second",
+        body: "Chart shows the wheel, placements, houses, and aspects. Hint then turns that structure into plain language.",
+        rows: ["Wheel", "Placements", "Houses", "Aspects", "Elements", "Chart ruler"],
+        icon: Orbit,
       };
   }
 }
@@ -1778,14 +3063,139 @@ function AstrologyAccessGate({
 }) {
   const needsLogin = !account;
   const lockedCopy = lockedTabCopy(activeTab);
-  const title = needsLogin ? "Save your sky profile" : profile ? lockedCopy.title : "Add birth details once";
-  const body = needsLogin
-    ? "Log in or sign up before Hint calculates and stores a personal chart."
-    : profile
-      ? canPersonalize
-        ? lockedCopy.body
-        : liveProfileHint(profile)
-      : "Save date, time, and place once. Hint will reuse it for chart, transits, reports, and together readings.";
+  const previewCopy = lockedTabPreview(activeTab);
+  const PreviewIcon = previewCopy.icon;
+
+  if (needsLogin) {
+    return (
+      <section className="relative grid min-h-[calc(100vh-13rem)] content-start gap-5 overflow-hidden px-1 pb-4 pt-2">
+        <div aria-hidden="true" className="relative mx-auto h-[238px] w-full max-w-[360px]">
+          <div
+            className="absolute left-1/2 top-1/2 h-[224px] w-[224px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{
+              border: "1px solid color-mix(in srgb, var(--hint-gold) 24%, transparent)",
+              boxShadow: "0 0 0 44px color-mix(in srgb, var(--hint-rose) 4%, transparent), 0 0 0 88px color-mix(in srgb, var(--hint-gold) 4%, transparent)",
+            }}
+          />
+          <div
+            className="absolute left-[18%] top-[46%] h-[76px] w-[250px] rounded-full"
+            style={{
+              border: "1px solid color-mix(in srgb, var(--hint-gold) 20%, transparent)",
+              transform: "rotate(-18deg)",
+            }}
+          />
+          <div
+            className="absolute left-[19%] top-[40%] h-[82px] w-[252px] rounded-full"
+            style={{
+              border: "1px solid color-mix(in srgb, var(--hint-lavender) 16%, transparent)",
+              transform: "rotate(31deg)",
+            }}
+          />
+          <div
+            className="absolute left-[calc(50%-82px)] top-[34px] h-[156px] w-[128px] rounded-[24px] border"
+            style={{
+              background: "linear-gradient(160deg, rgba(255,249,244,0.92), rgba(239,226,236,0.72) 56%, rgba(255,253,248,0.88))",
+              borderColor: "color-mix(in srgb, var(--hint-gold) 34%, white)",
+              boxShadow: "0 26px 64px color-mix(in srgb, var(--hint-plum, #2b1d39) 18%, transparent), inset 0 1px 0 rgba(255,255,255,0.78)",
+              transform: "rotate(-8deg)",
+            }}
+          />
+          <div
+            className="absolute left-[calc(50%-34px)] top-[38px] h-[154px] w-[128px] rounded-[24px] border"
+            style={{
+              background: "linear-gradient(155deg, rgba(255,249,244,0.98), rgba(245,232,236,0.76) 48%, rgba(236,228,243,0.72))",
+              borderColor: "color-mix(in srgb, var(--hint-gold) 36%, white)",
+              boxShadow: "0 30px 72px color-mix(in srgb, var(--hint-plum, #2b1d39) 18%, transparent), inset 0 1px 0 rgba(255,255,255,0.84)",
+              transform: "rotate(7deg)",
+            }}
+          />
+          <div
+            className="absolute left-1/2 top-[25px] grid h-[172px] w-[132px] -translate-x-1/2 place-items-center overflow-hidden rounded-[24px] border"
+            style={{
+              background: "linear-gradient(150deg, #fff9f4 0%, color-mix(in srgb, var(--hint-gold-bright) 30%, white) 45%, color-mix(in srgb, var(--hint-rose) 16%, white))",
+              borderColor: "color-mix(in srgb, var(--hint-gold) 42%, white)",
+              color: ASTRO_TEXT_STRONG,
+              boxShadow: "0 34px 82px color-mix(in srgb, var(--hint-plum, #2b1d39) 20%, transparent), 0 0 44px color-mix(in srgb, var(--hint-rose) 14%, transparent), inset 0 1px 0 rgba(255,255,255,0.9)",
+            }}
+          >
+            <span className="absolute left-4 top-4 font-sans text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_FAINT }}>Sky</span>
+            <Orbit size={54} strokeWidth={1.55} />
+            <span className="absolute right-5 top-7 text-[24px] leading-none" style={{ color: ASTRO_GOLD_BRIGHT }}>✕</span>
+            <span className="absolute bottom-5 h-[1px] w-16" style={{ background: "color-mix(in srgb, var(--hint-gold) 36%, transparent)" }} />
+          </div>
+          <div
+            className="absolute bottom-2 left-1/2 grid w-[190px] -translate-x-1/2 grid-cols-[1fr_0.72fr_0.54fr] gap-2 rounded-full border p-2"
+            style={{
+              background: "linear-gradient(145deg, rgba(255,249,244,0.78), rgba(255,252,248,0.48))",
+              borderColor: ASTRO_TILE_BORDER,
+              boxShadow: "0 18px 44px color-mix(in srgb, var(--hint-plum, #2b1d39) 12%, transparent), inset 0 1px 0 rgba(255,255,255,0.6)",
+            }}
+          >
+            <span className="h-1.5 rounded-full" style={{ background: "linear-gradient(90deg, var(--hint-rose), var(--hint-lavender), var(--hint-gold-bright))" }} />
+            <span className="h-1.5 rounded-full" style={{ background: "color-mix(in srgb, var(--hint-muted) 18%, transparent)" }} />
+            <span className="h-1.5 rounded-full" style={{ background: "color-mix(in srgb, var(--hint-muted) 16%, transparent)" }} />
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          <p className="font-sans text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: ASTRO_ROSE }}>
+            Astrology room
+          </p>
+          <h2 className="max-w-[21rem] font-serif text-[44px] font-semibold leading-[0.9]" style={{ color: ASTRO_TEXT_STRONG }}>
+            Build your private sky.
+          </h2>
+          <p className="max-w-[22rem] text-[15px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>
+            Save your birth details once. Hint turns the chart into a clean summary first, then deeper reads open only when you ask.
+          </p>
+        </div>
+
+        <section
+          className="grid gap-3 rounded-[18px] border p-3"
+          style={{
+            background: "linear-gradient(150deg, rgba(255,249,244,0.72), rgba(255,252,248,0.46))",
+            borderColor: "color-mix(in srgb, var(--hint-gold) 24%, transparent)",
+            boxShadow: "0 22px 64px color-mix(in srgb, var(--hint-plum, #2b1d39) 10%, transparent), inset 0 1px 0 rgba(255,255,255,0.54)",
+          }}
+        >
+          <div className="grid grid-cols-[38px_minmax(0,1fr)] gap-3">
+            <span className="grid h-[38px] w-[38px] place-items-center rounded-[12px] border" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_GOLD_BRIGHT }}>
+              <PreviewIcon size={18} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{previewCopy.eyebrow}</p>
+              <h3 className="mt-1 font-serif text-[22px] font-semibold leading-none" style={{ color: ASTRO_TEXT_STRONG }}>{previewCopy.title}</h3>
+              <p className="mt-2 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{previewCopy.body}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {previewCopy.rows.map((row) => (
+              <span key={row} className="truncate rounded-full border px-2 py-2 text-center text-[9px] font-black uppercase tracking-[0.08em]" style={{ background: "rgba(255,255,255,0.25)", borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
+                {row}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Link href="/app/signup?mode=signup&from=astrology" className="inline-flex h-12 items-center justify-center gap-2 rounded-full px-4 text-[12px] font-black uppercase tracking-[0.11em]" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT, boxShadow: "var(--astro-button-shadow)" }}>
+            <UserPlus size={15} />
+            Sign up
+          </Link>
+          <Link href="/app/login?mode=login&from=astrology" className="inline-flex h-12 items-center justify-center gap-2 rounded-full border px-4 text-[12px] font-black uppercase tracking-[0.11em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
+            <LogIn size={15} />
+            Log in
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
+  const title = profile ? lockedCopy.title : activeTab === "birth" ? "Add birth details once" : lockedCopy.title;
+  const body = profile
+    ? canPersonalize
+      ? lockedCopy.body
+      : liveProfileHint(profile)
+    : "Date, exact time, and birthplace turn Astrology into a clean chart, zodiac summary, today timing, pair view, and reports.";
   const studioItems = [
     {
       label: "Birth",
@@ -1801,49 +3211,135 @@ function AstrologyAccessGate({
     },
     {
       label: lockedCopy.label,
-      value: hasSavedChart ? "Open" : lockedCopy.after,
+      value: hasSavedChart ? "Ready" : lockedCopy.after,
       active: hasSavedChart,
       icon: activeTab === "transits" ? Activity : activeTab === "reports" ? FileText : activeTab === "together" ? HeartHandshake : Radar,
     },
   ];
+  const setupSteps = profile
+    ? studioItems
+    : [
+        {
+          label: "Date",
+          value: "Birth day",
+          active: false,
+          icon: CalendarDays,
+        },
+        {
+          label: "Time",
+          value: "Exact hour",
+          active: false,
+          icon: Activity,
+        },
+        {
+          label: "Place",
+          value: "City saved",
+          active: false,
+          icon: MapPin,
+        },
+      ];
+  const statusLabel = hasSavedChart
+    ? "Astrology studio is active"
+    : profile
+      ? "Ready to calculate your chart"
+      : "Unlocks Chart, Zodiac, Today, Pair, and Reports";
 
   return (
-    <section className="relative overflow-hidden rounded-[8px] border p-4 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_PREMIUM_PANEL, borderColor: ASTRO_STROKE }}>
+    <section className="relative overflow-hidden rounded-[22px] border p-3 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_PREMIUM_PANEL, borderColor: ASTRO_STROKE }}>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
-          background: `radial-gradient(circle at 12% 10%, ${ASTRO_ROSE}, transparent 28%), radial-gradient(circle at 88% 20%, ${ASTRO_AQUA}, transparent 32%), linear-gradient(145deg, transparent, ${ASTRO_TILE})`,
-          opacity: 0.13,
+          background: `radial-gradient(circle at 10% 7%, color-mix(in srgb, ${ASTRO_ROSE} 62%, transparent), transparent 25%), radial-gradient(circle at 92% 16%, color-mix(in srgb, ${ASTRO_AQUA} 58%, transparent), transparent 30%), radial-gradient(circle at 48% 98%, color-mix(in srgb, ${ASTRO_GOLD_BRIGHT} 34%, transparent), transparent 34%), linear-gradient(145deg, transparent, ${ASTRO_TILE})`,
+          opacity: 0.2,
         }}
       />
-      <div className="relative grid gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <span className="inline-flex items-center gap-2 rounded-[8px] border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: needsLogin ? ASTRO_GOLD_BRIGHT : ASTRO_AQUA }}>
-              {needsLogin ? <LockKeyhole size={14} /> : <ShieldCheck size={14} />}
-              {needsLogin ? "Account sync" : "Chart setup"}
-            </span>
-            <h2 className="mt-3 font-serif text-[24px] leading-[1.04]" style={{ color: ASTRO_TEXT_STRONG }}>{title}</h2>
-            <p className="mt-2 text-[12px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>{body}</p>
-          </div>
-          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border" style={{ background: ASTRO_CHART_PANEL, borderColor: ASTRO_TILE_BORDER, color: hasSavedChart ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }}>
-            <Orbit size={25} />
+      <div className="relative grid gap-2.5">
+        <div className="relative overflow-hidden rounded-[20px] border p-3" style={{ background: ASTRO_PREMIUM_INNER, borderColor: ASTRO_TILE_BORDER }}>
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background: "radial-gradient(circle at 24% 14%, rgba(255,255,255,0.16), transparent 24%), radial-gradient(circle at 74% 68%, rgba(216,185,110,0.16), transparent 26%)",
+            }}
+          />
+          <div className="relative grid gap-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: hasSavedChart ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }}>
+                  <ShieldCheck size={13} />
+                  Private sky setup
+                </span>
+                <h2 className="mt-2.5 max-w-[15rem] font-serif text-[32px] font-semibold leading-[0.94]" style={{ color: ASTRO_TEXT_STRONG }}>{title}</h2>
+                <p className="mt-2 max-w-[19rem] text-[12px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>{body}</p>
+              </div>
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[16px] border" style={{ background: ASTRO_CHART_PANEL, borderColor: ASTRO_TILE_BORDER, color: ASTRO_GOLD_BRIGHT }}>
+                <Orbit size={23} />
+              </span>
+            </div>
+
+            <div className="relative h-[128px] overflow-hidden rounded-[18px] border" style={{ background: "linear-gradient(150deg, color-mix(in srgb, var(--hint-plum, #2b1d39) 34%, transparent), color-mix(in srgb, var(--hint-surface-soft) 58%, transparent))", borderColor: ASTRO_TILE_BORDER }}>
+              <motion.div
+                aria-hidden="true"
+                className="absolute left-1/2 top-1/2 h-[112px] w-[112px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+                style={{
+                  border: `1px solid color-mix(in srgb, ${ASTRO_GOLD_BRIGHT} 36%, transparent)`,
+                  boxShadow: `0 0 0 20px color-mix(in srgb, ${ASTRO_ROSE} 9%, transparent), 0 0 0 44px color-mix(in srgb, ${ASTRO_AQUA} 7%, transparent)`,
+                }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 26, repeat: Infinity, ease: "linear" }}
+              />
+              <div aria-hidden="true" className="absolute left-1/2 top-1/2 h-[78px] w-[184px] -translate-x-1/2 -translate-y-1/2 rounded-full border" style={{ borderColor: "color-mix(in srgb, var(--hint-gold-bright) 34%, transparent)", transform: "translate(-50%, -50%) rotate(-19deg)" }} />
+              <div aria-hidden="true" className="absolute left-1/2 top-1/2 h-[70px] w-[192px] -translate-x-1/2 -translate-y-1/2 rounded-full border" style={{ borderColor: "color-mix(in srgb, var(--hint-lavender) 30%, transparent)", transform: "translate(-50%, -50%) rotate(24deg)" }} />
+              <div className="absolute left-1/2 top-[17px] grid h-[88px] w-[72px] -translate-x-1/2 place-items-center rounded-[17px] border" style={{ background: "linear-gradient(155deg, rgba(255,249,244,0.92), rgba(245,221,236,0.74), rgba(226,238,242,0.78))", borderColor: "color-mix(in srgb, var(--hint-gold-bright) 42%, white)", color: ASTRO_TEXT_STRONG, boxShadow: "0 24px 60px color-mix(in srgb, var(--hint-plum, #2b1d39) 26%, transparent)" }}>
+                <span className="absolute left-3 top-3 text-[8px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_FAINT }}>Sky</span>
+                <Orbit size={29} strokeWidth={1.55} />
+                <span className="absolute bottom-2.5 h-[1px] w-9" style={{ background: "color-mix(in srgb, var(--hint-gold-bright) 42%, transparent)" }} />
+              </div>
+              <div className="absolute bottom-2 left-3 right-3 grid grid-cols-3 gap-1.5">
+                {["Birth", "Chart", "Ask"].map((label, index) => (
+                  <span key={label} className="rounded-full border px-2 py-1.5 text-center text-[8px] font-black uppercase tracking-[0.12em]" style={{ background: index === 0 ? ASTRO_TILE : "rgba(255,255,255,0.08)", borderColor: ASTRO_TILE_BORDER, color: index === 0 ? ASTRO_GOLD_BRIGHT : ASTRO_FAINT }}>
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          {studioItems.map((item) => {
+          {setupSteps.map((item, index) => {
             const Icon = item.icon;
+            const active = item.active || (!profile && index === 0);
             return (
-              <article key={item.label} className="rounded-[8px] border px-2 py-3 text-center" style={{ background: item.active ? ASTRO_TILE : ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
-                <Icon className="mx-auto" size={17} style={{ color: item.active ? ASTRO_AQUA : ASTRO_FAINT }} />
-                <p className="mt-2 text-[9px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>{item.label}</p>
-                <p className="mt-1 truncate text-[12px] font-black" style={{ color: item.active ? ASTRO_TEXT_STRONG : ASTRO_MUTED }}>{item.value}</p>
+              <article key={`${item.label}-${item.value}`} className="rounded-[16px] border px-2 py-2.5 text-center" style={{ background: active ? ASTRO_TILE : ASTRO_INNER, borderColor: active ? "color-mix(in srgb, var(--hint-gold-bright) 34%, var(--hint-control-border))" : ASTRO_TILE_BORDER }}>
+                <Icon className="mx-auto" size={16} style={{ color: active ? ASTRO_GOLD_BRIGHT : ASTRO_FAINT }} />
+                <p className="mt-2 text-[8px] font-black uppercase tracking-[0.13em]" style={{ color: ASTRO_FAINT }}>{item.label}</p>
+                <p className="mt-1 truncate text-[12px] font-black" style={{ color: active ? ASTRO_TEXT_STRONG : ASTRO_MUTED }}>{item.value}</p>
               </article>
             );
           })}
         </div>
+
+        <section className="rounded-[18px] border p-2.5" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+          <div className="grid grid-cols-[38px_minmax(0,1fr)] gap-3">
+            <span className="grid h-[38px] w-[38px] place-items-center rounded-[13px] border" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_AQUA }}>
+              <PreviewIcon size={18} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{previewCopy.eyebrow}</p>
+              <h3 className="mt-1 font-serif text-[20px] font-semibold leading-none" style={{ color: ASTRO_TEXT_STRONG }}>{previewCopy.title}</h3>
+              <p className="mt-1.5 text-[11px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{previewCopy.body}</p>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-1.5">
+            {previewCopy.rows.map((row) => (
+              <span key={row} className="truncate rounded-full border px-2 py-2 text-center text-[8px] font-black uppercase tracking-[0.08em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
+                {row}
+              </span>
+            ))}
+          </div>
+        </section>
 
         {liveError ? (
           <p className="rounded-[8px] border p-3 text-[12px] font-semibold" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_ROSE }}>
@@ -1852,22 +3348,18 @@ function AstrologyAccessGate({
         ) : null}
 
         <div className="grid gap-2">
-          {needsLogin ? (
-            <Link href="/app/login?mode=login" className="inline-flex h-12 items-center justify-center rounded-[8px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)]" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
-              Log in to continue
-            </Link>
-          ) : profile ? (
-            <button type="button" onClick={onPersonalize} disabled={!canPersonalize || personalizing} className="h-12 rounded-[8px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)] disabled:opacity-45" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
+          <span className="text-center text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>
+            {statusLabel}
+          </span>
+          {profile ? (
+            <button type="button" onClick={onPersonalize} disabled={!canPersonalize || personalizing} className="h-11 rounded-[16px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)] disabled:opacity-45" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
               {personalizing ? "Saving chart..." : "Calculate chart"}
             </button>
           ) : (
-            <button type="button" onClick={onAddProfile} className="h-12 rounded-[8px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)]" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
+            <button type="button" onClick={onAddProfile} className="h-11 rounded-[16px] px-5 text-[13px] font-black shadow-[var(--astro-button-shadow)]" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
               Add birth details
             </button>
           )}
-          <span className="text-center text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>
-            {needsLogin ? "Birth data is saved only after login" : hasSavedChart ? "Astrology studio is active" : "Local chart works now; live upgrades when configured"}
-          </span>
         </div>
       </div>
     </section>
@@ -2035,7 +3527,7 @@ function CoreSignatureRail({ chart, language }: { chart: NatalChart; language: H
 function PlanetDetailStrip({ chart, language, ui }: { chart: NatalChart; language: HintLanguage; ui: AstrologyUiCopy }) {
   const rows = wheelPlacementRows(chart, language, ui);
   return (
-    <div className="relative z-10 mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="relative z-10 mt-3 grid gap-2 min-[720px]:grid-cols-2 lg:grid-cols-3">
       {rows.map(({ placement, label, meta }) => (
         <article key={`${placement.body}-wheel-detail`} className="rounded-[8px] border px-3 py-2 backdrop-blur" style={{ background: ASTRO_CHART_HEADER, borderColor: ASTRO_TILE_BORDER }}>
           <div className="flex items-center gap-2">
@@ -2175,7 +3667,7 @@ function SignatureSelfPanel({
                     {placement ? BODY_MARKS[placement.body] : "?"}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-[9px] font-black uppercase tracking-[0.11em]" style={{ color: ASTRO_FAINT }}>{placement ? BODY_LENSES[placement.body].title : "Open"}</p>
+                    <p className="truncate text-[9px] font-black uppercase tracking-[0.11em]" style={{ color: ASTRO_FAINT }}>{placement ? BODY_LENSES[placement.body].title : "Pending"}</p>
                     <p className="mt-1 truncate text-[13px] font-black" style={{ color: ASTRO_TEXT }}>{placement ? signName(placement.sign, language) : ui.pending}</p>
                   </div>
                 </div>
@@ -2184,9 +3676,226 @@ function SignatureSelfPanel({
             ))}
           </div>
           <button type="button" onClick={onEditProfile} className="mt-3 inline-flex h-9 items-center gap-2 rounded-[8px] px-3 text-[12px] font-black shadow-[var(--astro-button-shadow)] transition-[transform,opacity] duration-200 hover:-translate-y-0.5" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
-            {previewMode ? "Add birth profile" : `Using ${profile?.birthDate ?? "saved birth profile"}`} <ChevronRight size={15} />
+            {profile ? `Using ${profile.birthDate}` : "Add birth data"} <ChevronRight size={15} />
           </button>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function PlacementIndexPanel({ chart, language, ui }: { chart: NatalChart; language: HintLanguage; ui: AstrologyUiCopy }) {
+  const houseFocus = chart.houses.filter((house) => house.sign || house.theme).slice(0, 4);
+
+  return (
+    <section className="rounded-[8px] border p-3 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_AQUA }}>Zodiac index</p>
+          <h2 className="mt-1 font-serif text-[21px] leading-tight" style={{ color: ASTRO_TEXT }}>Zodiac placements</h2>
+        </div>
+        <div className="flex shrink-0 gap-1 rounded-[8px] border p-1" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+          {["Signs", "Houses"].map((label, index) => (
+            <span
+              key={label}
+              className="rounded-[7px] px-2 py-1 text-[9px] font-black uppercase tracking-[0.1em]"
+              style={{ background: index === 0 ? ASTRO_BUTTON : "transparent", color: index === 0 ? ASTRO_BUTTON_TEXT : ASTRO_FAINT }}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="grid gap-2">
+        {PLACEMENT_INDEX_BODIES.map((body) => {
+          const placement = corePlacement(chart, body);
+          const color = BODY_COLORS[body];
+          return (
+            <article key={`${body}-placement-index`} className="rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+              <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-full text-[13px] font-black" style={{ background: `${color}22`, color }}>
+                  {bodySymbol(body, language)}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <h3 className="text-[15px] font-black leading-tight" style={{ color: ASTRO_TEXT_STRONG }}>
+                      {bodyName(body, language)} · {signName(placement?.sign, language)}
+                    </h3>
+                    <span className="rounded-[7px] border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color }}>
+                      {placement?.house ? `${ui.house} ${placement.house}` : ui.housePending}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>
+                    {BODY_LENSES[body].role}
+                    {typeof placement?.degree === "number" ? ` · ${Math.round(placement.degree)} deg` : ""}
+                  </p>
+                  <p className="mt-2 line-clamp-2 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>
+                    {placement?.meaning ?? ui.fullDataNeeded}
+                  </p>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      {houseFocus.length ? (
+        <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+          {houseFocus.map((house) => (
+            <article key={`house-focus-${house.house}`} className="min-w-0 rounded-[8px] border p-2.5" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER }}>
+              <p className="text-[8px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>{ui.house} {house.house}</p>
+              <p className="mt-1 truncate text-[13px] font-black" style={{ color: ASTRO_TEXT }}>{signName(house.sign, language)}</p>
+              {house.theme ? <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{house.theme}</p> : null}
+            </article>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function ZodiacStrengthSummaryPanel({ chart, language, ui }: { chart: NatalChart; language: HintLanguage; ui: AstrologyUiCopy }) {
+  const rows = zodiacStrengthRows(chart, language);
+  const receipts = topStrengthReceipts(chart).slice(0, 2);
+  const sun = corePlacement(chart, "sun");
+  const moon = corePlacement(chart, "moon");
+  const rising = corePlacement(chart, "rising");
+
+  return (
+    <section className="rounded-[8px] border p-3 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_PREMIUM_PANEL, borderColor: ASTRO_STROKE }}>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Top strengths</p>
+          <h2 className="mt-1 font-serif text-[23px] leading-tight" style={{ color: ASTRO_TEXT_STRONG }}>Strength snapshot</h2>
+        </div>
+        <span className="shrink-0 rounded-[8px] border px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ELEMENT_META[chart.elementBalance.dominant].color }}>
+          {traitPill(chart)}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        <article className="rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+          <p className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_FAINT }}>Top read</p>
+          <p className="mt-1 text-[14px] font-black leading-snug" style={{ color: ASTRO_TEXT }}>
+            {chartSignatureTitle(chart, language, ui)}
+          </p>
+          <p className="mt-2 line-clamp-3 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>
+            {chart.summary.short || chartSignatureLine(chart, ui)}
+          </p>
+        </article>
+
+        <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+          {[
+            { label: "Core", placement: sun, color: BODY_COLORS.sun },
+            { label: "Feeling", placement: moon, color: BODY_COLORS.moon },
+            { label: "Signal", placement: rising, color: BODY_COLORS.rising },
+            { label: "Mode", placement: undefined, color: MODALITY_META[chart.modalityBalance.dominant].color, value: MODALITY_META[chart.modalityBalance.dominant].label },
+          ].map((item) => (
+            <article key={item.label} className="min-w-0 rounded-[8px] border p-2.5" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER }}>
+              <p className="text-[8px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>{item.label}</p>
+              <p className="mt-1 truncate text-[13px] font-black" style={{ color: item.color }}>
+                {item.placement ? signName(item.placement.sign, language) : item.value}
+              </p>
+            </article>
+          ))}
+        </div>
+
+        <div className="rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_AQUA }}>Ability graph</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>summary only</p>
+          </div>
+          <div className="grid gap-2.5">
+            {rows.map((row) => (
+              <div key={row.label}>
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <p className="text-[11px] font-black" style={{ color: ASTRO_TEXT }}>{row.label}</p>
+                  <p className="truncate text-[10px] font-bold" style={{ color: row.color }}>{row.value}</p>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full" style={{ background: ASTRO_TILE }}>
+                  <div className="h-full rounded-full" style={{ width: `${row.score}%`, background: `linear-gradient(90deg, ${row.color}, ${ASTRO_TEXT_STRONG})` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-2 min-[720px]:grid-cols-2">
+          {receipts.map((line, index) => (
+            <p key={`${line}-${index}`} className="line-clamp-2 rounded-[8px] border px-3 py-2 text-[11px] font-semibold leading-snug" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_MUTED }}>
+              <span className="mr-2 font-black" style={{ color: ASTRO_GOLD_BRIGHT }}>{String(index + 1).padStart(2, "0")}</span>
+              {line}
+            </p>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TraditionLayerPanel() {
+  const layers = [
+    {
+      label: "星宿",
+      title: "28 lunar mansions",
+      status: "Optional",
+      body: "Good as a cultural side layer: mansion, daily mansion, relationship tone, and low-stakes ritual prompts.",
+      color: ASTRO_AQUA,
+      icon: Radar,
+    },
+    {
+      label: "值日星宿",
+      title: "Day mansion",
+      status: "Today layer",
+      body: "Useful for a daily card like good-for / avoid. It should stay reflective, not deterministic fortune.",
+      color: ASTRO_GOLD_BRIGHT,
+      icon: CalendarDays,
+    },
+    {
+      label: "紫微",
+      title: "Zi Wei palaces",
+      status: "Later",
+      body: "Worth adding only with a real Zi Wei engine. It is a separate 12-palace system, not another zodiac placement.",
+      color: "var(--astro-lavender)",
+      icon: Compass,
+    },
+  ];
+
+  return (
+    <section className="rounded-[8px] border p-3 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_FAINT }}>Side layers</p>
+          <h2 className="mt-1 font-serif text-[21px] leading-tight" style={{ color: ASTRO_TEXT }}>星宿 & 紫微</h2>
+        </div>
+        <span className="shrink-0 rounded-[8px] border px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_AQUA }}>
+          not core chart
+        </span>
+      </div>
+      <p className="rounded-[8px] border px-3 py-2 text-[12px] font-semibold leading-snug" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_MUTED }}>
+        Keep Western chart, Zodiac placements, and Today as the primary Hint astrology flow. Add Chinese systems as optional report lenses only when the calculation source is explicit.
+      </p>
+      <div className="mt-3 grid gap-2">
+        {layers.map((layer) => {
+          const Icon = layer.icon;
+          return (
+            <article key={layer.label} className="rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+              <div className="grid grid-cols-[38px_minmax(0,1fr)] gap-2.5">
+                <span className="grid h-9 w-9 place-items-center rounded-[8px] border" style={{ background: `${layer.color}20`, borderColor: `${layer.color}55`, color: layer.color }}>
+                  <Icon size={16} />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <h3 className="text-[14px] font-black leading-tight" style={{ color: ASTRO_TEXT_STRONG }}>{layer.label} · {layer.title}</h3>
+                    <span className="rounded-[7px] border px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: layer.color }}>
+                      {layer.status}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-[11px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{layer.body}</p>
+                </div>
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -2263,7 +3972,7 @@ function StarSecretPanel({ chart, language, ui }: { chart: NatalChart; language:
       <p className="mt-4 rounded-[8px] border p-4 text-[15px] font-black leading-relaxed" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
         {ui.codeSummary}
       </p>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-5 grid gap-3 min-[720px]:grid-cols-2">
         {cards.map((card) => (
           <article key={card.title} className="rounded-[8px] border p-4" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
             <div className="flex items-center gap-3">
@@ -2309,7 +4018,7 @@ function AstroCodePanel({ chart, language, ui }: { chart: NatalChart; language: 
           {fitSigns.join(" / ")}
         </span>
       </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-5 grid gap-3 min-[720px]:grid-cols-2 lg:grid-cols-3">
         {codeCards.map(({ label, subtitle, placement, body, value, line }) => (
           <article key={label} className="relative overflow-hidden rounded-[8px] border p-4" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
             <div className="absolute right-3 top-3 h-12 w-12 rounded-full opacity-20" style={{ background: placement ? BODY_COLORS[body] : ASTRO_GOLD }} />
@@ -2397,7 +4106,7 @@ function SocialPlanetsPanel({ chart, language, ui }: { chart: NatalChart; langua
           <h2 className="mt-2 font-serif text-[24px] leading-tight" style={{ color: ASTRO_TEXT }}>{ui.socialPlanetsTitle}</h2>
         </div>
       </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-5 grid gap-3 min-[720px]:grid-cols-2 lg:grid-cols-5">
         {SOCIAL_PLANETS.map((body) => {
           const placement = corePlacement(chart, body);
           const color = BODY_COLORS[body];
@@ -2486,14 +4195,14 @@ function PremiumChartHero({
   const quickFacts = [
     { label: "Element", value: titleCase(chart.elementBalance.dominant), icon: Activity, color: ELEMENT_META[chart.elementBalance.dominant].color },
     { label: "Mode", value: titleCase(chart.modalityBalance.dominant), icon: Compass, color: MODALITY_META[chart.modalityBalance.dominant].color },
-    { label: "Aspect", value: strongestAspect ? `${bodyLabel(strongestAspect.from)} ${strongestAspect.type}` : "Open", icon: CircleDot, color: ASTRO_AQUA },
+    { label: "Aspect", value: strongestAspect ? `${bodyLabel(strongestAspect.from)} ${strongestAspect.type}` : "Pending", icon: CircleDot, color: ASTRO_AQUA },
   ];
 
   return (
     <section className="relative overflow-hidden rounded-[8px] border p-3 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_PREMIUM_PANEL, borderColor: ASTRO_STROKE }}>
       <div className="pointer-events-none absolute inset-0 opacity-80" style={{ background: `radial-gradient(circle at 18% 18%, ${ASTRO_GOLD_BRIGHT}, transparent 28%), radial-gradient(circle at 82% 20%, ${ASTRO_AQUA}, transparent 32%), radial-gradient(circle at 72% 82%, ${ASTRO_ROSE}, transparent 30%)`, opacity: 0.14 }} />
       <div className="relative grid gap-3">
-        <div className="grid grid-cols-[minmax(0,1fr)_118px] items-start gap-3 min-[390px]:grid-cols-[minmax(0,1fr)_136px]">
+        <div className="grid grid-cols-[minmax(0,1fr)_118px] items-start gap-3 min-[720px]:grid-cols-[minmax(0,1fr)_136px]">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1.5 rounded-[8px] border px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_STROKE, color: ASTRO_GOLD_BRIGHT }}>
@@ -2516,7 +4225,7 @@ function PremiumChartHero({
           {trio.map((placement) => (
             <article key={placement?.body ?? "open"} className="min-w-0 rounded-[8px] border px-2.5 py-2" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER }}>
               <p className="truncate text-[8px] font-black uppercase tracking-[0.11em]" style={{ color: ASTRO_FAINT }}>
-                {placement ? bodyName(placement.body, language) : "Open"}
+                {placement ? bodyName(placement.body, language) : "Pending"}
               </p>
               <p className="mt-1 truncate text-[14px] font-black leading-none" style={{ color: placement ? BODY_COLORS[placement.body] : ASTRO_GOLD_BRIGHT }}>
                 {placement ? signName(placement.sign, language) : ui.pending}
@@ -2604,7 +4313,7 @@ function LiveNatalControl({
             {sourceLabel}
           </p>
           <p className="mt-1 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>
-            {live ? `Live chart loaded${natalResponse?.cached ? " from cache" : ""}.` : natalResponse ? "Local fallback is saved and usable until provider credentials are added." : liveProfileHint(profile)}
+            {live ? `Live chart loaded${natalResponse?.cached ? " from cache" : ""}.` : natalResponse ? "Your saved chart preview is ready to use." : liveProfileHint(profile)}
           </p>
           {error ? <p className="mt-2 text-[12px] font-semibold" style={{ color: ASTRO_ROSE }}>{error}</p> : null}
         </div>
@@ -2623,6 +4332,99 @@ function LiveNatalControl({
             Add birth details
           </button>
         )}
+      </div>
+    </section>
+  );
+}
+
+function ChartFocusPanel({
+  chart,
+  language,
+  ui,
+  providerLabel,
+  onKnowMore,
+}: {
+  chart: NatalChart;
+  language: HintLanguage;
+  ui: AstrologyUiCopy;
+  providerLabel: string;
+  onKnowMore: () => void;
+}) {
+  const headline = chartSignatureTitle(chart, language, ui);
+  const coreRows = (["sun", "moon", "rising"] as PlanetBody[]).map((body) => {
+    const placement = corePlacement(chart, body);
+    return {
+      body,
+      label: bodyName(body, language),
+      value: signName(placement?.sign, language),
+      detail: placement?.house ? `House ${placement.house}` : "Placement",
+      color: BODY_COLORS[body],
+    };
+  });
+  const strengthReceipts = topStrengthReceipts(chart).slice(0, 2);
+
+  return (
+    <section className="rounded-[8px] border p-3 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_PREMIUM_PANEL, borderColor: ASTRO_STROKE }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_AQUA }}>Birth chart</p>
+          <h1 className="mt-1 font-serif text-[23px] leading-tight" style={{ color: ASTRO_TEXT_STRONG }}>{headline}</h1>
+          <p className="mt-2 line-clamp-2 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{chart.summary.short}</p>
+        </div>
+        <span className="shrink-0 rounded-[8px] border px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_GOLD_BRIGHT }}>
+          {providerLabel}
+        </span>
+      </div>
+
+      <div className="mt-3 rounded-[8px] border p-2" style={{ background: ASTRO_CHART_PANEL, borderColor: ASTRO_TILE_BORDER }}>
+        <div className="relative grid min-h-[220px] place-items-center overflow-hidden rounded-[8px]" style={{ background: ASTRO_CHART_HEADER }}>
+          <AstroWheel chart={chart} language={language} className="aspect-square w-full max-w-[232px]" />
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+        {coreRows.map((item) => (
+          <article key={item.body} className="min-w-0 rounded-[8px] border px-2.5 py-2" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+            <p className="truncate text-[8px] font-black uppercase tracking-[0.1em]" style={{ color: ASTRO_FAINT }}>{item.label}</p>
+            <p className="mt-1 truncate text-[14px] font-black leading-none" style={{ color: item.color }}>{item.value}</p>
+            <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-[0.08em]" style={{ color: ASTRO_FAINT }}>{item.detail}</p>
+          </article>
+        ))}
+      </div>
+
+      <div className="mt-3 rounded-[8px] border p-2.5" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Top strengths</p>
+          <p className="truncate text-[9px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>{traitPill(chart)}</p>
+        </div>
+        <div className="grid gap-1.5">
+          {strengthReceipts.map((line, index) => (
+            <p key={`${line}-${index}`} className="line-clamp-2 rounded-[7px] border px-2.5 py-2 text-[11px] font-semibold leading-snug" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
+              <span className="mr-2 font-black" style={{ color: ASTRO_AQUA }}>{index + 1}</span>
+              {line}
+            </p>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 min-[720px]:grid-cols-2">
+        <Link
+          href="/app/ask"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] px-4 text-[12px] font-black shadow-[var(--astro-button-shadow)]"
+          style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}
+        >
+          <Sparkles size={15} />
+          Ask Hint
+        </Link>
+        <button
+          type="button"
+          onClick={onKnowMore}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] border px-4 text-[12px] font-black"
+          style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+        >
+          View chart details
+          <ChevronRight size={15} />
+        </button>
       </div>
     </section>
   );
@@ -2653,30 +4455,87 @@ function ChartSection({
   onAddProfile: () => void;
   onPersonalize: () => void;
 }) {
-  const providerLabel = previewMode ? (profile ? "Profile preview" : "Sample chart") : chartSourceLabel(natalResponse, chart);
+  const providerLabel = previewMode ? (profile ? "Profile preview" : "Example chart") : chartSourceLabel(natalResponse, chart);
   const partialMessage = chart.validation?.message ?? "Sun and planet signs can be previewed. Rising sign and houses need birth time and location.";
   const rankedAspects = [...chart.aspects].sort((a, b) => (b.strength ?? 0) - (a.strength ?? 0) || (a.orb ?? 99) - (b.orb ?? 99));
   const visibleAspects = rankedAspects.slice(0, 5);
   const hiddenAspects = rankedAspects.slice(5);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const chartRuler = chartRulerPlacement(chart);
+  const chartModules: AstroModuleItem[] = [
+    {
+      label: "Sky identity",
+      value: chartSignatureTitle(chart, language, ui),
+      note: "Big Three first, because this is the fastest orientation.",
+      color: ASTRO_GOLD_BRIGHT,
+    },
+    {
+      label: "Chart wheel",
+      value: chart.validation?.partial ? "Partial wheel" : "12 houses",
+      note: chart.validation?.partial ? "Birth time and place sharpen houses." : "The wheel stays the source map.",
+      color: ASTRO_AQUA,
+    },
+    {
+      label: "Placements",
+      value: `${chart.placements.length} bodies`,
+      note: "Planet-by-planet plain language stays available below.",
+      color: "var(--astro-lavender)",
+    },
+    {
+      label: "Houses",
+      value: chart.validation?.partial ? "Needs time" : "Ready",
+      note: "Houses explain where each placement shows up.",
+      color: ASTRO_ROSE,
+    },
+    {
+      label: "Aspects",
+      value: strongestAspectLine(chart),
+      note: "Strong patterns are ranked before the full list.",
+      color: ASTRO_AQUA,
+    },
+    {
+      label: "Elements",
+      value: `${titleCase(chart.elementBalance.dominant)} / ${titleCase(chart.modalityBalance.dominant)}`,
+      note: "Balance shows the overall temperament of the chart.",
+      color: ELEMENT_META[chart.elementBalance.dominant].color,
+    },
+    {
+      label: "Chart ruler",
+      value: chartRuler ? chartRulerLine(chart, language) : "Rising needed",
+      note: "A quick handle for how the whole chart tends to steer.",
+      color: chartRuler ? BODY_COLORS[chartRuler.body] : ASTRO_FAINT,
+    },
+    {
+      label: "Patterns",
+      value: retrogradeLine(chart),
+      note: "Retrogrades and clusters stay as context, not verdicts.",
+      color: ASTRO_GOLD,
+    },
+  ];
 
   return (
     <section className="grid gap-4">
-      <PremiumChartHero chart={chart} previewMode={previewMode} profile={profile} providerLabel={providerLabel} language={language} ui={ui} onAddProfile={onAddProfile} strongestAspect={visibleAspects[0]} />
-      <ChartGraphPanel chart={chart} language={language} ui={ui} />
-      <LiveNatalControl profile={profile} canRun={canPersonalize} loading={personalizing} error={liveError} natalResponse={natalResponse} onAddProfile={onAddProfile} onRun={onPersonalize} />
-      <details className="rounded-[8px] border p-3.5 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <ChartFocusPanel chart={chart} language={language} ui={ui} providerLabel={providerLabel} onKnowMore={() => setDetailsOpen(true)} />
+      <AstroModuleMap eyebrow="Chart system" title="What this chart contains" items={chartModules} />
+      <details
+        open={detailsOpen}
+        onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
+        className="rounded-[8px] border p-3.5 shadow-[var(--astro-shadow-soft)]"
+        style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}
+      >
         <summary className="cursor-pointer list-none">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Analysis layers</p>
-              <p className="mt-1 text-[13px] font-black" style={{ color: ASTRO_TEXT }}>Placements, aspects, elements, houses</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Chart details</p>
+              <p className="mt-1 text-[13px] font-black" style={{ color: ASTRO_TEXT }}>Wheel, placements, houses, aspects</p>
             </div>
             <span className="rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_FAINT }}>
-              Expand
+              {detailsOpen ? "Hide" : "View"}
             </span>
           </div>
         </summary>
         <div className="mt-4 grid gap-4">
+          <LiveNatalControl profile={profile} canRun={canPersonalize} loading={personalizing} error={liveError} natalResponse={natalResponse} onAddProfile={onAddProfile} onRun={onPersonalize} />
           <AstroCodePanel chart={chart} language={language} ui={ui} />
           <ElementSignaturePanel chart={chart} ui={ui} />
           <SocialPlanetsPanel chart={chart} language={language} ui={ui} />
@@ -2717,7 +4576,7 @@ function ChartSection({
           <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
             <section className="rounded-[8px] border p-4 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
               <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_GOLD }}>Planet placements</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 min-[720px]:grid-cols-2">
                 {chart.placements.map((placement) => (
                   <PlacementRow key={placement.body} placement={placement} />
                 ))}
@@ -2790,6 +4649,148 @@ function TransitTimelineVisual({ rows, startDate }: { rows: NormalizedTransit[];
   );
 }
 
+function transitStrengthPercent(transit: NormalizedTransit | undefined, index = 0) {
+  const raw = typeof transit?.strength === "number" ? transit.strength : 72 - index * 8;
+  return Math.max(32, Math.min(100, Math.round(raw)));
+}
+
+function formatTransitDate(value?: string) {
+  if (!value) return "Today";
+  return dateFromInputValue(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function TransitSignalGraph({ rows, strongest }: { rows: NormalizedTransit[]; strongest: NormalizedTransit }) {
+  const ranked = rows.slice(0, 4);
+  return (
+    <section className="rounded-[8px] border p-3 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Signal map</p>
+          <h3 className="mt-1 truncate font-serif text-[21px] leading-tight" style={{ color: ASTRO_TEXT }}>What matters first</h3>
+        </div>
+        <span className="rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.11em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_AQUA }}>
+          Ranked
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2.5">
+        {ranked.map((transit, index) => {
+          const percent = transitStrengthPercent(transit, index);
+          const active = transit.id === strongest.id;
+          return (
+            <article key={transit.id} className="grid gap-2">
+              <div className="grid grid-cols-[22px_minmax(0,1fr)_42px] items-center gap-2">
+                <span className="grid h-6 w-6 place-items-center rounded-full text-[10px] font-black" style={{ background: active ? ASTRO_BUTTON : ASTRO_TILE, color: active ? ASTRO_BUTTON_TEXT : ASTRO_MUTED }}>
+                  {index + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-[12px] font-black leading-tight" style={{ color: active ? ASTRO_TEXT_STRONG : ASTRO_TEXT }}>{transit.title}</p>
+                  <p className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: ASTRO_FAINT }}>
+                    {formatTransitDate(transit.peakDate ?? transit.startDate)} · {transit.area.slice(0, 2).join(" / ")}
+                  </p>
+                </div>
+                <p className="text-right text-[11px] font-black tabular-nums" style={{ color: astroColor(index) }}>{percent}%</p>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full" style={{ background: ASTRO_INPUT }}>
+                <div className="h-full rounded-full" style={{ width: `${percent}%`, background: `linear-gradient(90deg, ${astroColor(index)}, rgba(255,255,255,0.82))` }} />
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function moonPhaseForDate(value: string) {
+  const date = dateFromInputValue(value);
+  const knownNewMoon = new Date(2000, 0, 6, 18, 14).getTime();
+  const lunarCycle = 29.530588853;
+  const days = (date.getTime() - knownNewMoon) / 86400000;
+  const age = ((days % lunarCycle) + lunarCycle) % lunarCycle;
+  const phaseIndex = Math.floor(((age / lunarCycle) * 8) + 0.5) % 8;
+  const phases = [
+    { label: "New Moon", note: "Start quietly and set a clean intention." },
+    { label: "Waxing Crescent", note: "Build one small proof before pushing harder." },
+    { label: "First Quarter", note: "Choose the action that breaks the stall." },
+    { label: "Waxing Gibbous", note: "Refine the plan before it becomes public." },
+    { label: "Full Moon", note: "Notice what is visible, emotional, or ready to peak." },
+    { label: "Waning Gibbous", note: "Share the lesson and keep what still works." },
+    { label: "Last Quarter", note: "Release the old pattern before choosing again." },
+    { label: "Waning Crescent", note: "Rest, close loops, and let the signal settle." },
+  ];
+  return {
+    ...phases[phaseIndex],
+    percent: Math.round((age / lunarCycle) * 100),
+  };
+}
+
+function TodayDoAvoidCards({ strongest }: { strongest: NormalizedTransit }) {
+  const focus = strongest.area[0] ?? strongest.theme[0] ?? "the signal";
+  const avoid = `Do not force certainty around ${focus.toLowerCase()}. Let the chart point to the cleaner next question.`;
+  return (
+    <section className="grid min-w-0 gap-2 min-[720px]:grid-cols-2">
+      <article className="min-w-0 rounded-[8px] border p-3" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+        <p className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_AQUA }}>Do</p>
+        <p className="mt-2 text-[13px] font-black leading-snug" style={{ color: ASTRO_TEXT }}>{strongest.action}</p>
+      </article>
+      <article className="min-w-0 rounded-[8px] border p-3" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+        <p className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_ROSE }}>Avoid</p>
+        <p className="mt-2 text-[13px] font-black leading-snug" style={{ color: ASTRO_TEXT }}>{avoid}</p>
+      </article>
+    </section>
+  );
+}
+
+function MoonPhaseTimingCard({ date, strongest }: { date: string; strongest: NormalizedTransit }) {
+  const phase = moonPhaseForDate(date);
+  return (
+    <section className="min-w-0 rounded-[8px] border p-3 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_GOLD_BRIGHT }}>Moon phase</p>
+          <h3 className="mt-1 font-serif text-[22px] leading-tight" style={{ color: ASTRO_TEXT }}>{phase.label}</h3>
+          <p className="mt-2 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{phase.note}</p>
+        </div>
+        <div className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full border" style={{ background: ASTRO_CHART_PANEL, borderColor: ASTRO_TILE_BORDER }}>
+          <div className="absolute inset-2 rounded-full" style={{ background: `conic-gradient(${ASTRO_AQUA} ${phase.percent}%, ${ASTRO_INPUT} 0)` }} />
+          <div className="relative grid h-12 w-12 place-items-center rounded-full text-[12px] font-black" style={{ background: ASTRO_TILE, color: ASTRO_TEXT }}>
+            {phase.percent}%
+          </div>
+        </div>
+      </div>
+      <p className="mt-3 rounded-[8px] border px-3 py-2 text-[11px] font-semibold leading-snug" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_MUTED }}>
+        Timing lens: {strongest.title}. Moon phase is shown as a reflection cue, not a prediction.
+      </p>
+    </section>
+  );
+}
+
+function SevenDayForecastPreview({ rows, startDate }: { rows: NormalizedTransit[]; startDate: string }) {
+  const visible = buildTransitWindow(rows, startDate);
+  return (
+    <section className="min-w-0 rounded-[8px] border p-3 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_AQUA }}>7-day forecast</p>
+          <h3 className="mt-1 font-serif text-[21px] leading-tight" style={{ color: ASTRO_TEXT }}>Upcoming signal window</h3>
+        </div>
+        <span className="rounded-[8px] border px-2.5 py-1.5 text-[8px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_FAINT }}>
+          Preview
+        </span>
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {visible.map((transit, index) => (
+          <article key={`${transit.id}-${transit.timelineDate}-preview`} className="min-h-[116px] w-[118px] shrink-0 rounded-[8px] border p-2.5" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+            <p className="text-[9px] font-black uppercase tracking-[0.12em]" style={{ color: astroColor(index) }}>{formatTransitDate(transit.timelineDate)}</p>
+            <p className="mt-2 line-clamp-2 text-[12px] font-black leading-tight" style={{ color: ASTRO_TEXT }}>{transit.title}</p>
+            <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{transit.area.slice(0, 2).join(" / ")}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function TransitsSection({
   transits,
   previewMode,
@@ -2822,103 +4823,111 @@ function TransitsSection({
     day: "numeric",
     year: "numeric",
   });
+  const strongestStrength = transitStrengthPercent(strongest);
+  const sourceLive = transits?.source === "astrologyapi";
 
   return (
-    <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="min-w-0 rounded-[8px] border p-4 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_HERO, borderColor: ASTRO_BORDER }}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="font-sans text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{previewMode ? "Sample transits" : "Transit focus"}</p>
-          <span className="rounded-[8px] border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: transits?.source === "astrologyapi" ? ASTRO_AQUA : ASTRO_FAINT }}>{transitSourceLabel(transits)}</span>
-        </div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
-          <div>
-            <h2 className="font-serif text-[24px] leading-tight" style={{ color: ASTRO_TEXT }}>{strongest.title}</h2>
-            <p className="mt-2 max-w-2xl text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>{strongest.action}</p>
+    <section className="grid min-w-0 gap-3">
+      <section className="relative min-w-0 overflow-hidden rounded-[8px] border p-3 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_HERO, borderColor: ASTRO_BORDER }}>
+        <div className="pointer-events-none absolute inset-0 opacity-70" style={{ background: `radial-gradient(circle at 18% 8%, ${ASTRO_GOLD_BRIGHT}, transparent 26%), radial-gradient(circle at 92% 18%, ${ASTRO_AQUA}, transparent 30%)`, opacity: 0.12 }} />
+        <div className="relative">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-sans text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{previewMode ? "Today preview" : "Today timing"}</p>
+            <span className="shrink-0 rounded-[8px] border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.11em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: sourceLive ? ASTRO_AQUA : ASTRO_FAINT }}>{transitSourceLabel(transits)}</span>
           </div>
-          <div className="rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
-            <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_FAINT }}>Current window</p>
-            <p className="mt-1 text-[18px] font-black" style={{ color: ASTRO_AQUA }}>{selectedDateLabel}</p>
-            <p className="mt-1 text-[12px] font-semibold" style={{ color: ASTRO_MUTED }}>{rows.length} signals ranked</p>
-          </div>
-        </div>
-        <div className="mt-4">
-          <TransitTimelineVisual rows={rows} startDate={date} />
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {[...strongest.area, ...strongest.theme].map((tag) => (
-            <span key={tag} className="rounded-[8px] border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_GOLD_BRIGHT }}>{tag}</span>
-          ))}
-        </div>
-        <details className="mt-4 rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
-          <summary className="cursor-pointer text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_FAINT }}>Why</summary>
-          <p className="mt-2 text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_TEXT }}>{strongest.why}</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {strongest.evidence.map((item) => (
-              <p key={item} className="rounded-[8px] border px-3 py-2 text-[12px] font-semibold" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_MUTED }}>{item}</p>
-            ))}
-          </div>
-        </details>
-        <div className="mt-4 rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <div>
-              <p className="text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>{canLoadLive ? "Choose any date, then generate live transits for that day." : liveProfileHint(profile)}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onDateChange(shiftDateInputValue(date, -1))}
-                  aria-label="Previous transit day"
-                  className="grid size-10 place-items-center rounded-[8px] border"
-                  style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <label className="flex min-h-10 min-w-[210px] items-center gap-2 rounded-[8px] border px-3" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
-                  <CalendarDays size={15} style={{ color: ASTRO_GOLD_BRIGHT }} />
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(event) => onDateChange(event.target.value)}
-                    className="min-w-0 flex-1 bg-transparent text-[13px] font-black outline-none"
-                    style={{ color: ASTRO_TEXT, colorScheme: "dark" }}
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => onDateChange(shiftDateInputValue(date, 1))}
-                  aria-label="Next transit day"
-                  className="grid size-10 place-items-center rounded-[8px] border"
-                  style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
-                >
-                  <ChevronRight size={16} />
-                </button>
-                <span className="rounded-[8px] border px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_FAINT }}>
-                  {selectedDateLabel}
-                </span>
-              </div>
-            </div>
-            <button type="button" onClick={onLoadLive} disabled={!canLoadLive || loading} className="h-11 shrink-0 rounded-[8px] px-5 text-[13px] font-black disabled:opacity-45" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
-              {loading ? "Generating transits..." : "Generate transits"}
+          <h2 className="mt-3 font-serif text-[25px] leading-[1.05]" style={{ color: ASTRO_TEXT_STRONG }}>{strongest.title}</h2>
+          <p className="mt-2 text-[13px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{strongest.action}</p>
+
+          <div className="mt-3 grid grid-cols-[40px_minmax(0,1fr)_40px] items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onDateChange(shiftDateInputValue(date, -1))}
+              aria-label="Previous transit day"
+              className="grid size-10 place-items-center rounded-[8px] border"
+              style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <label className="flex min-h-10 min-w-0 items-center gap-2 rounded-[8px] border px-3" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}>
+              <CalendarDays size={15} style={{ color: ASTRO_GOLD_BRIGHT }} />
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => onDateChange(event.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-[13px] font-black outline-none"
+                style={{ color: ASTRO_TEXT, colorScheme: "dark" }}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => onDateChange(shiftDateInputValue(date, 1))}
+              aria-label="Next transit day"
+              className="grid size-10 place-items-center rounded-[8px] border"
+              style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+            >
+              <ChevronRight size={16} />
             </button>
           </div>
-          {error ? <p className="mt-2 text-[12px] font-semibold" style={{ color: ASTRO_ROSE }}>{error}</p> : null}
-        </div>
-      </div>
-      <aside className="grid min-w-0 gap-4">
-        <AstroFoldout eyebrow="Sky visual" title="Real sky today and local fallback">
-          <RealSkyTodayCard onModeChange={onNasaMode} />
-        </AstroFoldout>
-        <AstroFoldout eyebrow="7-day window" title="Transit list by day">
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-            {transitWindow.map((transit, index) => (
-              <article key={`${transit.title}-${transit.timelineDate}`} className="rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
-                <div className="mb-2 h-1 rounded-full" style={{ background: `linear-gradient(90deg, ${astroColor(index)}, transparent)` }} />
-                <p className="text-[13px] font-black leading-tight" style={{ color: ASTRO_TEXT }}>{transit.title}</p>
-                <p className="mt-1 text-[11px] font-semibold" style={{ color: ASTRO_MUTED }}>{transit.timelineDate} · {transit.area.join(", ")}</p>
-              </article>
+
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_104px] gap-2">
+            <div className="min-w-0 rounded-[8px] border px-3 py-2" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+              <p className="text-[9px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>Current window</p>
+              <p className="mt-1 truncate text-[13px] font-black" style={{ color: ASTRO_TEXT }}>{selectedDateLabel}</p>
+            </div>
+            <div className="rounded-[8px] border px-3 py-2 text-right" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+              <p className="text-[9px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>Signal</p>
+              <p className="mt-1 text-[17px] font-black tabular-nums" style={{ color: ASTRO_AQUA }}>{strongestStrength}%</p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {[...strongest.area, ...strongest.theme].slice(0, 5).map((tag) => (
+              <span key={tag} className="rounded-[8px] border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_GOLD_BRIGHT }}>{tag}</span>
             ))}
           </div>
-        </AstroFoldout>
-      </aside>
+
+          <div className="mt-3">
+            <TodayDoAvoidCards strongest={strongest} />
+          </div>
+
+          <button type="button" onClick={onLoadLive} disabled={!canLoadLive || loading} className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[8px] px-5 text-[12px] font-black disabled:opacity-45" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
+            <RefreshCw size={14} />
+            {loading ? "Checking timing..." : sourceLive ? "Refresh live timing" : "Check live timing"}
+          </button>
+          {error ? <p className="mt-2 text-[12px] font-semibold" style={{ color: ASTRO_ROSE }}>{error}</p> : null}
+          {!canLoadLive ? <p className="mt-2 text-[11px] font-semibold" style={{ color: ASTRO_MUTED }}>{liveProfileHint(profile)}</p> : null}
+        </div>
+      </section>
+
+      <TransitSignalGraph rows={rows} strongest={strongest} />
+      <MoonPhaseTimingCard date={date} strongest={strongest} />
+      <SevenDayForecastPreview rows={rows} startDate={date} />
+
+      <AstroFoldout eyebrow="Why this matters" title="Evidence behind the timing">
+        <p className="text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_TEXT }}>{strongest.why}</p>
+        <div className="mt-3 grid gap-2">
+          {strongest.evidence.map((item) => (
+            <p key={item} className="rounded-[8px] border px-3 py-2 text-[12px] font-semibold" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_MUTED }}>{item}</p>
+          ))}
+        </div>
+      </AstroFoldout>
+
+      <AstroFoldout eyebrow="7-day window" title="Transit path">
+        <TransitTimelineVisual rows={rows} startDate={date} />
+        <div className="mt-3 grid gap-2">
+          {transitWindow.slice(0, 4).map((transit, index) => (
+            <article key={`${transit.title}-${transit.timelineDate}`} className="rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+              <div className="mb-2 h-1 rounded-full" style={{ background: `linear-gradient(90deg, ${astroColor(index)}, transparent)` }} />
+              <p className="text-[13px] font-black leading-tight" style={{ color: ASTRO_TEXT }}>{transit.title}</p>
+              <p className="mt-1 text-[11px] font-semibold" style={{ color: ASTRO_MUTED }}>{transit.timelineDate} · {transit.area.join(", ")}</p>
+            </article>
+          ))}
+        </div>
+      </AstroFoldout>
+
+      <AstroFoldout eyebrow="Sky visual" title="Real sky today and saved preview">
+        <RealSkyTodayCard onModeChange={onNasaMode} />
+      </AstroFoldout>
     </section>
   );
 }
@@ -2931,7 +4940,7 @@ function BalanceCard({ title, rows, note }: { title: string; rows: Array<[string
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.18em]" style={{ color: ASTRO_GOLD_BRIGHT }}>{title}</p>
-          <h3 className="mt-2 font-serif text-[24px] leading-none" style={{ color: ASTRO_TEXT }}>{dominant?.[0] ?? "Open"}</h3>
+          <h3 className="mt-2 font-serif text-[24px] leading-none" style={{ color: ASTRO_TEXT }}>{dominant?.[0] ?? "Pending"}</h3>
         </div>
         <div className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${rows.map(([label, value], index) => `${balanceColor(label)} ${index * 25}% ${Math.min(100, index * 25 + (value / Math.max(rows.reduce((sum, [, rowValue]) => sum + rowValue, 1), 1)) * 100)}%`).join(", ")}, ${ASTRO_TILE} 0)`, boxShadow: `inset 0 0 0 1px ${ASTRO_TILE_BORDER}` }}>
           <div className="grid h-14 w-14 place-items-center rounded-full text-[18px] font-black" style={{ background: ASTRO_CHART_HEADER, color: ASTRO_TEXT }}>
@@ -2989,12 +4998,25 @@ function AspectCard({ aspect }: { aspect: NatalChart["aspects"][number] }) {
   );
 }
 
+function birthAccuracyStatus(profile: BirthProfile | null) {
+  if (!profile) return { label: "No profile", value: "Birth details needed", ready: false };
+  const hasTime = Boolean(profile.birthTime);
+  const hasPlace = profile.latitude !== undefined && profile.longitude !== undefined;
+  const hasTimezone = profile.timezoneOffset !== undefined;
+  if (hasTime && hasPlace && hasTimezone) return { label: "High confidence", value: "Rising sign and houses ready", ready: true };
+  if (!hasTime) return { label: "Unknown birth time mode", value: "Sun and planets only", ready: false };
+  if (!hasPlace || !hasTimezone) return { label: "Place/timezone needed", value: "Houses stay approximate", ready: false };
+  return { label: "Partial profile", value: "Chart preview only", ready: false };
+}
+
 function BirthDataVisual({ profile }: { profile: BirthProfile | null }) {
   const ready = Boolean(profile?.birthTime && profile.latitude !== undefined && profile.longitude !== undefined && profile.timezoneOffset !== undefined);
+  const accuracy = birthAccuracyStatus(profile);
   const facts = [
     { icon: CalendarDays, label: "Date", value: profile?.birthDate ?? "Needed" },
     { icon: Compass, label: "Time", value: profile?.birthTime ?? "Needed" },
     { icon: MapPin, label: "Location", value: profile?.latitude !== undefined && profile.longitude !== undefined ? "Coordinates saved" : "Needed" },
+    { icon: Radar, label: "Timezone", value: profile?.timezone ?? (profile?.timezoneOffset !== undefined ? `UTC ${profile.timezoneOffset >= 0 ? "+" : ""}${profile.timezoneOffset}` : "Needed") },
   ];
 
   return (
@@ -3007,11 +5029,79 @@ function BirthDataVisual({ profile }: { profile: BirthProfile | null }) {
       <p className="mt-2 max-w-xl pr-14 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>
         {ready ? "Time, location, and timezone are saved, so rising sign and houses can be calculated." : liveProfileHint(profile)}
       </p>
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        {facts.map(({ icon: Icon, label, value }, index) => (
+      <div className="mt-3 rounded-[8px] border px-3 py-2" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+        <p className="text-[9px] font-black uppercase tracking-[0.12em]" style={{ color: accuracy.ready ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }}>Chart accuracy status</p>
+        <p className="mt-1 text-[13px] font-black" style={{ color: ASTRO_TEXT }}>{accuracy.label} · {accuracy.value}</p>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-4">
+        {facts.map(({ icon: Icon, label, value }) => (
           <div key={label} className="rounded-[8px] border p-2.5" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
             <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}><Icon size={12} /> {label}</p>
             <p className="mt-1 text-[14px] font-black" style={{ color: ASTRO_TEXT }}>{value}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DataTrustPanel({
+  profile,
+  chart,
+  natalResponse,
+  nasaMode,
+  gptMode,
+}: {
+  profile: BirthProfile | null;
+  chart: NatalChart | null;
+  natalResponse: AstroNatalResponse | null;
+  nasaMode: ServiceMode;
+  gptMode: ServiceMode;
+}) {
+  const accuracy = birthAccuracyStatus(profile);
+  const lastCalculated = natalResponse?.fetchedAt ?? chart?.calculatedAt;
+  const rows = [
+    ["Birth date", profile?.birthDate ?? "Needed"],
+    ["Birth time", profile?.birthTime ?? "Unknown birth time mode"],
+    ["Birth place", profile?.birthPlace ?? "Needed"],
+    ["Timezone", profile?.timezone ?? (profile?.timezoneOffset !== undefined ? `UTC ${profile.timezoneOffset >= 0 ? "+" : ""}${profile.timezoneOffset}` : "Needed")],
+    ["House system", profile?.birthTime ? "Whole-sign preview" : "Disabled until birth time"],
+    ["Zodiac system", "Tropical / Western"],
+    ["Calculation source", chartSourceLabel(natalResponse, chart)],
+    ["Last calculated", lastCalculated ? new Date(lastCalculated).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Not calculated"],
+    ["Saved profiles", profile ? "1 active self profile" : "None yet"],
+    ["Privacy controls", "Local profile first, account save after login"],
+  ];
+  return (
+    <section className="rounded-[8px] border p-4 shadow-[var(--astro-shadow-soft)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_AQUA }}>Trust center</p>
+          <h2 className="mt-1 font-serif text-[22px] leading-tight" style={{ color: ASTRO_TEXT }}>Data, settings, and accuracy</h2>
+        </div>
+        <span className="shrink-0 rounded-[8px] border px-2.5 py-1.5 text-[8px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: accuracy.ready ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }}>
+          {accuracy.label}
+        </span>
+      </div>
+      <p className="mt-2 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>
+        If birth time is missing, Hint keeps zodiac signs and planet placements visible but labels rising sign, houses, transits, and pair timing as approximate.
+      </p>
+      <div className="mt-4 grid gap-2 min-[720px]:grid-cols-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="min-w-0 rounded-[8px] border p-2.5" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+            <p className="truncate text-[8px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>{label}</p>
+            <p className="mt-1 truncate text-[12px] font-black" style={{ color: ASTRO_TEXT }}>{value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {[
+          ["Sky visual", nasaMode === "Connected" ? "NASA connected" : "Local visual"],
+          ["Report copy", gptMode === "Connected" ? "AI ready" : "Curated preview"],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-[8px] border px-3 py-2" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER }}>
+            <p className="text-[8px] font-black uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>{label}</p>
+            <p className="mt-1 text-[12px] font-black" style={{ color: ASTRO_GOLD_BRIGHT }}>{value}</p>
           </div>
         ))}
       </div>
@@ -3054,26 +5144,29 @@ function BirthSection({
     <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_390px]">
       <div className="grid gap-4">
         <BirthDataVisual profile={profile} />
+        <DataTrustPanel profile={profile} chart={chart} natalResponse={natalResponse} nasaMode={nasaMode} gptMode={gptMode} />
         {profile ? <BirthProfileCard profile={profile} onEdit={() => setEditing(true)} /> : null}
         {profile && chart ? (
-          <section className="rounded-[8px] border p-3 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_AQUA }}>Profile preview</p>
-                <h2 className="mt-1 font-serif text-[22px] leading-tight" style={{ color: ASTRO_TEXT }}>Your wheel is drawing</h2>
+          <AstroFoldout eyebrow="Chart preview" title="Wheel generated from this data">
+            <section className="rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_AQUA }}>Profile preview</p>
+                  <h2 className="mt-1 font-serif text-[22px] leading-tight" style={{ color: ASTRO_TEXT }}>Chart generated from saved data</h2>
+                </div>
+                <span className="rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.13em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_BORDER, color: isLiveNatal(natalResponse) ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }}>
+                  {chartSourceLabel(natalResponse, chart)}
+                </span>
               </div>
-              <span className="rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.13em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: isLiveNatal(natalResponse) ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }}>
-                {chartSourceLabel(natalResponse, chart)}
-              </span>
-            </div>
-            <ChartGraphPanel chart={chart} language={language} ui={ui} />
-            <div className="mt-3">
-              <CoreSignatureRail chart={chart} language={language} />
-            </div>
-            <p className="mt-3 rounded-[8px] border p-3 text-[12px] font-semibold leading-relaxed" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_MUTED }}>
-              This wheel uses the saved birth profile and the best available astrology API mode. Live AstrologyAPI data replaces the local fallback automatically when credentials are configured.
-            </p>
-          </section>
+              <ChartGraphPanel chart={chart} language={language} ui={ui} />
+              <div className="mt-3">
+                <CoreSignatureRail chart={chart} language={language} />
+              </div>
+              <p className="mt-3 rounded-[8px] border p-3 text-[12px] font-semibold leading-relaxed" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_MUTED }}>
+                This chart uses the saved birth profile and the best available sky data. Live astrology data replaces the saved preview automatically when connected.
+              </p>
+            </section>
+          </AstroFoldout>
         ) : null}
         <section className="rounded-[8px] border p-4 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -3082,17 +5175,17 @@ function BirthSection({
               <h2 className="mt-2 font-serif text-[22px] leading-tight" style={{ color: ASTRO_TEXT }}>Saved profile status</h2>
             </div>
             <span className="rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.13em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: natalResponse ? (isLiveNatal(natalResponse) ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT) : ASTRO_FAINT }}>
-              {natalResponse ? chartSourceLabel(natalResponse, chart) : "Chart not saved"}
+              {natalResponse ? chartSourceLabel(natalResponse, chart) : "Chart not calculated"}
             </span>
           </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="mt-4 grid gap-2 min-[720px]:grid-cols-2">
             {[
               ["Birth details", profile ? "Saved for this account" : "Add profile details"],
               ["Chart source", chartSourceLabel(natalResponse, chart)],
               ["Chart depth", profile?.birthTime && profile.latitude !== undefined && profile.longitude !== undefined && profile.timezoneOffset !== undefined ? "Rising sign and houses ready" : "Needs time and place"],
               ["Cache state", natalResponse?.cached ? "Loaded from saved chart" : natalResponse ? "Fresh API response" : "No API call yet"],
               ["Sky visual", nasaMode === "Connected" ? "NASA connected" : "Local sky visual"],
-              ["Report copy", gptMode === "Connected" ? "GPT connected" : "Curated fallback"],
+              ["Report copy", gptMode === "Connected" ? "AI connected" : "Curated preview"],
             ].map(([label, value]) => (
               <div key={label} className="rounded-[8px] border p-2.5" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
                 <p className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: ASTRO_FAINT }}>{label}</p>
@@ -3136,41 +5229,82 @@ function RelationshipMapVisual({ profileName, partnerName, active }: { profileNa
   return (
     <div className="relative overflow-hidden rounded-[8px] border p-4" style={{ background: ASTRO_CHART_PANEL, borderColor: ASTRO_TILE_BORDER }}>
       <div className="pointer-events-none absolute inset-0 opacity-70" style={{ background: `linear-gradient(115deg, ${ASTRO_TILE}, transparent 34%, ${ASTRO_PREMIUM_INNER} 70%, transparent)` }} />
-      <div className="relative grid min-h-[240px] items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
-        <div className="mx-auto grid h-36 w-36 place-items-center rounded-full border text-center" style={{ background: `radial-gradient(circle, ${ASTRO_TILE}, ${ASTRO_CHART_HEADER} 70%)`, borderColor: ASTRO_BORDER }}>
+      <div className="relative grid min-h-[188px] grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border text-center" style={{ background: `radial-gradient(circle, ${ASTRO_TILE}, ${ASTRO_CHART_HEADER} 70%)`, borderColor: ASTRO_BORDER }}>
           <div>
-            <UserRound className="mx-auto" size={24} style={{ color: ASTRO_GOLD_BRIGHT }} />
-            <p className="mt-3 px-4 text-[13px] font-black leading-tight" style={{ color: ASTRO_TEXT }}>{profileName}</p>
+            <UserRound className="mx-auto" size={18} style={{ color: ASTRO_GOLD_BRIGHT }} />
+            <p className="mt-2 px-2 text-[11px] font-black leading-tight" style={{ color: ASTRO_TEXT }}>{profileName}</p>
             <p className="mt-1 text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_FAINT }}>Chart A</p>
           </div>
         </div>
-        <div className="relative mx-auto grid h-24 w-24 place-items-center rounded-full border" style={{ background: `radial-gradient(circle, ${ASTRO_TILE}, ${ASTRO_CHART_HEADER})`, borderColor: active ? ASTRO_AQUA : ASTRO_BORDER }}>
-          <span className="absolute -left-24 top-1/2 hidden h-px w-24 -translate-y-1/2 sm:block" style={{ background: `linear-gradient(90deg, transparent, ${ASTRO_GOLD_BRIGHT})` }} />
-          <span className="absolute -right-24 top-1/2 hidden h-px w-24 -translate-y-1/2 sm:block" style={{ background: `linear-gradient(90deg, ${ASTRO_AQUA}, transparent)` }} />
-          <HeartHandshake size={30} style={{ color: active ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }} />
+        <div className="relative mx-auto grid h-16 w-16 place-items-center rounded-full border" style={{ background: `radial-gradient(circle, ${ASTRO_TILE}, ${ASTRO_CHART_HEADER})`, borderColor: active ? ASTRO_AQUA : ASTRO_BORDER }}>
+          <span className="absolute -left-10 top-1/2 h-px w-10 -translate-y-1/2" style={{ background: `linear-gradient(90deg, transparent, ${ASTRO_GOLD_BRIGHT})` }} />
+          <span className="absolute -right-10 top-1/2 h-px w-10 -translate-y-1/2" style={{ background: `linear-gradient(90deg, ${ASTRO_AQUA}, transparent)` }} />
+          <HeartHandshake size={23} style={{ color: active ? ASTRO_AQUA : ASTRO_GOLD_BRIGHT }} />
         </div>
-        <div className="mx-auto grid h-36 w-36 place-items-center rounded-full border text-center" style={{ background: `radial-gradient(circle, ${ASTRO_TILE}, ${ASTRO_CHART_HEADER} 70%)`, borderColor: ASTRO_ROSE }}>
+        <div className="mx-auto grid h-24 w-24 place-items-center rounded-full border text-center" style={{ background: `radial-gradient(circle, ${ASTRO_TILE}, ${ASTRO_CHART_HEADER} 70%)`, borderColor: ASTRO_ROSE }}>
           <div>
-            <UserRound className="mx-auto" size={24} style={{ color: ASTRO_ROSE }} />
-            <p className="mt-3 px-4 text-[13px] font-black leading-tight" style={{ color: ASTRO_TEXT }}>{partnerName || "Partner"}</p>
+            <UserRound className="mx-auto" size={18} style={{ color: ASTRO_ROSE }} />
+            <p className="mt-2 px-2 text-[11px] font-black leading-tight" style={{ color: ASTRO_TEXT }}>{partnerName || "Partner"}</p>
             <p className="mt-1 text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_FAINT }}>Chart B</p>
           </div>
         </div>
       </div>
-      <div className="relative mt-4 grid gap-2 sm:grid-cols-3">
+      <div className="relative mt-3 grid grid-cols-3 gap-1.5">
         {[
           ["Comfort", ASTRO_GOLD_BRIGHT],
-          ["Signal", ASTRO_AQUA],
-          ["Friction", ASTRO_ROSE],
+          ["Growth", ASTRO_AQUA],
+          ["Tension", ASTRO_ROSE],
         ].map(([label, color]) => (
-          <div key={label} className="rounded-[8px] border px-3 py-2" style={{ background: ASTRO_INPUT, borderColor: ASTRO_TILE_BORDER }}>
+          <div key={label} className="min-w-0 rounded-[8px] border px-2 py-2" style={{ background: ASTRO_INPUT, borderColor: ASTRO_TILE_BORDER }}>
             <div className="mb-2 h-1 rounded-full" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
-            <p className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_FAINT }}>{label}</p>
+            <p className="truncate text-[9px] font-black uppercase tracking-[0.1em]" style={{ color: ASTRO_FAINT }}>{label}</p>
           </div>
         ))}
       </div>
     </div>
   );
+}
+
+function pairModuleItems(summary?: AstroSynastryResponse["summary"]): AstroModuleItem[] {
+  return [
+    {
+      label: "Synastry preview",
+      value: summary ? "Generated" : "Needs partner",
+      note: "How two natal charts touch each other by aspect.",
+      color: ASTRO_AQUA,
+    },
+    {
+      label: "Composite preview",
+      value: "Shared pattern",
+      note: "A future layer for reading the relationship as one space.",
+      color: "var(--astro-lavender)",
+    },
+    {
+      label: "Comfort",
+      value: summary ? "Mapped" : "Conversation cue",
+      note: summary?.comfort ?? "Where the connection feels easier and safer.",
+      color: ASTRO_GOLD_BRIGHT,
+    },
+    {
+      label: "Tension",
+      value: summary ? "Mapped" : "Useful friction",
+      note: summary?.tension ?? "Where needs should be named before they become tests.",
+      color: ASTRO_ROSE,
+    },
+    {
+      label: "Communication",
+      value: summary ? "Mapped" : "Ask directly",
+      note: summary?.communication ?? "How to talk without guessing the hidden meaning.",
+      color: BODY_COLORS.mercury,
+    },
+    {
+      label: "Pair timing",
+      value: "Optional",
+      note: "Current transits can explain timing after both profiles are present.",
+      color: ASTRO_AQUA,
+    },
+  ];
 }
 
 function compatibilityBirthProfile(profile: BirthProfile) {
@@ -3355,28 +5489,38 @@ function TogetherSection({ relationship, previewMode, profile }: { relationship:
         <div className="mt-4">
           <RelationshipMapVisual profileName={profile?.name ?? "You"} partnerName={partner.name} active={Boolean(summary)} />
         </div>
-        <div className="mt-4 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-          {relationship.highlights.map((item) => (
-            <p key={item} className="rounded-[8px] border p-3 text-[13px] font-semibold leading-relaxed" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}>{item}</p>
+        <div className="mt-4">
+          <AstroModuleMap eyebrow="Pair system" title="Consent-first relationship map" items={pairModuleItems(summary)} />
+        </div>
+        <p className="mt-3 rounded-[8px] border px-3 py-2.5 text-[12px] font-semibold leading-snug" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_MUTED }}>
+          Use signs as conversation prompts, not fixed judgments. Pair readings should make better questions, not rank the relationship.
+        </p>
+        <div className="mt-4 grid gap-2 min-[720px]:grid-cols-2">
+          {relationship.highlights.slice(0, 2).map((item) => (
+            <p key={item} className="rounded-[8px] border p-3 text-[12px] font-semibold leading-snug" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_TEXT }}>{item}</p>
           ))}
         </div>
-        <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-          {(summary
-            ? [
-                ["Comfort", summary.comfort],
-                ["Tension", summary.tension],
-                ["Communication", summary.communication],
-                ["Attraction", summary.attraction],
-                ["Growth", summary.growth],
-              ]
-            : themes
-          ).map(([label, copy]) => (
-            <article key={label} className="rounded-[8px] border p-4" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
-              <div className="mb-3 h-1 rounded-full" style={{ background: `linear-gradient(90deg, ${balanceColor(label)}, transparent)` }} />
-              <p className="text-[12px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_FAINT }}>{label}</p>
-              <p className="mt-2 text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_TEXT }}>{copy}</p>
-            </article>
-          ))}
+        <div className="mt-4">
+          <AstroFoldout eyebrow="Pair details" title="Comfort, tension, communication">
+            <div className="grid gap-2.5 min-[720px]:grid-cols-2">
+              {(summary
+                ? [
+                    ["Comfort", summary.comfort],
+                    ["Tension", summary.tension],
+                    ["Communication", summary.communication],
+                    ["Attraction", summary.attraction],
+                    ["Growth", summary.growth],
+                  ]
+                : themes
+              ).map(([label, copy]) => (
+                <article key={label} className="rounded-[8px] border p-4" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
+                  <div className="mb-3 h-1 rounded-full" style={{ background: `linear-gradient(90deg, ${balanceColor(label)}, transparent)` }} />
+                  <p className="text-[12px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_FAINT }}>{label}</p>
+                  <p className="mt-2 text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_TEXT }}>{copy}</p>
+                </article>
+              ))}
+            </div>
+          </AstroFoldout>
         </div>
         {synastry ? (
           <section className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -3400,25 +5544,27 @@ function TogetherSection({ relationship, previewMode, profile }: { relationship:
               <h3 className="mt-2 font-serif text-[24px] leading-tight" style={{ color: ASTRO_TEXT }}>{profile?.name ?? "You"} + {partner.name || "Partner"}</h3>
               <p className="mt-3 text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>{synastry.plainEnglish.main}</p>
               <p className="mt-3 rounded-[8px] border p-3 text-[12px] font-black" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: ASTRO_GOLD_BRIGHT }}>
-                {synastry.source === "astrologyapi" ? "AstrologyAPI live synastry" : "Fallback synastry preview"}
+                {synastry.source === "astrologyapi" ? "Live synastry" : "Synastry preview"}
               </p>
             </div>
           </section>
         ) : null}
       </div>
-      <aside className="rounded-[8px] border p-5 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
-        <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-[8px] border" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
-            <Link2 size={20} style={{ color: ASTRO_GOLD }} />
-          </span>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_FAINT }}>Consent first</p>
-            <h2 className="font-serif text-[24px] leading-tight" style={{ color: ASTRO_TEXT }}>Invite them in</h2>
-          </div>
-        </div>
-        <p className="mt-3 text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>Send a private web link. They add their own birth details and consent before the shared chart opens.</p>
-        {profile ? (
-          <div className="mt-4 grid gap-3">
+      <aside className="min-w-0">
+        <AstroFoldout eyebrow="Partner data" title="Invite or enter partner details">
+          <section className="rounded-[8px] border p-4" style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER }}>
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 place-items-center rounded-[8px] border" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER }}>
+                <Link2 size={20} style={{ color: ASTRO_GOLD }} />
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_FAINT }}>Consent first</p>
+                <h2 className="font-serif text-[24px] leading-tight" style={{ color: ASTRO_TEXT }}>Invite them in</h2>
+              </div>
+            </div>
+            <p className="mt-3 text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>Send a private web link. They add their own birth details and consent before the shared chart opens.</p>
+            {profile ? (
+              <div className="mt-4 grid gap-3">
             <div className="rounded-[8px] border p-3" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
               <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_FAINT }}>Your side</p>
               <p className="mt-1 text-[14px] font-black" style={{ color: ASTRO_TEXT }}>{profile.name}</p>
@@ -3459,7 +5605,7 @@ function TogetherSection({ relationship, previewMode, profile }: { relationship:
                     {partnerPlaceLoading ? "Finding..." : "Find"}
                   </button>
                 </div>
-                {partnerPlaceMode ? <p className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_MUTED }}>{partnerPlaceMode === "live" ? "AstrologyAPI place match" : "Fallback place match"}</p> : null}
+                {partnerPlaceMode ? <p className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: ASTRO_MUTED }}>{partnerPlaceMode === "live" ? "AstrologyAPI place match" : "Saved place match"}</p> : null}
                 {partnerPlaceResults.length ? (
                   <div className="grid gap-2">
                     {partnerPlaceResults.map((place) => {
@@ -3493,12 +5639,14 @@ function TogetherSection({ relationship, previewMode, profile }: { relationship:
                 <button type="button" onClick={createRelationshipMap} disabled={!partnerReady || synastryLoading} className="h-11 rounded-[8px] px-5 text-[13px] font-black transition-[transform,opacity] duration-200 hover:-translate-y-0.5 disabled:opacity-45" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>{synastryLoading ? "Creating..." : "Create relationship map"}</button>
               </div>
             </section>
-          </div>
-        ) : (
-          <div className="mt-5 rounded-[8px] border p-4 text-[13px] font-semibold leading-relaxed" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_MUTED }}>
-            Sample preview is active. Save your profile to create a web invite.
-          </div>
-        )}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-[8px] border p-4 text-[13px] font-semibold leading-relaxed" style={{ background: ASTRO_TILE, borderColor: ASTRO_BORDER, color: ASTRO_MUTED }}>
+                Sample preview is active. Save your profile to create a web invite.
+              </div>
+            )}
+          </section>
+        </AstroFoldout>
       </aside>
     </section>
   );
@@ -3520,6 +5668,7 @@ function ReportsSection({
   onGeneratePreview: () => void;
 }) {
   const fallbackBullets = ["Chart evidence first", "Plain-English timing", "Reflection, not certainty"];
+  const reportLenses = ["Chart", "Love", "Career", "Money", "Year", "Timing"];
   const bulletsFor = (report: AstrologyReport) => {
     const generated = previewBulletsByReport[report.id] ?? [];
     const curated = report.previewBullets ?? fallbackBullets;
@@ -3527,54 +5676,93 @@ function ReportsSection({
   };
 
   return (
-    <section className="rounded-[8px] border p-4 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-center">
-        <div>
-          <p className="inline-flex items-center gap-2 font-sans text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: ASTRO_GOLD_BRIGHT }}><FileText size={14} /> Reports</p>
-          <h2 className="mt-2 font-serif text-[24px] leading-tight" style={{ color: ASTRO_TEXT }}>Premium report room</h2>
-          <p className="mt-2 max-w-2xl text-[13px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>Each module previews the evidence it will use: chart pattern, timing, and reflection prompts.</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-[8px] border px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_GOLD_BRIGHT }}>5 report modules</span>
-            <span className="rounded-[8px] border px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: gptMode === "Connected" ? ASTRO_AQUA : ASTRO_FAINT }}>GPT {gptMode}</span>
+    <section className="grid gap-3">
+      <div className="overflow-hidden rounded-[20px] border p-3 shadow-[var(--astro-shadow)]" style={{ background: ASTRO_SURFACE, borderColor: ASTRO_BORDER }}>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-2 font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_GOLD_BRIGHT }}><FileText size={13} /> Reports</p>
+            <h2 className="mt-1 font-serif text-[28px] leading-tight" style={{ color: ASTRO_TEXT }}>Deep reading library</h2>
+            <p className="mt-2 line-clamp-3 text-[12px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>Each report starts as a short summary. Long-form sections open when someone asks Hint or spends a token.</p>
           </div>
-          <button type="button" onClick={onGeneratePreview} disabled={gptLoading} className="mt-4 h-11 rounded-[8px] px-5 text-[13px] font-black disabled:opacity-45" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
-            {gptLoading ? "Generating preview..." : "Generate GPT preview bullets"}
-          </button>
-          {gptError ? <p className="mt-2 text-[12px] font-semibold" style={{ color: ASTRO_ROSE }}>{gptError}</p> : null}
+          <span className="grid h-12 w-12 place-items-center rounded-[16px] border" style={{ background: ASTRO_LOCKED, borderColor: ASTRO_TILE_BORDER }}>
+            <FileText size={22} style={{ color: ASTRO_GOLD_BRIGHT }} />
+          </span>
         </div>
-        <div className="rounded-[8px] border p-3" style={{ background: ASTRO_LOCKED, borderColor: ASTRO_BORDER }}>
-          <div className="grid h-24 place-items-center rounded-[8px] border" style={{ background: `radial-gradient(circle, ${ASTRO_TILE}, ${ASTRO_CHART_HEADER})`, borderColor: ASTRO_TILE_BORDER }}>
-            <FileText size={32} style={{ color: ASTRO_GOLD_BRIGHT }} />
-          </div>
-          <p className="mt-3 text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: ASTRO_FAINT }}>Report archive</p>
-          <p className="mt-1 text-[18px] font-black" style={{ color: ASTRO_TEXT }}>{reports.length} modules</p>
+        <div className="mt-3 grid grid-cols-3 gap-1.5">
+          <span className="truncate rounded-full border px-2 py-2 text-center text-[9px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_GOLD_BRIGHT }}>
+            {reports.length} modules
+          </span>
+          <span className="truncate rounded-full border px-2 py-2 text-center text-[9px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_AQUA }}>
+            Summary first
+          </span>
+          <span className="truncate rounded-full border px-2 py-2 text-center text-[9px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: gptMode === "Connected" ? ASTRO_AQUA : ASTRO_FAINT }}>
+            {gptMode === "Connected" ? "AI ready" : "Curated"}
+          </span>
         </div>
+        <div className="mt-2 grid grid-cols-3 gap-1.5">
+          {reportLenses.map((lens, index) => (
+            <span key={lens} className="truncate rounded-full border px-2 py-1.5 text-center text-[8px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER, color: astroColor(index) }}>
+              {lens}
+            </span>
+          ))}
+        </div>
+        <button type="button" onClick={onGeneratePreview} disabled={gptLoading} className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-[14px] px-5 text-[12px] font-black disabled:opacity-45" style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}>
+          <Sparkles size={15} />
+          {gptLoading ? "Preparing preview..." : "Ask Hint for preview"}
+        </button>
+        {gptError ? <p className="mt-2 text-[12px] font-semibold" style={{ color: ASTRO_ROSE }}>{gptError}</p> : null}
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {reports.map((report, index) => (
-          <article key={report.id} className="relative overflow-hidden rounded-[8px] border p-4 transition-[transform,opacity] duration-200 hover:-translate-y-0.5" style={{ background: ASTRO_LOCKED, borderColor: ASTRO_BORDER }}>
-            <div className="absolute inset-x-0 top-0 h-1.5" style={{ background: `linear-gradient(90deg, ${astroColor(index)}, transparent)` }} />
-            <div className="flex items-center justify-between gap-3">
-              <span className="grid h-10 w-10 place-items-center rounded-[8px] border" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER }}>
-                <FileText size={18} style={{ color: astroColor(index) }} />
-              </span>
-              <span className="rounded-[8px] border px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: report.status === "available" ? ASTRO_AQUA : ASTRO_GOLD }}>Member report</span>
-            </div>
-            <p className="mt-3 text-[15px] font-black leading-tight" style={{ color: ASTRO_TEXT }}>{report.title}</p>
-            <p className="mt-2 text-[12px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>{report.subtitle}</p>
-            <div className="mt-3 grid gap-2">
-              {bulletsFor(report).map((bullet) => (
-                <p key={bullet} className="flex gap-2 text-[11px] font-semibold leading-snug" style={{ color: ASTRO_TEXT }}><span style={{ color: astroColor(index) }}>•</span>{bullet}</p>
-              ))}
-            </div>
-            <details className="mt-4 rounded-[8px] border px-3 py-2" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
-              <summary className="cursor-pointer text-[12px] font-black" style={{ color: ASTRO_TEXT }}>
-                <span className="inline-flex items-center gap-2"><LockKeyhole size={13} /> Preview report</span>
-              </summary>
-              <p className="mt-3 text-[12px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>{report.unlockHint}</p>
-            </details>
-          </article>
-        ))}
+      <div className="grid gap-2">
+        {reports.map((report, index) => {
+          const bullets = bulletsFor(report);
+          return (
+            <article key={report.id} className="relative overflow-hidden rounded-[18px] border p-3 transition-[transform,opacity] duration-200 active:scale-[0.99]" style={{ background: ASTRO_LOCKED, borderColor: ASTRO_BORDER }}>
+              <div className="absolute bottom-0 left-0 top-0 w-1" style={{ background: `linear-gradient(180deg, ${astroColor(index)}, transparent)` }} />
+              <div className="grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-[14px] border" style={{ background: ASTRO_TILE, borderColor: ASTRO_TILE_BORDER }}>
+                  <FileText size={18} style={{ color: astroColor(index) }} />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-black leading-tight" style={{ color: ASTRO_TEXT }}>{report.title}</p>
+                  <p className="mt-1 line-clamp-1 text-[11px] font-semibold leading-snug" style={{ color: ASTRO_MUTED }}>{report.subtitle}</p>
+                </div>
+                <span className="rounded-full border px-2 py-1 text-[8px] font-black uppercase tracking-[0.1em]" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: report.status === "available" ? ASTRO_AQUA : ASTRO_GOLD }}>
+                {report.status === "available" ? "Ready" : "Preview"}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-1.5">
+                {bullets.slice(0, 3).map((bullet) => (
+                  <p key={`${report.id}-${bullet}`} className="flex gap-2 text-[11px] font-semibold leading-snug" style={{ color: ASTRO_TEXT }}>
+                    <span style={{ color: astroColor(index) }}>•</span>
+                    <span className="line-clamp-1">{bullet}</span>
+                  </p>
+                ))}
+              </div>
+              <details className="mt-3 rounded-[14px] border px-3 py-2" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER }}>
+                <summary className="cursor-pointer text-[12px] font-black" style={{ color: ASTRO_TEXT }}>
+                  <span className="inline-flex items-center gap-2"><LockKeyhole size={13} /> Summary and unlock path</span>
+                </summary>
+                <p className="mt-3 text-[12px] font-semibold leading-relaxed" style={{ color: ASTRO_MUTED }}>{report.unlockHint}</p>
+                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                  {["Ask preview", "View summary", "Unlock full"].map((label, actionIndex) => (
+                    <button
+                      key={`${report.id}-${label}`}
+                      type="button"
+                      className="min-h-9 rounded-[8px] border px-1.5 text-[9px] font-black uppercase tracking-[0.08em]"
+                      style={{
+                        background: actionIndex === 0 ? ASTRO_BUTTON : ASTRO_TILE,
+                        borderColor: ASTRO_TILE_BORDER,
+                        color: actionIndex === 0 ? ASTRO_BUTTON_TEXT : actionIndex === 2 ? ASTRO_GOLD_BRIGHT : ASTRO_TEXT,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -3600,6 +5788,7 @@ export function AstrologyView() {
   const [nasaMode, setNasaMode] = useState<ServiceMode>("Fallback");
   const [reportRequestId, setReportRequestId] = useState(0);
   const autoNatalKeyRef = useRef<string | null>(null);
+  const autoLiveUpgradeKeyRef = useRef<string | null>(null);
   const autoTransitKeyRef = useRef<string | null>(null);
   const backendState = useAstroBackendStatus();
   const { relationship, reports } = useAstrologyData(profile);
@@ -3638,6 +5827,27 @@ export function AstrologyView() {
     autoNatalKeyRef.current = key;
     void handlePersonalizeLiveData();
   }, [account, anonId, canPersonalize, hasSavedChart, profile]);
+
+  useEffect(() => {
+    if (!account || !profile || !canPersonalize || !hasSavedChart || personalizing) return;
+    if (!backendState.online || !backendState.status.astrology.configured) return;
+    if (isLiveNatal(activeNatalResponse)) return;
+    const key = `${account.identifier}:${profile.id}:${profile.updatedAt}:live-upgrade`;
+    if (autoLiveUpgradeKeyRef.current === key) return;
+    autoLiveUpgradeKeyRef.current = key;
+    void handlePersonalizeLiveData();
+  }, [
+    account?.identifier,
+    activeNatalResponse?.mode,
+    activeNatalResponse?.source,
+    backendState.online,
+    backendState.status.astrology.configured,
+    canPersonalize,
+    hasSavedChart,
+    personalizing,
+    profile?.id,
+    profile?.updatedAt,
+  ]);
 
   useEffect(() => {
     if (!account || !profile || !canPersonalize || !hasSavedChart) return;
@@ -3699,9 +5909,20 @@ export function AstrologyView() {
       const nextNatal = await getNatalChart(profile);
       const nextChart = normalizeClientNatal(profile, nextNatal);
       if (!nextChart) {
-        setLiveError("Chart response could not be normalized. No saved chart was changed.");
-        setNatalResponse(nextNatal);
-        setChart(null);
+        const fallbackChart = buildMockNatalChart(profile);
+        const fallbackNatal = buildFallbackNatalResponse(profile, fallbackChart);
+        setLiveError("Live chart response was incomplete, so Hint saved a local chart preview instead.");
+        setNatalResponse(fallbackNatal);
+        setChart(fallbackChart);
+        setSavedNatalRecord({
+          accountKey: accountStorageKey(account, anonId),
+          profileId: profile.id,
+          profileUpdatedAt: profile.updatedAt,
+          chart: fallbackChart,
+          natalResponse: fallbackNatal,
+          savedAt: new Date().toISOString(),
+        });
+        writeSavedNatalChart(account, anonId, profile, fallbackChart, fallbackNatal);
         return;
       }
       setNatalResponse(nextNatal);
@@ -3716,9 +5937,20 @@ export function AstrologyView() {
       });
       writeSavedNatalChart(account, anonId, profile, nextChart, nextNatal);
     } catch {
-      setLiveError("Astrology chart service is unavailable right now. Local preview remains available.");
-      setNatalResponse(null);
-      setChart(null);
+      const fallbackChart = buildMockNatalChart(profile);
+      const fallbackNatal = buildFallbackNatalResponse(profile, fallbackChart);
+      setLiveError("Live chart is unavailable right now. Hint saved a local preview so the page still works.");
+      setNatalResponse(fallbackNatal);
+      setChart(fallbackChart);
+      setSavedNatalRecord({
+        accountKey: accountStorageKey(account, anonId),
+        profileId: profile.id,
+        profileUpdatedAt: profile.updatedAt,
+        chart: fallbackChart,
+        natalResponse: fallbackNatal,
+        savedAt: new Date().toISOString(),
+      });
+      writeSavedNatalChart(account, anonId, profile, fallbackChart, fallbackNatal);
     } finally {
       setPersonalizing(false);
     }
@@ -3739,7 +5971,7 @@ export function AstrologyView() {
       const nextTransits = await getTransits(profile, transitDate);
       setTransits(nextTransits);
     } catch {
-      setTransitError("Transit service is unavailable right now. Sample transit guidance remains visible.");
+      setTransitError("Live timing is unavailable right now. Saved preview guidance remains visible.");
       setTransits(null);
     } finally {
       setTransitLoading(false);
@@ -3769,23 +6001,66 @@ export function AstrologyView() {
       onPersonalize={() => void handlePersonalizeLiveData()}
     />
   );
+  const showReadingChrome = false;
+  const showSetupMap = false;
+  const showSetupStatus = false;
+  const showGuidedCard = false;
 
   return (
-    <AppScreen>
-      <div className="grid w-full gap-4" style={{ color: ASTRO_TEXT }}>
-        <AstrologyAppSummary
-          account={account}
-          chart={activeChart}
-          profile={profile}
-          hasSavedChart={hasSavedChart}
-          language={language}
-          ui={ui}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        />
-        {account && profile ? <TopTabs activeTab={activeTab} onChange={handleTabChange} /> : null}
-        <ProviderReadinessStrip state={backendState} />
-        {activeTab !== "chart" ? statusRow : null}
+    <div
+      className="hint-astrology-home relative h-full w-full overflow-y-auto overscroll-none pb-[calc(7.25rem+var(--hint-safe-bottom))]"
+      style={ASTROLOGY_HOME_STYLE}
+    >
+      <AstrologyHomeBackdrop />
+      <div className="relative z-10 mx-auto grid w-full max-w-[var(--hint-app-width)] gap-3 px-4 pt-[calc(0.75rem+var(--hint-safe-top))]">
+        <div
+          className="sticky z-40 grid gap-1.5 rounded-[16px] border px-0 py-1.5"
+          style={{
+            top: "calc(0.35rem + var(--hint-safe-top))",
+            background: "color-mix(in srgb, var(--hint-control-bg-strong) 72%, transparent)",
+            borderColor: "transparent",
+            boxShadow: "none",
+            backdropFilter: "blur(18px) saturate(1.12)",
+            WebkitBackdropFilter: "blur(18px) saturate(1.12)",
+          }}
+        >
+          <AstrologyTopBar
+            account={account}
+            profile={profile}
+            chart={activeChart}
+            hasSavedChart={hasSavedChart}
+            activeTab={activeTab}
+            language={language}
+            ui={ui}
+            onEditProfile={() => handleTabChange("birth")}
+          />
+          <TopTabs activeTab={activeTab} onChange={handleTabChange} />
+        </div>
+        {showReadingChrome ? (
+          <AstrologyAppSummary
+            account={account}
+            chart={activeChart}
+            profile={profile}
+            hasSavedChart={hasSavedChart}
+            language={language}
+            ui={ui}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
+        ) : null}
+        {showSetupMap ? (
+          <AstrologyMapOverview
+            chart={activeChart}
+            profile={profile}
+            hasSavedChart={hasSavedChart}
+            activeTab={activeTab}
+            language={language}
+            onTabChange={handleTabChange}
+          />
+        ) : null}
+        {showSetupMap ? <ProviderReadinessStrip state={backendState} /> : null}
+        {showSetupStatus ? statusRow : null}
+        {showGuidedCard ? <AstrologyGuidedCard activeTab={activeTab} onTabChange={handleTabChange} /> : null}
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 14, filter: "blur(6px)" }}
@@ -3794,12 +6069,39 @@ export function AstrologyView() {
           className="grid gap-4"
         >
           {activeTab === "signs" ? (
-            !account || !profile ? chartGate : <section className="grid gap-5">
-              <SignatureSelfPanel profile={profile} chart={activeChart} previewMode={previewMode} language={language} ui={ui} onEditProfile={() => handleTabChange("birth")} />
-              <AstroFoldout eyebrow="Pattern" title="Visual blend and rare chart cues">
+            !account || !profile ? chartGate : <section className="grid gap-4">
+              <ZodiacStrengthSummaryPanel chart={activeChart} language={language} ui={ui} />
+              <AstroModuleMap eyebrow="Zodiac system" title="Signs translated into strengths" items={zodiacModuleItems(activeChart, language)} />
+              <div className="grid gap-2 min-[720px]:grid-cols-2">
+                <Link
+                  href="/app/ask"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] px-4 text-[12px] font-black shadow-[var(--astro-button-shadow)]"
+                  style={{ background: ASTRO_BUTTON, color: ASTRO_BUTTON_TEXT }}
+                >
+                  <Sparkles size={15} />
+                  Ask Hint
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleTabChange("reports")}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] border px-4 text-[12px] font-black"
+                  style={{ background: ASTRO_INNER, borderColor: ASTRO_TILE_BORDER, color: ASTRO_TEXT }}
+                >
+                  Deeper reads
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+              <AstroFoldout eyebrow="Zodiac details" title="Placements, self code, and houses">
+                <PlacementIndexPanel chart={activeChart} language={language} ui={ui} />
+                <SignatureSelfPanel profile={profile} chart={activeChart} previewMode={previewMode} language={language} ui={ui} onEditProfile={() => handleTabChange("birth")} />
+              </AstroFoldout>
+              <AstroFoldout eyebrow="Side systems" title="星宿 and 紫微 stay optional">
+                <TraditionLayerPanel />
+              </AstroFoldout>
+              <AstroFoldout eyebrow="Graphs" title="Pattern blend and rare chart cues">
                 <TraitArcGraph chart={activeChart} language={language} ui={ui} />
               </AstroFoldout>
-              <AstroFoldout eyebrow="Self code" title="First impression, mode, and best-fit signs">
+              <AstroFoldout eyebrow="Deep zodiac" title="First impression, mode, and best-fit signs">
                 <StarSecretPanel chart={activeChart} language={language} ui={ui} />
               </AstroFoldout>
               <AstroFoldout eyebrow="Placements" title="Planet-by-planet plain language">
@@ -3828,7 +6130,6 @@ export function AstrologyView() {
                 onAddProfile={() => handleTabChange("birth")}
                 onPersonalize={() => void handlePersonalizeLiveData()}
               />
-              {statusRow}
             </section>
           ) : null}
           {activeTab === "transits" ? (
@@ -3877,10 +6178,10 @@ export function AstrologyView() {
             />
           ) : null}
         </motion.div>
-        <p className="rounded-[8px] border p-4 text-[11px] font-semibold leading-relaxed" style={{ background: ASTRO_INNER, borderColor: ASTRO_BORDER, color: ASTRO_MUTED }}>
-          Astrology in Hint is for reflection, not guaranteed prediction. Saved charts stay attached to the signed-in local profile.
+        <p className="px-2 pb-3 pt-1 text-center text-[10px] font-semibold leading-relaxed" style={{ color: ASTRO_FAINT }}>
+          Astrology in Hint is for reflection, timing awareness, and self-understanding — not guaranteed prediction, medical advice, legal advice, or financial advice.
         </p>
       </div>
-    </AppScreen>
+    </div>
   );
 }

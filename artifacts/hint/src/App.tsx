@@ -24,6 +24,7 @@ const PRODUCT_ROUTES = [
   "/daily-pull",
   "/daily",
   "/animal-tarot",
+  "/personalities",
   "/sky-deck",
   "/collection",
   "/profile",
