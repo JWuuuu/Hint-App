@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Link, useRoute } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
 import { BookOpen, CalendarDays, HelpCircle } from "lucide-react";
 import { ACCENT, GLASS } from "../hold/atmosphere";
 import { AppScreen, ScreenHeader, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
@@ -79,7 +79,7 @@ const CARD_NAMES_ZH: Record<string, string> = {
 
 function displayReading(reading: ReadingSummary, language: HintLanguage) {
   if (language !== "zh") {
-    return { cardName: reading.cardName, whisper: reading.whisper };
+    return { cardName: reading.cardName, whisper: sanitizeReadingCopy(reading.whisper) };
   }
 
   const cardName = CARD_NAMES_ZH[reading.cardName] ?? reading.cardName;
@@ -87,6 +87,14 @@ function displayReading(reading: ReadingSummary, language: HintLanguage) {
     cardName,
     whisper: `这次解读的核心提示来自「${cardName}」。旧记录会保留原始生成内容，但这里先用中文帮你回到这张牌的重点。`,
   };
+}
+
+function sanitizeReadingCopy(copy = "") {
+  return copy
+    .replace(/^Short Answer\s*:?\s*/i, "")
+    .replace(/^What does the card mean\?\s*/i, "")
+    .replace(/^For this question,\s*the answer is:\s*/i, "The saved reading points to: ")
+    .trim();
 }
 
 function ReadingCard({
@@ -104,7 +112,7 @@ function ReadingCard({
 
   return (
     <Link
-      href={`/readings/${reading.id}`}
+      href={`/app/readings/${reading.id}`}
       className={`hint-liquid-panel flex gap-3.5 rounded-[22px] ${featured ? "px-4 py-4" : "px-3.5 py-3.5"}`}
       style={{ borderColor: GLASS.border }}
     >
@@ -154,7 +162,7 @@ function tarotToSummary(reading: LocalTarotReading): ReadingSummary {
   return {
     id: reading.id,
     cardName: reading.spreadLabel,
-    whisper: reading.shortAnswer,
+    whisper: sanitizeReadingCopy(reading.shortAnswer),
     spreadType: reading.spreadType,
     question: reading.question,
     territory: reading.focusLabel ?? "tarot",
@@ -267,7 +275,7 @@ function QuestionCard({
         {item.focus}
       </p>
       <Link
-        href={`/readings/${item.readingId ?? item.id}`}
+        href={`/app/readings/${item.readingId ?? item.id}`}
         className="hint-soft-button mt-4 inline-flex h-10 items-center justify-center rounded-full px-4 font-sans text-[12px] font-bold"
         style={{
           color: "var(--hint-special-action-text)",
@@ -758,8 +766,13 @@ export function ReadingsView() {
 
 export function ReadingDetailView() {
   const { t } = useLanguage();
-  const [, params] = useRoute("/readings/:id");
-  const id = params?.id ?? "";
+  const [location] = useLocation();
+  const [, appParams] = useRoute("/app/readings/:id");
+  const [, legacyParams] = useRoute("/readings/:id");
+  const pathId =
+    location.match(/^\/app\/readings\/([^/?#]+)/)?.[1] ??
+    location.match(/^\/readings\/([^/?#]+)/)?.[1];
+  const id = appParams?.id ?? legacyParams?.id ?? pathId ?? "";
   const anonId = getAnonId();
   const [chatOpen, setChatOpen] = useState(false);
   const { data } = useListReadings({ anonId });
@@ -808,7 +821,7 @@ export function ReadingDetailView() {
           eyebrow={t("readings.detail")}
           title={tarotReading.spreadLabel}
           subtitle={tarotReading.focusLabel ?? t("readings.savedTarot")}
-          backHref="/readings"
+          backHref="/app/readings"
           backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
@@ -869,7 +882,7 @@ export function ReadingDetailView() {
           <SectionLabel>{t("readings.answer")}</SectionLabel>
           <GlassPanel>
             <p className="font-serif text-[18px] leading-relaxed" style={{ color: GLASS.text }}>
-              {tarotReading.shortAnswer}
+              {sanitizeReadingCopy(tarotReading.shortAnswer)}
             </p>
             <div className="mt-4 grid gap-2 md:grid-cols-2">
               {tarotReading.cardMeanings.map((meaning, index) => (
@@ -898,7 +911,7 @@ export function ReadingDetailView() {
           eyebrow={t("readings.detail")}
           title={fallbackReading.cardName}
           subtitle={t("readings.savedReading")}
-          backHref="/readings"
+          backHref="/app/readings"
           backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
@@ -908,7 +921,7 @@ export function ReadingDetailView() {
         />
         <GlassPanel hero>
           <p className="font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>
-            {fallbackReading.whisper}
+            {sanitizeReadingCopy(fallbackReading.whisper)}
           </p>
         </GlassPanel>
       </AppScreen>
@@ -922,7 +935,7 @@ export function ReadingDetailView() {
           eyebrow={t("readings.questionDetail")}
           title={SPREAD_LABELS[question.spreadType] ?? question.spreadType}
           subtitle={question.focus}
-          backHref="/readings"
+          backHref="/app/readings"
           backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
@@ -945,7 +958,7 @@ export function ReadingDetailView() {
         eyebrow={t("nav.history")}
         title={t("readings.notFound")}
         subtitle={t("readings.notFoundBody")}
-        backHref="/readings"
+        backHref="/app/readings"
         backLabel={t("nav.history")}
       />
       <EmptyPanel>{t("readings.notFoundHint")}</EmptyPanel>

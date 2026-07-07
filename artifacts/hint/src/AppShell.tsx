@@ -1,6 +1,7 @@
 ﻿import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { MotionConfig } from "framer-motion";
 import {
   CalendarDays,
   History,
@@ -35,7 +36,7 @@ import { useLanguage } from "./lib/i18n";
 import { triggerFeedback } from "./lib/feedback";
 
 /** Full-screen flows own their navigation, so the global bottom nav is hidden there. */
-const NAV_HIDDEN_ROUTES = ["/tarot", "/ask", "/login", "/app/tarot", "/app/ask", "/app/login"];
+const NAV_HIDDEN_ROUTES = ["/tarot", "/ask", "/login", "/signup", "/app/tarot", "/app/ask", "/app/login", "/app/signup"];
 const HINT_LAUNCH_SEEN_STORAGE_KEY = "hint_launch_seen_v2";
 const ENABLE_LAUNCH_INTRO = true;
 
@@ -68,7 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       return true;
     }
   });
-  const [showLaunchIntro, setShowLaunchIntro] = useState(true);
+  const [showLaunchIntro, setShowLaunchIntro] = useState(() => isFirstLaunch || hasLaunchIntroPreviewFlag());
   const [launchIntroLeaving, setLaunchIntroLeaving] = useState(false);
   const [launchIntroRunKey, setLaunchIntroRunKey] = useState(0);
   const isLaunchIntroPreview = hasLaunchIntroPreviewFlag();
@@ -126,6 +127,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [location]);
 
   useEffect(() => {
+    if (!isFirstLaunch && !isLaunchIntroPreview) {
+      setShowLaunchIntro(false);
+      setLaunchIntroLeaving(false);
+      return;
+    }
     if (!showLaunchIntro) return;
 
     const shouldReduceLaunchMotion = reduceMotion && !isLaunchIntroPreview;
@@ -155,48 +161,50 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [location]);
 
   return (
-    <PointerProvider>
-      <div
-        data-hint-theme={theme}
-        className="hint-app-shell-root fixed inset-0 overflow-hidden"
-      >
-        {!referenceHomeRoute ? (
-          <>
-            {/* Atmosphere stack — back to front */}
-            <CelestialBackdrop theme={theme} />
-            <Moonlight />
-            <Haze />
-            <Particles />
-            <RoomLight />
-            <Vignette />
-            <Grain />
-          </>
-        ) : null}
+    <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
+      <PointerProvider>
+        <div
+          data-hint-theme={theme}
+          className="hint-app-shell-root fixed inset-0 overflow-hidden"
+        >
+          {!referenceHomeRoute ? (
+            <>
+              {/* Atmosphere stack — back to front */}
+              <CelestialBackdrop theme={theme} />
+              <Moonlight />
+              <Haze />
+              <Particles />
+              <RoomLight />
+              <Vignette />
+              <Grain />
+            </>
+          ) : null}
 
-        {/* Route content sits above the atmosphere.
-            Pages own their own scroll model — AppShell does not impose
-            one, so chat-style pages can pin an input to the bottom while
-            scrollable pages (like the home dashboard) handle their own
-            overflow. */}
-        <div className="absolute inset-0 z-20">
-          {children}
+          {/* Route content sits above the atmosphere.
+              Pages own their own scroll model — AppShell does not impose
+              one, so chat-style pages can pin an input to the bottom while
+              scrollable pages (like the home dashboard) handle their own
+              overflow. */}
+          <div className="absolute inset-0 z-20">
+            {children}
+          </div>
+
+          {showNav ? (
+            <AppNavigationChrome location={location} theme={theme} />
+          ) : null}
+
+          {ENABLE_LAUNCH_INTRO && isProductRoute && !referenceHomeRoute && showLaunchIntro ? (
+            <AppLaunchIntro
+              theme={theme}
+              leaving={launchIntroLeaving}
+              firstLaunch={isFirstLaunch}
+              preview={isLaunchIntroPreview}
+              variant={launchIntroVariant}
+            />
+          ) : null}
         </div>
-
-        {showNav ? (
-          <AppNavigationChrome location={location} theme={theme} />
-        ) : null}
-
-        {ENABLE_LAUNCH_INTRO && isProductRoute && !referenceHomeRoute && showLaunchIntro ? (
-          <AppLaunchIntro
-            theme={theme}
-            leaving={launchIntroLeaving}
-            firstLaunch={isFirstLaunch}
-            preview={isLaunchIntroPreview}
-            variant={launchIntroVariant}
-          />
-        ) : null}
-      </div>
-    </PointerProvider>
+      </PointerProvider>
+    </MotionConfig>
   );
 }
 
@@ -211,13 +219,13 @@ function AppNavigationChrome({
   const { t } = useLanguage();
   const referenceHome = location === "/app" || location === "/";
   const chromeSurface = referenceHome
-    ? "linear-gradient(180deg, rgba(255,254,251,0.88), rgba(250,244,238,0.76))"
+    ? "linear-gradient(180deg, rgba(255,254,251,0.94), rgba(250,244,238,0.82))"
     : "var(--hint-dock-bg, var(--hint-nav-bg, var(--hint-liquid-panel)))";
   const chromeBorder = referenceHome
-    ? "rgba(218,199,187,0.42)"
+    ? "rgba(218,199,187,0.50)"
     : "var(--hint-dock-border, var(--hint-liquid-border, var(--hint-border)))";
   const chromeShadow = referenceHome
-    ? "0 18px 44px rgba(102, 79, 67, 0.09), 0 6px 18px rgba(177,137,190,0.045), inset 0 1px 0 rgba(255,255,255,0.74), inset 0 -16px 28px rgba(129,91,111,0.025)"
+    ? "0 20px 48px rgba(102, 79, 67, 0.105), 0 8px 22px rgba(177,137,190,0.055), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -16px 28px rgba(129,91,111,0.032)"
     : "var(--hint-dock-shadow, var(--hint-nav-shadow, var(--hint-liquid-shadow)))";
   const appTabs: AppTabItem[] = [
     { href: "/app", label: t("nav.today"), icon: Home, exact: true },
@@ -279,11 +287,11 @@ function HintAiMark({ active }: { active: boolean }) {
       className="relative grid size-[52px] place-items-center overflow-hidden rounded-full"
       style={{
         background: active
-          ? "radial-gradient(circle at 34% 20%, rgba(255,244,252,0.98), rgba(207,161,215,0.70) 40%, rgba(123,87,143,0.94) 100%)"
-          : "radial-gradient(circle at 34% 20%, rgba(255,243,252,0.92), rgba(205,159,214,0.62) 42%, rgba(130,95,151,0.90) 100%)",
+          ? "radial-gradient(circle at 34% 20%, rgba(255,244,252,0.98), rgba(213,166,221,0.74) 40%, rgba(120,84,141,0.96) 100%)"
+          : "radial-gradient(circle at 34% 20%, rgba(255,243,252,0.94), rgba(208,161,216,0.66) 42%, rgba(126,91,148,0.92) 100%)",
         color: "#fff8f4",
         boxShadow:
-          "0 0 0 5px rgba(255,255,255,0.66), 0 13px 26px rgba(105,77,120,0.18), inset 0 1px 0 rgba(255,255,255,0.62), inset 0 -10px 20px rgba(63,38,83,0.13), inset 0 0 0 1px rgba(255,255,255,0.44)",
+          "0 0 0 5px rgba(255,255,255,0.70), 0 15px 30px rgba(105,77,120,0.21), inset 0 1px 0 rgba(255,255,255,0.66), inset 0 -10px 20px rgba(63,38,83,0.14), inset 0 0 0 1px rgba(255,255,255,0.48)",
       }}
     >
       <span

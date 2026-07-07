@@ -17,7 +17,7 @@ import {
   Wind,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
+import { AppScreen, GlassPanel, ScreenHeader, SectionLabel } from "../../components/app/AppChrome";
 import { ACCENT, GLASS } from "../../modules/hold/atmosphere";
 import { getAnonId, getLocalDateString } from "../../lib/identity";
 import {
@@ -212,7 +212,7 @@ function ReadingBlock({
   children: string;
 }) {
   return (
-    <div className="hint-app-card rounded-[16px] border px-4 py-3" style={{ borderColor: GLASS.border }}>
+    <div className="hint-subtle-card rounded-[18px] px-4 py-3">
       <p className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: GLASS.faint }}>
         {label}
       </p>
@@ -240,14 +240,14 @@ export function AnimalTarotView() {
         setReceipt(nextReceipt);
         setPhase(nextReceipt.openedAt ? "revealed" : "intro");
         setReceiptError(nextReceipt.source === "local-fallback"
-          ? "Server daily lock is unavailable. This draw is locked locally for now and may resync when the backend returns."
+          ? "This draw is saved on this device for today."
           : null);
       })
       .catch(() => {
         if (cancelled) return;
         setReceipt(null);
         setPhase("intro");
-        setReceiptError("Animal Tarot could not reach the daily lock service. Try again when the backend is available.");
+        setReceiptError("Animal Tarot will save this draw on this device for today.");
       });
     return () => {
       cancelled = true;
@@ -264,7 +264,7 @@ export function AnimalTarotView() {
 
   function drawAnimal() {
     if (!receipt) {
-      setReceiptError("Animal Tarot is waiting for the daily lock service. Refresh once the backend is available.");
+      setReceiptError("Animal Tarot is preparing today's draw. Try again in a moment.");
       return;
     }
     setSaved(false);
@@ -274,12 +274,12 @@ export function AnimalTarotView() {
         .then((opened) => {
           setReceipt(opened);
           setReceiptError(opened.source === "local-fallback"
-            ? "Server daily lock is unavailable. This opened draw is locked locally until the backend returns."
+            ? "This opened draw is saved on this device for today."
             : null);
           setPhase("revealed");
         })
         .catch(() => {
-          setReceiptError("Animal Tarot could not mark this draw opened on the daily lock service. Try again in a moment.");
+          setReceiptError("Animal Tarot could not finish this draw. Try again in a moment.");
           setPhase(receipt.openedAt ? "revealed" : "intro");
         });
     }, 1280);
@@ -298,35 +298,18 @@ export function AnimalTarotView() {
 
   return (
     <AppScreen>
-      <header className="animal-tarot-hero mb-6">
-        <div className="animal-hero-orbit" aria-hidden />
-        <div className="relative z-10">
-          <p className="font-sans text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT.gold }}>
-            Animal Tarot
-          </p>
-          <h1 className="mt-2 font-serif text-[34px] leading-none sm:text-[42px]" style={{ color: GLASS.text }}>
-            Animal Terrace
-          </h1>
-          <p className="mt-3 max-w-2xl font-sans text-[13px] leading-relaxed sm:text-[14px]" style={{ color: GLASS.muted }}>
-            Draw the animal walking with you today. The card is assigned once per server day and stays open after you reveal it.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {["Instinct", "Emotion", "Today"].map((item) => (
-              <span
-                key={item}
-                className="rounded-full border px-3 py-1.5 font-sans text-[10px] font-black uppercase tracking-[0.14em]"
-                style={{ color: GLASS.text, borderColor: GLASS.border, background: "color-mix(in srgb, var(--hint-surface-soft) 78%, transparent)" }}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </header>
+      <ScreenHeader
+        eyebrow="Animal Tarot"
+        title="Animal Terrace"
+        subtitle="One animal, one companion card, one clean message for today."
+        sigil={PawPrint}
+        backHref="/app"
+        backLabel="Home"
+      />
 
       <GlassPanel hero className="animal-tarot-stage" padded={false}>
         <div className="animal-stage-sky" aria-hidden />
-        <div className="relative z-10 grid gap-6 p-5 sm:p-6">
+        <div className="relative z-10 grid gap-4 p-4 sm:p-5">
           <div className="animal-card-stage">
             {(revealing || revealed) && <div className="animal-burst-rings" aria-hidden />}
             <SpiritCard animal={animal} cardImage={companion.image} revealed={revealed || revealing} />
@@ -334,9 +317,9 @@ export function AnimalTarotView() {
 
           <div>
             {receiptError && (
-              <div className="mb-4 rounded-[16px] border px-4 py-3" style={{ borderColor: "rgba(241,166,107,0.34)", background: "rgba(241,166,107,0.08)" }}>
+              <div className="hint-info-callout mb-4 rounded-[18px] px-4 py-3">
                 <p className="font-sans text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: EMBER }}>
-                  {fallbackMode ? "Local fallback" : "Daily lock unavailable"}
+                  {fallbackMode ? "Saved for today" : "Draw is preparing"}
                 </p>
                 <p className="mt-1 font-sans text-[12px] leading-relaxed" style={{ color: GLASS.muted }}>
                   {receiptError}
@@ -346,30 +329,34 @@ export function AnimalTarotView() {
             <SectionLabel>{revealed ? animal.title : "Mystical animal ritual"}</SectionLabel>
             {loading && (
               <div className="py-6">
-                <h2 className="font-serif text-[34px] leading-tight" style={{ color: GLASS.text }}>
+                <h2 className="font-sans text-[24px] font-black leading-tight" style={{ color: GLASS.text }}>
                   Finding today’s animal.
                 </h2>
                 <p className="mt-4 font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>
-                  Asking the server for today’s locked draw.
+                  Preparing today’s locked draw.
                 </p>
               </div>
             )}
 
             {!loading && !revealed && !revealing && (
               <>
-                <h2 className="font-serif text-[32px] leading-tight sm:text-[38px]" style={{ color: GLASS.text }}>
+                <h2 className="font-sans text-[24px] font-black leading-tight" style={{ color: GLASS.text }}>
                   Let one animal step forward.
                 </h2>
-                <p className="mt-4 max-w-lg font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>
-                  This is not a childish animal picker. Treat it like an instinct card: one animal, one companion tarot card, one clean message for today.
+                <p className="mt-3 max-w-lg font-sans text-[13px] leading-relaxed" style={{ color: GLASS.muted }}>
+                  Treat it like an instinct card: one animal, one companion tarot card, one clean message for today.
                 </p>
-                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <button type="button" onClick={drawAnimal} className="animal-primary-button hint-tap-sparkle mt-4" disabled={!receipt}>
+                  <Sparkles size={16} />
+                  Draw animal card
+                </button>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
                   {[
                     ["1", "Hold the question loosely"],
                     ["2", "Draw one animal"],
                     ["3", "Use the prompt today"],
                   ].map(([step, copy]) => (
-                    <div key={step} className="hint-card-lift rounded-[16px] border px-3 py-3" style={{ borderColor: GLASS.border, background: "color-mix(in srgb, var(--hint-surface-soft) 76%, transparent)" }}>
+                    <div key={step} className="hint-subtle-card hint-card-lift rounded-[18px] px-3 py-3">
                       <span className="font-serif text-[22px]" style={{ color: ACCENT.gold }}>{step}</span>
                       <p className="mt-1 font-sans text-[11px] leading-snug" style={{ color: GLASS.muted }}>{copy}</p>
                     </div>
@@ -380,7 +367,7 @@ export function AnimalTarotView() {
 
             {revealing && (
               <div className="py-6">
-                <h2 className="font-serif text-[34px] leading-tight" style={{ color: GLASS.text }}>
+                <h2 className="font-sans text-[24px] font-black leading-tight" style={{ color: GLASS.text }}>
                   The terrace is opening.
                 </h2>
                 <p className="mt-4 font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>
@@ -396,11 +383,11 @@ export function AnimalTarotView() {
                     <p className="font-sans text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: ACCENT.aqua }}>
                       Today's animal
                     </p>
-                    <h2 className="mt-1 font-serif text-[42px] leading-none" style={{ color: GLASS.text }}>
+                    <h2 className="mt-1 font-sans text-[28px] font-black leading-none" style={{ color: GLASS.text }}>
                       {animal.name}
                     </h2>
                   </div>
-                  <div className="rounded-full border px-3 py-1.5 font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: ACCENT.gold, borderColor: "rgba(206,178,110,0.28)", background: "rgba(206,178,110,0.08)" }}>
+                  <div className="hint-segment rounded-full px-3 py-1.5 font-sans text-[10px] font-black uppercase tracking-[0.16em]" data-active="true">
                     Companion: {companion.name}
                   </div>
                 </div>
@@ -414,13 +401,7 @@ export function AnimalTarotView() {
               </div>
             )}
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              {!loading && !revealing && !revealed && (
-                <button type="button" onClick={drawAnimal} className="animal-primary-button hint-tap-sparkle" disabled={!receipt}>
-                  <Sparkles size={16} />
-                  Draw animal card
-                </button>
-              )}
+            <div className="mt-4 flex flex-wrap gap-3">
               {loading && (
                 <button type="button" className="animal-primary-button hint-tap-sparkle is-loading" disabled>
                   <Moon size={16} />

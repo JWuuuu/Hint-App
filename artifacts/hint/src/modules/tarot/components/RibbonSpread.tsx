@@ -826,9 +826,11 @@ export function RibbonSpread({
                   {zoomed && !selected && !popping ? (
                     <span
                       aria-hidden
-                      className="pointer-events-none absolute left-1/2 top-[-2.1rem] z-20 grid h-7 min-w-7 place-items-center rounded-full border border-[#e2c989]/84 bg-[#fff8e6]/94 px-1.5 font-serif text-[13px] font-black leading-none text-[#4a3422] shadow-[0_12px_22px_rgba(45,35,92,0.18)] backdrop-blur-xl"
+                      className="pointer-events-none absolute left-1/2 top-[-2rem] z-20 font-serif text-[17px] font-black leading-none text-[#4a3422]"
                       style={{
                         transform: `translateX(-50%) rotate(${-layout.rotate}rad)`,
+                        textShadow:
+                          "0 1px 0 rgba(255,250,230,0.94), 0 7px 16px rgba(80,52,34,0.18)",
                       }}
                     >
                       {index + 1}

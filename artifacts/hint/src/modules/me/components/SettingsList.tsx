@@ -115,7 +115,7 @@ export function SettingsList() {
             <div className="flex items-start gap-3.5">
               <IconTile icon={Palette} />
               <div className="min-w-0 flex-1">
-                <p className="font-serif text-[15px]" style={{ color: GLASS.text }}>
+                <p className="font-sans text-[15px] font-black" style={{ color: GLASS.text }}>
                   {t("me.more.appearance")}
                 </p>
                 <p className="mt-0.5 font-sans text-[11.5px] leading-snug" style={{ color: GLASS.faint }}>
@@ -185,7 +185,7 @@ export function SettingsList() {
 const groupStyle = {
   background: "var(--hint-liquid-panel)",
   borderColor: "var(--hint-liquid-border)",
-  boxShadow: "0 16px 38px rgba(25,18,34,0.18), inset 0 1px 0 rgba(255,255,255,0.18)",
+  boxShadow: "var(--hint-liquid-shadow)",
   backdropFilter: "blur(28px) saturate(1.22)",
   WebkitBackdropFilter: "blur(28px) saturate(1.22)",
 } as const;
@@ -207,15 +207,14 @@ function IconTile({
 }) {
   return (
     <span
-      className="grid size-8 shrink-0 place-items-center rounded-[10px]"
+      className="hint-icon-tile grid size-8 shrink-0 place-items-center rounded-[12px]"
       style={{
         background: danger
-          ? "rgba(214,140,140,0.12)"
-          : "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)",
-        border: `1px solid ${GLASS.border}`,
+          ? "color-mix(in srgb, var(--hint-danger) 13%, var(--hint-control-bg))"
+          : undefined,
       }}
     >
-      <Icon size={17} color={danger ? "rgba(214,140,140,0.9)" : ACCENT.aqua} />
+      <Icon size={17} color={danger ? "var(--hint-danger)" : ACCENT.aqua} />
     </span>
   );
 }
@@ -245,10 +244,10 @@ function ExpandableSettingsSection({
   return (
     <section>
       <details className="overflow-hidden rounded-[18px] border" style={groupStyle}>
-        <summary className="flex cursor-pointer list-none items-center gap-3.5 px-3.5 py-3">
+        <summary className="flex cursor-pointer list-none transform-gpu items-center gap-3.5 px-3.5 py-3 transition-[background,transform] duration-200 ease-out active:scale-[0.995]">
           <IconTile icon={ShieldAlert} />
           <span className="min-w-0 flex-1">
-            <span className="block font-serif text-[15px] leading-tight" style={{ color: GLASS.text }}>
+            <span className="block font-sans text-[14px] font-black leading-tight" style={{ color: GLASS.text }}>
               {title}
             </span>
             <span className="mt-0.5 line-clamp-1 block font-sans text-[11.5px] leading-snug" style={{ color: GLASS.faint }}>
@@ -275,7 +274,7 @@ function SettingsRow({ row, isFirst }: { row: Row; isFirst: boolean }) {
         className="min-w-0 flex-1"
         style={{ color: row.danger ? "rgba(224,168,168,0.95)" : GLASS.text }}
       >
-        <span className="block font-serif text-[15px] leading-tight">{row.label}</span>
+        <span className="block font-sans text-[14px] font-black leading-tight">{row.label}</span>
         {row.detail && (
           <span
             className="mt-0.5 line-clamp-1 block font-sans text-[11.5px] leading-snug"
@@ -289,7 +288,7 @@ function SettingsRow({ row, isFirst }: { row: Row; isFirst: boolean }) {
     </>
   );
 
-  const className = "flex min-h-[58px] w-full items-center gap-3.5 px-3.5 py-3 text-left transition active:bg-white/[0.06]";
+  const className = "flex min-h-[58px] w-full transform-gpu items-center gap-3.5 px-3.5 py-3 text-left transition-[background,transform,opacity] duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.992] active:bg-white/[0.06]";
   const style = { borderTop: isFirst ? "none" : `1px solid ${GLASS.border}` };
 
   if (row.href) {
@@ -325,10 +324,10 @@ function ControlRow({
   control: ReactNode;
 }) {
   return (
-    <div className="flex min-h-[58px] items-center gap-3.5 border-t px-3.5 py-3" style={{ borderColor: GLASS.border }}>
+    <div className="flex min-h-[58px] transform-gpu items-center gap-3.5 border-t px-3.5 py-3" style={{ borderColor: GLASS.border }}>
       <IconTile icon={icon} />
       <span className="min-w-0 flex-1">
-        <span className="block font-serif text-[15px] leading-tight" style={{ color: GLASS.text }}>
+        <span className="block font-sans text-[14px] font-black leading-tight" style={{ color: GLASS.text }}>
           {label}
         </span>
         <span className="mt-0.5 line-clamp-1 block font-sans text-[11.5px] leading-snug" style={{ color: GLASS.faint }}>
@@ -355,17 +354,8 @@ function ThemeButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-10 items-center justify-center gap-2 rounded-[12px] border px-3 py-2 font-sans text-[12px] font-bold transition active:scale-[0.98]"
-      style={{
-        borderColor: active ? "color-mix(in srgb, var(--hint-rose) 34%, var(--hint-border))" : GLASS.border,
-        color: active ? "var(--hint-special-action-text)" : GLASS.text,
-        background: active
-          ? "var(--hint-special-action-bg)"
-          : "color-mix(in srgb, var(--hint-surface-soft) 86%, transparent)",
-        boxShadow: active
-          ? "0 10px 22px color-mix(in srgb, var(--hint-rose) 16%, transparent), inset 0 1px 0 rgba(255,255,255,0.50)"
-          : "inset 0 1px 0 rgba(255,255,255,0.16)",
-      }}
+      className="hint-segment flex min-h-10 transform-gpu items-center justify-center gap-2 rounded-full px-3 py-2 font-sans text-[12px] font-bold transition-[background,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.98]"
+      data-active={active}
     >
       <Icon size={14} />
       <span className="min-w-0 truncate">{label}</span>
@@ -389,7 +379,7 @@ function ToggleSwitch({
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+      className="relative h-7 w-12 shrink-0 transform-gpu rounded-full transition-colors duration-200 ease-out active:scale-[0.98]"
       style={{
         background: checked
           ? "var(--hint-special-action-bg)"
@@ -399,7 +389,7 @@ function ToggleSwitch({
       }}
     >
       <span
-        className="absolute left-0.5 top-0.5 rounded-full transition-transform"
+        className="absolute left-0.5 top-0.5 rounded-full transition-transform duration-200 ease-out will-change-transform"
         style={{
           width: 22,
           height: 22,

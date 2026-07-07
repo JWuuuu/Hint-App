@@ -195,9 +195,9 @@ export function CelestialBackdrop({ theme }: Props) {
           animation: "hint-ornament-breathe 18s ease-in-out infinite",
           opacity: "var(--hint-linework-opacity)",
           maskImage:
-            "linear-gradient(to bottom, rgba(0,0,0,0.92), rgba(0,0,0,0.78) 58%, rgba(0,0,0,0.34) 100%)",
+            "linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(0,0,0,0.10) 42%, rgba(0,0,0,0.55) 66%, rgba(0,0,0,0.26) 100%)",
           WebkitMaskImage:
-            "linear-gradient(to bottom, rgba(0,0,0,0.92), rgba(0,0,0,0.78) 58%, rgba(0,0,0,0.34) 100%)",
+            "linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(0,0,0,0.10) 42%, rgba(0,0,0,0.55) 66%, rgba(0,0,0,0.26) 100%)",
         }}
       >
         <CelestialLinework />
@@ -223,4 +223,3 @@ export function CelestialBackdrop({ theme }: Props) {
     </div>
   );
 }
-

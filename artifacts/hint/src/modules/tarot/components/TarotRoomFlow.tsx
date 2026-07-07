@@ -78,6 +78,7 @@ type TarotStep =
 
 type QuestionCard = {
   category: string;
+  preview: string;
   question: string;
   icon: "love" | "decision" | "self" | "timing" | "career" | "truth";
   imageCardId: string;
@@ -112,9 +113,17 @@ const SPREAD_PREVIEW_TEXT_STYLE: CSSProperties = {
   fontVariantNumeric: "tabular-nums",
 };
 
+const TWO_LINE_CLAMP_STYLE: CSSProperties = {
+  display: "-webkit-box",
+  overflow: "hidden",
+  WebkitBoxOrient: "vertical",
+  WebkitLineClamp: 2,
+};
+
 const QUESTION_CARDS: QuestionCard[] = [
   {
     category: "Love",
+    preview: "Why am I thinking about them?",
     question: "Why do I keep thinking about them?",
     icon: "love",
     imageCardId: "6-lovers",
@@ -122,6 +131,7 @@ const QUESTION_CARDS: QuestionCard[] = [
   },
   {
     category: "Work",
+    preview: "What should I know next?",
     question: "What should I know before my next job move?",
     icon: "career",
     imageCardId: "1-magician",
@@ -129,6 +139,7 @@ const QUESTION_CARDS: QuestionCard[] = [
   },
   {
     category: "Decision",
+    preview: "Which path is better?",
     question: "Which path is better for me now?",
     icon: "decision",
     imageCardId: "11-justice",
@@ -136,6 +147,7 @@ const QUESTION_CARDS: QuestionCard[] = [
   },
   {
     category: "Self",
+    preview: "What am I avoiding?",
     question: "What am I avoiding emotionally?",
     icon: "self",
     imageCardId: "9-hermit",
@@ -143,6 +155,7 @@ const QUESTION_CARDS: QuestionCard[] = [
   },
   {
     category: "Timing",
+    preview: "Is now the right time?",
     question: "Is now the right time to act?",
     icon: "timing",
     imageCardId: "14-temperance",
@@ -150,6 +163,7 @@ const QUESTION_CARDS: QuestionCard[] = [
   },
   {
     category: "Truth",
+    preview: "What am I missing?",
     question: "What is the honest thing I am missing?",
     icon: "truth",
     imageCardId: "18-moon",
@@ -839,6 +853,57 @@ function getSpreadPreviewLabelStyle(
   };
 }
 
+type PickSpreadPreviewPoint = {
+  x: number;
+  y: number;
+};
+
+function pickSpreadSlotSize(spread: SpreadChoice) {
+  if (spread.cardCount >= 7) return { width: 42, height: 64 };
+  if (spread.cardCount >= 5) return { width: 46, height: 72 };
+  return { width: 48, height: 76 };
+}
+
+function pickSpreadPanelHeight(spread: SpreadChoice) {
+  if (spread.cardCount >= 7) return 318;
+  return 300;
+}
+
+function getPickSpreadPreviewPoints(spread: SpreadChoice): PickSpreadPreviewPoint[] {
+  if (spread.id === "loveTree") {
+    return [
+      { x: 50, y: 82 },
+      { x: 50, y: 55 },
+      { x: 24, y: 55 },
+      { x: 76, y: 55 },
+      { x: 32, y: 25 },
+      { x: 68, y: 25 },
+      { x: 50, y: 12 },
+    ];
+  }
+
+  if (spread.id === "reconciliation") {
+    return getSpreadPreviewLayout(spread);
+  }
+
+  if (spread.cardCount >= 7) {
+    return getSpreadPreviewLayout(spread);
+  }
+
+  return spread.layout.slice(0, spread.cardCount).map((point) => ({
+    x: point.x,
+    y: point.y,
+  }));
+}
+
+function getPickSpreadLabelStyle() {
+  return {
+    left: "50%",
+    top: "calc(100% + 0.35rem)",
+    transform: "translateX(-50%)",
+  };
+}
+
 function SpreadDiagram({
   spread,
   active = false,
@@ -1052,6 +1117,78 @@ function QuestionIcon({ icon }: { icon: QuestionCard["icon"] }) {
   if (icon === "career") return <WandSparkles className={className} />;
   if (icon === "truth") return <Sparkles className={className} />;
   return <Moon className={className} />;
+}
+
+function RitualPathPanel({
+  ready,
+  onContinue,
+}: {
+  ready: boolean;
+  onContinue?: () => void;
+}) {
+  const reducedMotion = useReducedMotion();
+  const steps = [
+    {
+      label: "Ask",
+      icon: <Sparkles size={16} />,
+      tone: "text-[#d7779e] bg-[#fff1f7]",
+    },
+    {
+      label: "Shape",
+      icon: <Route size={16} />,
+      tone: "text-[#9b76d8] bg-[#f4ecff]",
+    },
+    {
+      label: "Draw",
+      icon: <WandSparkles size={16} />,
+      tone: "text-[#c68d35] bg-[#fff5dc]",
+    },
+  ];
+
+  return (
+    <motion.div
+      initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reducedMotion ? 0 : 0.38, ease: TAROT_STEP_EASE }}
+      className="mt-4 rounded-[22px] border border-white/60 bg-white/36 p-3 shadow-[0_14px_34px_rgba(93,68,101,0.10)] backdrop-blur-xl"
+    >
+      <div className="flex items-center gap-2">
+        {steps.map((step, index) => (
+          <div className="flex min-w-0 flex-1 items-center gap-1.5" key={step.label}>
+            <span
+              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${step.tone}`}
+              aria-hidden="true"
+            >
+              {step.icon}
+            </span>
+            <span className="min-w-0 truncate text-[10.5px] font-black text-[#4a3d52]">
+              {`${index + 1}. ${step.label}`}
+            </span>
+          </div>
+        ))}
+        <span className="rounded-full bg-[#352a46] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-[#fff8ec] shadow-[0_8px_20px_rgba(55,42,69,0.18)]">
+          {ready ? "Next" : "Flow"}
+        </span>
+      </div>
+      {ready && onContinue ? (
+        <button
+          type="button"
+          onClick={() => {
+            hapticTick(8);
+            onContinue();
+          }}
+          className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#352a46] px-4 text-[12px] font-black text-[#fff8ec] shadow-[0_14px_30px_rgba(55,42,69,0.20)] transition active:scale-[0.985]"
+        >
+          Choose spread
+          <ChevronRight size={15} strokeWidth={2.5} />
+        </button>
+      ) : (
+        <p className="mt-2 text-[11px] font-bold leading-snug text-[#8b7887]">
+          Type your own question or tap a card. Hint will pick the spread.
+        </p>
+      )}
+    </motion.div>
+  );
 }
 
 function TarotBack({
@@ -1396,79 +1533,93 @@ function QuestionStep({
           </p>
 
           {question ? (
-            <div className="mt-5 rounded-[24px] border border-white/66 bg-white/46 p-4 shadow-[0_16px_46px_rgba(102,72,105,0.10)] backdrop-blur-xl">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#a28398]">
-                Current question
-              </p>
-              <p className="mt-2 text-[14px] font-bold leading-relaxed text-[#3d3348]">
-                {question}
-              </p>
-            </div>
-          ) : null}
+            <>
+              <div className="mt-5 rounded-[24px] border border-white/66 bg-white/52 p-4 shadow-[0_16px_46px_rgba(102,72,105,0.10)] backdrop-blur-xl">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#a28398]">
+                  Current question
+                </p>
+                <p className="mt-2 text-[14px] font-bold leading-relaxed text-[#3d3348]">
+                  {question}
+                </p>
+              </div>
+              <RitualPathPanel ready onContinue={onSubmit} />
+            </>
+          ) : (
+            <>
+              <div className="mt-5 flex items-center justify-between gap-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9c7d92]">
+                  Suggested questions
+                </p>
+                <p className="rounded-full border border-white/56 bg-white/42 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-[#8a7888] shadow-[0_8px_22px_rgba(96,72,104,0.08)] backdrop-blur-xl">
+                  Auto spread
+                </p>
+              </div>
 
-          <div className="mt-5 flex items-center justify-between gap-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#9c7d92]">
-              Suggested questions
-            </p>
-            <p className="rounded-full border border-white/56 bg-white/42 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-[#8a7888] shadow-[0_8px_22px_rgba(96,72,104,0.08)] backdrop-blur-xl">
-              Auto spread
-            </p>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2.5">
-            {QUESTION_CARDS.map((card) => {
-              const image =
-                getTarotCardImage(card.imageCardId, "hint-card-2") ??
-                getTarotCardImage(card.imageCardId, "hint-classic");
-              return (
-                <button
-                  key={card.category}
-                  type="button"
-                  onClick={() => {
-                    hapticTick();
-                    setPickedPrompt(card.category);
-                    setQuestion(card.question);
-                    onPromptSelect(card.question);
-                  }}
-                  className={`relative h-[104px] overflow-hidden rounded-[18px] border bg-gradient-to-br ${card.gradient} p-3 text-left shadow-[0_14px_32px_rgba(104,82,111,0.12)] transition duration-200 active:scale-[0.98] ${
-                    pickedPrompt === card.category
-                      ? "border-[#d7a85e] shadow-[0_20px_50px_rgba(215,168,94,0.26)]"
-                      : "border-white/72"
-                  }`}
-                >
-                  <span className="pointer-events-none absolute -right-8 top-0 h-24 w-24 rounded-full bg-white/44 blur-2xl" />
-                  <span className="pointer-events-none absolute -bottom-10 left-8 h-24 w-32 rounded-full bg-[#f5c9df]/22 blur-2xl" />
-                  {image ? (
-                    <span className="pointer-events-none absolute -right-1 bottom-1 h-[66px] w-[40px] rotate-[8deg] overflow-hidden rounded-[8px] border border-white/76 opacity-95 shadow-[0_12px_22px_rgba(79,58,91,0.18)]">
-                      <img
-                        src={image}
-                        alt=""
-                        aria-hidden="true"
-                        className="h-full w-full object-cover"
-                        draggable={false}
-                      />
-                    </span>
-                  ) : null}
-                  <span className="relative z-10 flex items-center gap-2">
-                    <span className="grid h-7 w-7 place-items-center rounded-full bg-white/58 text-[#5e4c67] shadow-inner">
-                      <QuestionIcon icon={card.icon} />
-                    </span>
-                    <span className="min-w-0 truncate text-[9px] font-black uppercase tracking-[0.18em] text-[#9d7c84]">
-                      {card.category}
-                    </span>
-                  </span>
-                  <span className="relative z-10 mt-3 line-clamp-2 block max-w-[calc(100%-2rem)] text-[12.5px] font-black leading-snug text-[#3e3448]">
-                    {card.question}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+              <div className="mt-3 grid grid-cols-2 gap-2.5">
+                {QUESTION_CARDS.map((card) => {
+                  const image =
+                    getTarotCardImage(card.imageCardId, "hint-card-2") ??
+                    getTarotCardImage(card.imageCardId, "hint-classic");
+                  return (
+                    <button
+                      key={card.category}
+                      type="button"
+                      onClick={() => {
+                        hapticTick();
+                        setPickedPrompt(card.category);
+                        setQuestion(card.question);
+                        onPromptSelect(card.question);
+                      }}
+                      className={`relative h-[94px] overflow-hidden rounded-[18px] border bg-gradient-to-br ${card.gradient} p-3 text-left shadow-[0_14px_32px_rgba(104,82,111,0.12)] transition duration-200 active:scale-[0.98] ${
+                        pickedPrompt === card.category
+                          ? "border-[#d7a85e] shadow-[0_20px_50px_rgba(215,168,94,0.26)]"
+                          : "border-white/72"
+                      }`}
+                    >
+                      <span className="pointer-events-none absolute -right-8 top-0 h-24 w-24 rounded-full bg-white/44 blur-2xl" />
+                      <span className="pointer-events-none absolute -bottom-10 left-8 h-24 w-32 rounded-full bg-[#f5c9df]/22 blur-2xl" />
+                      {image ? (
+                        <span className="pointer-events-none absolute -right-1.5 bottom-2 h-[52px] w-[32px] rotate-[8deg] overflow-hidden rounded-[7px] border border-white/76 opacity-[0.86] shadow-[0_12px_22px_rgba(79,58,91,0.18)]">
+                          <img
+                            src={image}
+                            alt=""
+                            aria-hidden="true"
+                            className="h-full w-full object-cover"
+                            draggable={false}
+                          />
+                        </span>
+                      ) : null}
+                      {pickedPrompt === card.category ? (
+                        <span className="pointer-events-none absolute right-2 top-2 z-20 grid h-5 w-5 place-items-center rounded-full bg-[#fff6df] shadow-[0_6px_16px_rgba(155,106,36,0.18)]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#9b6a24]" />
+                        </span>
+                      ) : null}
+                      <span className="relative z-10 flex items-center gap-2">
+                        <span className="grid h-7 w-7 place-items-center rounded-full bg-white/58 text-[#5e4c67] shadow-inner">
+                          <QuestionIcon icon={card.icon} />
+                        </span>
+                        <span className="min-w-0 truncate text-[9px] font-black uppercase tracking-[0.18em] text-[#9d7c84]">
+                          {card.category}
+                        </span>
+                      </span>
+                      <span
+                        className="relative z-10 mt-3 block max-w-[calc(100%-3rem)] text-[12px] font-black leading-snug text-[#3e3448]"
+                        style={TWO_LINE_CLAMP_STYLE}
+                      >
+                        {card.preview}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <RitualPathPanel ready={false} />
+            </>
+          )}
         </div>
       </StepShell>
 
       <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(var(--hint-safe-bottom)+0.8rem)]">
-        <div className="mx-auto flex max-w-[520px] items-end gap-2 rounded-[28px] border border-white/68 bg-white/76 p-2 shadow-[0_18px_54px_rgba(83,61,93,0.20)] backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[440px] items-end gap-2 rounded-[28px] border border-white/68 bg-white/76 p-2 shadow-[0_18px_54px_rgba(83,61,93,0.20)] backdrop-blur-xl">
           <textarea
             value={question}
             rows={1}
@@ -1542,12 +1693,12 @@ function SpreadRecommendationStep({
     ? recommendation.reason
     : spreadReason(spread, question);
   const matchLabel = isLoading
-    ? "Choosing with API"
+    ? "Finding match"
     : recommendationMatches && recommendation?.source === "api"
-      ? "AI matched"
+      ? "Hint matched"
       : recommendationMatches
-        ? "Local match"
-        : "Manual choice";
+        ? "Smart match"
+        : "Browsing spread";
 
   function move(delta: number) {
     const nextIndex = Math.max(
@@ -1861,7 +2012,7 @@ function RoomDesignStudioStep({
     ? [...unlockedCardBackChoices, ...lockedCardBackChoices]
     : unlockedCardBackChoices;
   const cardBackHelpText = personalBacks
-    ? `Your ${personalBacks.sign} sign has two card backs. Other styles use token.`
+    ? `Your ${personalBacks.sign} sign has two card backs. Other styles stay available with tokens.`
     : "Your astrology sign card backs appear after profile setup.";
   const summaryItems = [
     { label: "Spread", value: spread.label },
@@ -1920,7 +2071,7 @@ function RoomDesignStudioStep({
               <div className="relative z-10 flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[#9b7a8d]">
-                    Ready setup
+                    Ritual setup
                   </p>
                   <p className="mt-1 truncate font-serif text-[29px] leading-tight text-[#342e43]">
                     {spread.label}
@@ -2331,7 +2482,9 @@ function createFlowDeckState(deck: RitualCard[]): FlowDeckState {
 }
 
 const CLOCKWISE_WASH_DIRECTION: 1 | -1 = 1;
-const AUTO_WASH_DURATION_MS = 4200;
+const AUTO_WASH_DURATION_MS = 3000;
+const AUTO_WASH_RELEASE_PAD_MS = 80;
+const AUTO_WASH_PHASE_STEP = 0.042;
 
 function RitualShuffleStep({
   design,
@@ -2461,7 +2614,7 @@ function RitualShuffleStep({
         const centerY = height * 0.50;
         const radiusX = width * 0.31;
         const radiusY = height * 0.245;
-        autoWashPhaseRef.current += 0.030;
+        autoWashPhaseRef.current += AUTO_WASH_PHASE_STEP;
         const phase = autoWashPhaseRef.current;
         const x =
           centerX +
@@ -2475,12 +2628,12 @@ function RitualShuffleStep({
           autoWashLastPointRef.current ?? {
             x:
               centerX +
-              Math.cos(phase - 0.030) * radiusX +
-              Math.sin((phase - 0.030) * 2.25) * width * 0.026,
+              Math.cos(phase - AUTO_WASH_PHASE_STEP) * radiusX +
+              Math.sin((phase - AUTO_WASH_PHASE_STEP) * 2.25) * width * 0.026,
             y:
               centerY +
-              Math.sin(phase - 0.030) * radiusY +
-              Math.cos((phase - 0.030) * 1.85) * height * 0.020,
+              Math.sin(phase - AUTO_WASH_PHASE_STEP) * radiusY +
+              Math.cos((phase - AUTO_WASH_PHASE_STEP) * 1.85) * height * 0.020,
           };
 
         autoWashLastPointRef.current = { x, y };
@@ -2524,7 +2677,10 @@ function RitualShuffleStep({
       autoWashStartedAtRef.current === null
         ? AUTO_WASH_DURATION_MS
         : performance.now() - autoWashStartedAtRef.current;
-    const releaseDelay = Math.max(120, AUTO_WASH_DURATION_MS - elapsed + 120);
+    const releaseDelay = Math.max(
+      AUTO_WASH_RELEASE_PAD_MS,
+      AUTO_WASH_DURATION_MS - elapsed + AUTO_WASH_RELEASE_PAD_MS,
+    );
     const timer = window.setTimeout(() => {
       if (stageRef.current === "washing") {
         finishWash();
@@ -3640,7 +3796,12 @@ function PickStep({
       layout.y < stageSize.height + 320
     );
   });
-  const spreadPreviewPoints = spread.layout.slice(0, spread.cardCount);
+  const spreadPreviewPoints = getPickSpreadPreviewPoints(spread).slice(
+    0,
+    spread.cardCount,
+  );
+  const pickSlotSize = pickSpreadSlotSize(spread);
+  const pickPanelHeight = pickSpreadPanelHeight(spread);
 
   return (
     <StepShell>
@@ -3661,15 +3822,22 @@ function PickStep({
           </p>
         </div>
         <div
-          className={`pointer-events-none relative z-50 mt-7 h-[300px] rounded-[34px] border border-white/70 bg-white/34 shadow-[inset_0_0_80px_rgba(255,255,255,0.20),0_18px_54px_rgba(91,65,100,0.08)] backdrop-blur-sm transition duration-300 ${
+          className={`pointer-events-none relative z-50 mt-7 rounded-[34px] border border-white/70 bg-white/34 shadow-[inset_0_0_80px_rgba(255,255,255,0.20),0_18px_54px_rgba(91,65,100,0.08)] backdrop-blur-sm transition duration-300 ${
             zoomed ? "scale-[0.98] opacity-0" : "scale-100 opacity-100"
           }`}
+          style={{ height: pickPanelHeight }}
         >
           {spreadPreviewPoints.map((point, index) => (
             <motion.div
               key={index}
-              className="absolute h-[76px] w-[48px] -translate-x-1/2 -translate-y-1/2 rounded-[10px]"
-              style={{ left: `${point.x}%`, top: `${point.y}%` }}
+              data-pick-slot-index={index}
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-[10px]"
+              style={{
+                left: `${point.x}%`,
+                top: `${point.y}%`,
+                width: pickSlotSize.width,
+                height: pickSlotSize.height,
+              }}
               initial={false}
               animate={
                 selectedCards[index]
@@ -3711,7 +3879,11 @@ function PickStep({
                   </span>
                 </div>
               )}
-              <span className="absolute left-1/2 top-[calc(100%+0.35rem)] max-w-[5.5rem] -translate-x-1/2 truncate text-[8px] font-black uppercase tracking-[0.12em] text-[#654f63]">
+              <span
+                data-pick-slot-label-index={index}
+                className="absolute z-20 max-w-[6.25rem] whitespace-nowrap rounded-full bg-white/54 px-1.5 py-0.5 text-[8px] font-black uppercase leading-none tracking-[0.12em] text-[#654f63] shadow-[0_7px_16px_rgba(108,79,116,0.10)] backdrop-blur-md"
+                style={getPickSpreadLabelStyle()}
+              >
                 {spread.positionLabels[index] ?? `Card ${index + 1}`}
               </span>
             </motion.div>
@@ -3802,13 +3974,15 @@ function PickStep({
                   {zoomed ? (
                     <span
                       aria-hidden
-                      className={`pointer-events-none absolute left-1/2 top-[-2.45rem] z-30 grid h-8 min-w-8 place-items-center rounded-full border px-2 font-serif text-[14px] font-black leading-none shadow-[0_12px_24px_rgba(80,60,90,0.18)] backdrop-blur-xl ${
-                        emphasized
-                          ? "border-[#e2b45f]/82 bg-[#fff4d4]/96 text-[#6a461d]"
-                          : "border-[#e8c27a]/84 bg-[#fff8e6]/94 text-[#4a3422]"
+                      className={`pointer-events-none absolute left-1/2 top-[-1.85rem] z-30 font-serif text-[13px] font-black leading-none ${
+                        emphasized ? "text-[#6a461d]" : "text-[#4a3422]"
                       }`}
                       style={{
+                        opacity: emphasized ? 0.68 : 0.48,
                         transform: `translateX(-50%) rotate(${-layout.rotate}rad)`,
+                        textShadow: emphasized
+                          ? "0 1px 0 rgba(255,250,230,0.72), 0 6px 14px rgba(108,70,29,0.14)"
+                          : "0 1px 0 rgba(255,250,230,0.58), 0 5px 12px rgba(80,52,34,0.10)",
                       }}
                     >
                       {displayNumber}
