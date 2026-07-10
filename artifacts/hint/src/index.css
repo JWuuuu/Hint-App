@@ -854,22 +854,26 @@
 
 .hint-app-dock[data-reference-home="true"]::before {
   background:
-    linear-gradient(112deg, rgba(255,255,255,0.22), rgba(255,255,255,0.045) 30%, transparent 50%, rgba(227,205,194,0.045) 78%, transparent),
-    radial-gradient(ellipse at 18% -18%, rgba(255,255,255,0.24), transparent 42%),
-    radial-gradient(ellipse at 54% 116%, rgba(213,176,198,0.045), transparent 54%);
-  opacity: 0.36;
+    linear-gradient(112deg, rgba(255,255,255,0.16), rgba(255,255,255,0.030) 30%, transparent 50%, rgba(227,205,194,0.030) 78%, transparent),
+    radial-gradient(ellipse at 18% -18%, rgba(255,255,255,0.18), transparent 42%),
+    radial-gradient(ellipse at 54% 116%, rgba(213,176,198,0.034), transparent 54%);
+  opacity: 0.28;
 }
 
 .hint-app-dock[data-reference-home="true"]::after {
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.20), transparent 24%, transparent 72%, rgba(255,255,255,0.08)),
-    linear-gradient(90deg, rgba(255,255,255,0.12), transparent 16%, transparent 84%, rgba(255,255,255,0.10));
+    linear-gradient(180deg, rgba(255,255,255,0.14), transparent 24%, transparent 72%, rgba(255,255,255,0.055)),
+    linear-gradient(90deg, rgba(255,255,255,0.08), transparent 16%, transparent 84%, rgba(255,255,255,0.070));
   box-shadow:
-    inset 0 1px 1px rgba(255,255,255,0.58),
-    inset 0 -1px 1px rgba(255,255,255,0.22),
-    inset 0 -14px 24px rgba(255,255,255,0.05),
-    inset 0 0 0 1px rgba(255,255,255,0.20);
-  opacity: 0.32;
+    inset 0 1px 1px rgba(255,255,255,0.46),
+    inset 0 -1px 1px rgba(255,255,255,0.16),
+    inset 0 -14px 24px rgba(255,255,255,0.035),
+    inset 0 0 0 1px rgba(255,255,255,0.14);
+  opacity: 0.24;
+}
+
+.hint-app-dock[data-reference-home="true"] .hint-app-tab {
+  height: 40px;
 }
 
 .hint-app-dock[data-reference-home="true"] .hint-app-tab[data-active="true"]:not([data-featured="true"])::before,

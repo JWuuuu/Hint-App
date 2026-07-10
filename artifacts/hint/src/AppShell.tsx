@@ -233,13 +233,13 @@ function AppNavigationChrome({
   const referenceHome = location === "/app" || location === "/";
   const lightChrome = referenceHome || creamStyleRoute;
   const chromeSurface = referenceHome
-    ? "linear-gradient(180deg, rgba(255,254,250,0.78), rgba(250,244,238,0.66))"
+    ? "linear-gradient(180deg, rgba(255,254,251,0.74), rgba(250,245,239,0.62))"
     : "var(--hint-dock-bg, var(--hint-nav-bg, var(--hint-liquid-panel)))";
   const chromeBorder = referenceHome
-    ? "rgba(218,199,187,0.24)"
+    ? "rgba(218,199,187,0.170)"
     : "var(--hint-dock-border, var(--hint-liquid-border, var(--hint-border)))";
   const chromeShadow = referenceHome
-    ? "0 18px 42px rgba(102, 79, 67, 0.060), 0 6px 16px rgba(177,137,190,0.024), inset 0 1px 0 rgba(255,255,255,0.66), inset 0 -14px 24px rgba(129,91,111,0.014)"
+    ? "0 16px 36px rgba(102, 79, 67, 0.044), 0 5px 14px rgba(177,137,190,0.018), inset 0 1px 0 rgba(255,255,255,0.56), inset 0 -12px 22px rgba(129,91,111,0.012)"
     : "var(--hint-dock-shadow, var(--hint-nav-shadow, var(--hint-liquid-shadow)))";
   const appTabs: AppTabItem[] = [
     { href: "/app", label: t("nav.today"), icon: Home, exact: true },
@@ -252,7 +252,7 @@ function AppNavigationChrome({
     <nav
       aria-label="App"
       data-app-tabbar
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-4 pb-[calc(var(--hint-safe-bottom)+0.35rem)]"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-[21px] pb-[calc(var(--hint-safe-bottom)+0.35rem)]"
     >
       <div
         aria-hidden
@@ -262,7 +262,7 @@ function AppNavigationChrome({
         }}
       />
       <div
-        className="hint-glass-nav hint-app-dock pointer-events-auto mx-auto grid h-[66px] w-full max-w-[var(--hint-app-width)] grid-cols-5 gap-1 overflow-visible rounded-[33px] border p-1.5"
+        className="hint-glass-nav hint-app-dock pointer-events-auto mx-auto grid h-[52px] w-full max-w-[var(--hint-app-width)] grid-cols-5 gap-1 overflow-visible rounded-[28px] border p-1.5"
         data-reference-home={referenceHome ? "true" : "false"}
         style={{
           background: chromeSurface,
@@ -278,7 +278,7 @@ function AppNavigationChrome({
             item={tab}
             active={isActiveAppTab(location, tab)}
             isDark={lightChrome ? false : isDark}
-            referenceHome={referenceHome}
+            referenceHome={lightChrome}
           />
         ))}
       </div>
@@ -300,15 +300,15 @@ function HintAiMark({ active, referenceHome = false }: { active: boolean; refere
       aria-hidden
       className={[
         "relative grid place-items-center overflow-hidden rounded-full",
-        referenceHome ? "size-[60px]" : "size-[52px]",
+        referenceHome ? "size-[54px]" : "size-[52px]",
       ].join(" ")}
       style={{
         background: active
-          ? "radial-gradient(circle at 34% 20%, rgba(255,244,252,0.98), rgba(207,161,215,0.70) 40%, rgba(123,87,143,0.94) 100%)"
-          : "radial-gradient(circle at 34% 20%, rgba(255,243,252,0.94), rgba(207,163,216,0.64) 42%, rgba(132,98,151,0.88) 100%)",
+          ? "radial-gradient(circle at 34% 20%, rgba(255,244,252,0.94), rgba(204,164,211,0.64) 40%, rgba(128,92,145,0.88) 100%)"
+          : "radial-gradient(circle at 34% 20%, rgba(255,243,252,0.90), rgba(207,163,216,0.56) 42%, rgba(132,98,151,0.80) 100%)",
         color: "#fff8f4",
         boxShadow:
-          "0 0 0 5px rgba(255,255,255,0.62), 0 12px 25px rgba(105,77,120,0.15), 0 0 28px rgba(195,145,206,0.18), inset 0 1px 0 rgba(255,255,255,0.64), inset 0 -10px 20px rgba(63,38,83,0.11), inset 0 0 0 1px rgba(255,255,255,0.42)",
+          "0 0 0 5px rgba(255,255,255,0.52), 0 11px 22px rgba(105,77,120,0.105), 0 0 24px rgba(195,145,206,0.12), inset 0 1px 0 rgba(255,255,255,0.54), inset 0 -10px 20px rgba(63,38,83,0.085), inset 0 0 0 1px rgba(255,255,255,0.34)",
       }}
     >
       <span
@@ -350,8 +350,8 @@ function AppTab({
         color: featured
           ? "var(--hint-special-action-text)"
           : active
-            ? isDark ? "#f8f1e8" : "#2d2934"
-            : isDark ? "rgba(248,241,232,0.62)" : "#777178",
+            ? isDark ? "#f8f1e8" : "#3f3a44"
+            : isDark ? "rgba(248,241,232,0.62)" : "#807982",
         background: "transparent",
         border: "1px solid transparent",
         boxShadow: "none",
@@ -368,19 +368,19 @@ function AppTab({
       {featured ? (
         <span className={[
           "hint-app-tab-orb pointer-events-none absolute left-1/2 -translate-x-1/2",
-          referenceHome ? "top-[-21px]" : "top-[-25px]",
+          referenceHome ? "top-[-18px]" : "top-[-25px]",
         ].join(" ")}>
           <HintAiMark active={active} referenceHome={referenceHome} />
         </span>
       ) : (
-        <Icon className="size-[21px] shrink-0" strokeWidth={active ? 2.35 : 1.9} />
+        <Icon className="size-[21px] shrink-0" strokeWidth={active ? 2.05 : 1.65} />
       )}
       {featured && referenceHome ? (
         <span className="sr-only">{item.label}</span>
       ) : (
         <span
           className={[
-            "hint-app-tab-label max-w-full truncate font-sans font-semibold leading-none",
+            "hint-app-tab-label max-w-full truncate font-sans font-medium leading-none",
             featured ? "absolute inset-x-0 bottom-[4px] text-[10px]" : "text-[11px]",
           ].join(" ")}
         >
