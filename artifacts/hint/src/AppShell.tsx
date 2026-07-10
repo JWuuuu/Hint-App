@@ -36,7 +36,17 @@ import { useLanguage } from "./lib/i18n";
 import { triggerFeedback } from "./lib/feedback";
 
 /** Full-screen flows own their navigation, so the global bottom nav is hidden there. */
-const NAV_HIDDEN_ROUTES = ["/tarot", "/ask", "/login", "/signup", "/app/tarot", "/app/ask", "/app/login", "/app/signup"];
+const NAV_HIDDEN_ROUTES = [
+  "/tarot",
+  "/ask",
+  "/login",
+  "/signup",
+  "/app/tarot",
+  "/app/ask",
+  "/app/login",
+  "/app/signup",
+  "/app/animal-tarot",
+];
 const HINT_LAUNCH_SEEN_STORAGE_KEY = "hint_launch_seen_v2";
 const ENABLE_LAUNCH_INTRO = true;
 

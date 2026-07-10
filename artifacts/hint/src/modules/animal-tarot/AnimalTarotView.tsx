@@ -1,139 +1,192 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "wouter";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import {
+  ArrowLeft,
   Bird,
-  Bookmark,
+  Bone,
   Cat,
-  Check,
-  Compass,
-  Feather,
+  Dog,
+  Heart,
   MessageCircle,
-  Moon,
   PawPrint,
   Rabbit,
   RefreshCcw,
-  Shield,
   Sparkles,
-  Wind,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import { AppScreen, GlassPanel, ScreenHeader, SectionLabel } from "../../components/app/AppChrome";
+import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
 import { ACCENT, GLASS } from "../../modules/hold/atmosphere";
-import { getAnonId, getLocalDateString } from "../../lib/identity";
-import {
-  getOrCreateDailyReceipt,
-  openDailyReceipt,
-  type DailyReceipt,
-} from "../../lib/dailyReceipts";
-import { RITUAL_TAROT_DECK } from "../../modules/tarot/logic/createHiddenDeck";
-import { getTarotCardImage } from "../../modules/tarot/logic/cardImageMap";
-import { saveLocalCollectionUnlock } from "../../shared/tarot/cardCollection";
+import { RITUAL_TAROT_DECK, type RitualCard, type RitualDeckCard } from "../../modules/tarot/logic/createHiddenDeck";
+import { TarotCardVisual } from "../../modules/tarot/components/TarotCardVisual";
 import { SafeImage } from "../../shared/ui/SafeImage";
 import "./animal-tarot.css";
 
-type AnimalSpirit = {
-  id: string;
-  name: string;
-  title: string;
-  icon: LucideIcon;
-  aura: string;
-  companionCardId: string;
-  emotionalMeaning: string;
-  todaysMessage: string;
-  reflectionPrompt: string;
-  task: string;
+const ANIMAL_TAROT_CARD_BACK_IMAGE = "/brand/tarot/card-backs/animal-tarot-card-back.png?v=1";
+const ANIMAL_TAROT_FACE_VERSION = "20260702";
+
+type PetType = "Cat" | "Dog" | "Rabbit" | "Bird" | "Hamster" | "Other";
+type PetPersonality =
+  | "Clingy"
+  | "Shy"
+  | "Playful"
+  | "Dramatic"
+  | "Quiet"
+  | "Bossy"
+  | "Curious"
+  | "Lazy"
+  | "Nervous"
+  | "Foodie"
+  | "Protective"
+  | "Independent"
+  | "Cuddly"
+  | "Jealous"
+  | "Energetic";
+type QuestionCategory = "Love" | "Mood" | "Care" | "Silly";
+type ReadingDepth = "quick" | "deep";
+type Step = "profile" | "question" | "owner" | "cards" | "answer";
+type StopSource = "pet" | "owner" | "deck";
+type PetTarotCard = RitualDeckCard & { image: string | null };
+
+const PET_TYPES: PetType[] = ["Cat", "Dog", "Rabbit", "Bird", "Hamster", "Other"];
+const PET_PERSONALITIES: PetPersonality[] = [
+  "Clingy",
+  "Shy",
+  "Playful",
+  "Dramatic",
+  "Quiet",
+  "Bossy",
+  "Curious",
+  "Lazy",
+  "Nervous",
+  "Foodie",
+  "Protective",
+  "Independent",
+  "Cuddly",
+  "Jealous",
+  "Energetic",
+];
+
+const PERSONALITY_PREVIEW_COUNT = 9;
+
+const CATEGORY_OPTIONS: Array<{
+  id: QuestionCategory;
+  label: string;
+  prompt: string;
+  icon: typeof Heart;
+}> = [
+  { id: "Love", label: "Love", prompt: "connection, trust, affection", icon: Heart },
+  { id: "Mood", label: "Mood", prompt: "today's energy and feelings", icon: MessageCircle },
+  { id: "Care", label: "Care", prompt: "comfort, routine, little needs", icon: Bone },
+  { id: "Silly", label: "Silly", prompt: "funny signs and tiny chaos", icon: Sparkles },
+];
+
+const PERSONALITY_TONE: Record<PetPersonality, string> = {
+  Clingy: "soft, attached, and looking for reassurance",
+  Shy: "gentle, cautious, and asking for a safer pace",
+  Playful: "bright, curious, and wanting more fun",
+  Dramatic: "expressive, sensitive, and asking to be noticed",
+  Quiet: "calm, private, and happiest with simple routines",
+  Bossy: "clear about preferences and not afraid to demand better service",
+  Curious: "alert, observant, and secretly investigating everything",
+  Lazy: "slow, cozy, and asking for comfort before effort",
+  Nervous: "sensitive, easily startled, and needing reassurance",
+  Foodie: "motivated by snacks, routine, and tiny edible diplomacy",
+  Protective: "loyal, watchful, and trying to keep their world safe",
+  Independent: "self-directed, private, and affectionate on their own terms",
+  Cuddly: "warm, touch-seeking, and comforted by closeness",
+  Jealous: "attention-aware, possessive, and checking where they stand",
+  Energetic: "restless, excited, and needing movement before calm",
 };
 
-type DrawPhase = "loading" | "intro" | "revealing" | "revealed";
+const PERSONALITY_ANSWER: Record<
+  PetPersonality,
+  {
+    read: string;
+    saying: string;
+    support: string;
+  }
+> = {
+  Clingy: {
+    read: "this card is about reassurance, closeness, and wanting to feel chosen",
+    saying: "stay near me, notice me softly, and make the world feel secure again",
+    support: "give a calm check-in, a familiar touch, or a few quiet minutes together",
+  },
+  Shy: {
+    read: "this card is asking for patience, lower pressure, and a safer emotional pace",
+    saying: "do not rush me; let me decide when I am ready to come closer",
+    support: "lower the noise, move slowly, and reward even a tiny brave step",
+  },
+  Playful: {
+    read: "this card turns the message into curiosity, movement, and a little game",
+    saying: "make this fun for me and I will show you what I need through play",
+    support: "try a treat hunt, toy invitation, or silly check-in before asking for calm",
+  },
+  Dramatic: {
+    read: "this card is amplifying feelings that want to be noticed before they can settle",
+    saying: "my reaction is big because I want you to understand the feeling underneath",
+    support: "acknowledge the mood first, then bring back one familiar comfort",
+  },
+  Quiet: {
+    read: "this card points to subtle signals, private comfort, and a need for simplicity",
+    saying: "watch the small signs; I may not announce what I need loudly",
+    support: "keep the routine simple and let calm be the answer",
+  },
+  Bossy: {
+    read: "this card is about clear preferences, boundaries, and wanting the room arranged correctly",
+    saying: "I know what I want, and I am asking you to respect the signal",
+    support: "honor the preference where you can, while keeping the boundary kind",
+  },
+  Curious: {
+    read: "this card wants investigation, novelty, and something safe to inspect",
+    saying: "give me something interesting and I will tell you how I feel by exploring it",
+    support: "offer a safe object, scent, perch, window view, or tiny discovery moment",
+  },
+  Lazy: {
+    read: "this card is about comfort first, effort second, and not forcing energy",
+    saying: "make it easy for me; I am more open when my body feels cozy",
+    support: "bring comfort closer instead of asking them to move toward it",
+  },
+  Nervous: {
+    read: "this card is asking for steadiness, predictability, and fewer surprises",
+    saying: "help me feel safe before you ask me to understand anything else",
+    support: "use a soft voice, predictable movement, and a quiet reset",
+  },
+  Foodie: {
+    read: "this card connects comfort, trust, and routine through food or reward",
+    saying: "make the message feel safe through something familiar and delicious",
+    support: "use a small treat, mealtime ritual, or food puzzle as the bridge",
+  },
+  Protective: {
+    read: "this card is about watchfulness, loyalty, and making sure their home base is safe",
+    saying: "I am checking the room because I care about what belongs to us",
+    support: "reassure them that the space is handled and they can stand down",
+  },
+  Independent: {
+    read: "this card respects choice, space, and affection on their own terms",
+    saying: "let me choose the timing and I will come back with real trust",
+    support: "offer options, then step back enough for them to choose",
+  },
+  Cuddly: {
+    read: "this card comes through touch, warmth, and the comfort of being close",
+    saying: "connection helps me understand the moment; stay soft and near",
+    support: "offer warmth, closeness, or a familiar cuddle if they ask for it",
+  },
+  Jealous: {
+    read: "this card is about attention, fairness, and needing to know where they stand",
+    saying: "show me I still matter, but do not make me fight for it",
+    support: "give clear attention, then return everyone to a steady routine",
+  },
+  Energetic: {
+    read: "this card has extra motion in it, so the message may arrive through activity",
+    saying: "help me move the energy out, then I can listen with my whole body",
+    support: "start with movement, play, or a short active reset before settling",
+  },
+};
 
-const EMBER = "var(--hint-rose, #f0b6cf)";
-
-const ANIMAL_SPIRITS: AnimalSpirit[] = [
-  {
-    id: "moon-moth",
-    name: "Moon Moth",
-    title: "Soft signal",
-    icon: Feather,
-    aura: "#b8d7ff",
-    companionCardId: "2-high-priestess",
-    emotionalMeaning: "You are picking up a quiet truth before it has words.",
-    todaysMessage: "Move toward the thing that keeps glowing after everything else gets loud.",
-    reflectionPrompt: "What small signal has been repeating, even when you try to ignore it?",
-    task: "Choose one quiet action before asking for another sign.",
-  },
-  {
-    id: "black-cat",
-    name: "Black Cat",
-    title: "Threshold",
-    icon: Cat,
-    aura: "#cba6c4",
-    companionCardId: "18-moon",
-    emotionalMeaning: "Your instinct noticed a doorway before your mind named it.",
-    todaysMessage: "Trust the pause. You do not need to cross every threshold the moment it appears.",
-    reflectionPrompt: "Where is your body asking you to slow down before you answer?",
-    task: "Wait one breath longer before replying to anything emotionally loaded.",
-  },
-  {
-    id: "white-stag",
-    name: "White Stag",
-    title: "Direction",
-    icon: Compass,
-    aura: "#e8cc96",
-    companionCardId: "7-chariot",
-    emotionalMeaning: "Dignity is the compass. Performance is only noise.",
-    todaysMessage: "Choose the path that lets you stand taller tomorrow.",
-    reflectionPrompt: "Which option feels quieter but more self-respecting?",
-    task: "Make one clean decision and leave the explanation short.",
-  },
-  {
-    id: "night-swan",
-    name: "Night Swan",
-    title: "Release",
-    icon: Bird,
-    aura: "#8bded6",
-    companionCardId: "13-death",
-    emotionalMeaning: "Something can be graceful and still be complete.",
-    todaysMessage: "Let the old shape leave cleanly. Do not keep touching the ending to prove it mattered.",
-    reflectionPrompt: "What are you ready to stop carrying with both hands?",
-    task: "Remove one reminder that keeps reopening the same feeling.",
-  },
-  {
-    id: "amber-fox",
-    name: "Amber Fox",
-    title: "Strategy",
-    icon: Wind,
-    aura: "#f1a66b",
-    companionCardId: "1-magician",
-    emotionalMeaning: "You do not need more force. You need cleaner timing.",
-    todaysMessage: "Move lightly. Say less, observe more, and use the opening that is already there.",
-    reflectionPrompt: "Where would subtlety work better than pressure today?",
-    task: "Take the smallest useful step without announcing it first.",
-  },
-  {
-    id: "silver-rabbit",
-    name: "Silver Rabbit",
-    title: "Sensitivity",
-    icon: Rabbit,
-    aura: "#d8d4ff",
-    companionCardId: "14-temperance",
-    emotionalMeaning: "Your sensitivity is information, not weakness.",
-    todaysMessage: "Protect your pace. The right thing will not require you to abandon your nervous system.",
-    reflectionPrompt: "What boundary would make today feel breathable again?",
-    task: "Create a soft limit around one draining conversation or task.",
-  },
-  {
-    id: "golden-lion",
-    name: "Golden Lion",
-    title: "Courage",
-    icon: Shield,
-    aura: "#ffd16f",
-    companionCardId: "8-strength",
-    emotionalMeaning: "Real courage is steady, not loud.",
-    todaysMessage: "Hold your ground without hardening your heart.",
-    reflectionPrompt: "What would calm confidence choose here?",
-    task: "Name your position once, clearly, and do not negotiate with panic.",
-  },
-];
+const CATEGORY_TONE: Record<QuestionCategory, string> = {
+  Love: "This answer is about how your pet feels bonded to you.",
+  Mood: "This answer reads your pet's current emotional weather.",
+  Care: "This answer focuses on what may help your pet feel comfortable.",
+  Silly: "This answer keeps the message light, funny, and low-stakes.",
+};
 
 function hashString(value: string): number {
   let hash = 2166136261;
@@ -144,311 +197,1643 @@ function hashString(value: string): number {
   return hash >>> 0;
 }
 
-function fallbackAnimalId(anonId = getAnonId(), dayKey = getLocalDateString()): AnimalSpirit["id"] {
-  const index = hashString(`${anonId}:${dayKey}:animal-tarot`) % ANIMAL_SPIRITS.length;
-  return (ANIMAL_SPIRITS[index] ?? ANIMAL_SPIRITS[0]!).id;
-}
-
-function getAnimalById(id: string): AnimalSpirit {
-  return ANIMAL_SPIRITS.find((animal) => animal.id === id) ?? ANIMAL_SPIRITS[0]!;
-}
-
-function companionCard(cardId: string) {
-  const card = RITUAL_TAROT_DECK.find((item) => item.cardId === cardId) ?? RITUAL_TAROT_DECK[0]!;
+function cardWithImage(card: RitualDeckCard): PetTarotCard {
   return {
     ...card,
-    image: getTarotCardImage(card.cardId, "hint-card-2") ?? getTarotCardImage(card.cardId),
+    image: getAnimalTarotCardImage(card.cardId),
   };
 }
 
-function SpiritCard({
-  animal,
-  cardImage,
-  revealed,
-  compact = false,
-}: {
-  animal: AnimalSpirit;
-  cardImage: string | null;
-  revealed: boolean;
-  compact?: boolean;
-}) {
-  const Icon = animal.icon;
+function toRitualCard(card: PetTarotCard, index = 0): RitualCard {
+  return {
+    visualId: `${card.cardId}-${index}`,
+    cardId: card.cardId,
+    name: card.name,
+    orientation: "upright",
+    x: 50,
+    y: 50,
+    rotation: 0,
+    rotate: 0,
+    zIndex: index,
+    selected: false,
+    revealed: false,
+  };
+}
+
+function drawCards(seed: string, count: number): PetTarotCard[] {
+  const deck = [...RITUAL_TAROT_DECK];
+  for (let index = deck.length - 1; index > 0; index -= 1) {
+    const swapIndex = hashString(`${seed}:${index}:${deck[index]?.cardId}`) % (index + 1);
+    [deck[index], deck[swapIndex]] = [deck[swapIndex]!, deck[index]!];
+  }
+  return deck.slice(0, count).map(cardWithImage);
+}
+
+function animalIcon(type: PetType) {
+  if (type === "Cat") return Cat;
+  if (type === "Dog") return Dog;
+  if (type === "Rabbit") return Rabbit;
+  if (type === "Bird") return Bird;
+  return PawPrint;
+}
+
+function getAnimalTarotCardImage(cardId: string) {
+  return `/brand/tarot/decks/animal-hint/cards/${cardId}.png?v=${ANIMAL_TAROT_FACE_VERSION}`;
+}
+
+function possessiveName(name: string) {
+  const trimmed = name.trim() || "your pet";
+  return trimmed.endsWith("s") ? `${trimmed}'` : `${trimmed}'s`;
+}
+
+function personalityPhrase(personalities: PetPersonality[]) {
+  const selected = personalities.length ? personalities : ["Playful" as const];
+  if (selected.length === 1) return selected[0].toLowerCase();
+  if (selected.length === 2) return `${selected[0].toLowerCase()} and ${selected[1].toLowerCase()}`;
+  return `${selected.slice(0, -1).map((item) => item.toLowerCase()).join(", ")}, and ${selected[selected.length - 1]?.toLowerCase()}`;
+}
+
+function primaryPersonality(personalities: PetPersonality[]) {
+  return personalities[0] ?? "Playful";
+}
+
+function tonePhrase(personalities: PetPersonality[]) {
+  const selected = personalities.length ? personalities : ["Playful" as const];
+  return selected.slice(0, 4).map((item) => PERSONALITY_TONE[item]).join("; ");
+}
+
+function personalityAnswer(personalities: PetPersonality[]) {
+  return PERSONALITY_ANSWER[primaryPersonality(personalities)];
+}
+
+function personalityBehavior(personalities: PetPersonality[], name: string) {
+  const primary = primaryPersonality(personalities);
+  return {
+    Clingy: `${name} may show it by staying close, asking for contact, or checking that you are still there.`,
+    Shy: `${name} may show it quietly: a small approach, a long look, or relaxing only when the pressure drops.`,
+    Playful: `${name} may show it through movement, games, sudden curiosity, or asking you to respond.`,
+    Dramatic: `${name} may show it with a bigger reaction than expected because the feeling wants to be noticed first.`,
+    Quiet: `${name} may show it through tiny signals, soft body language, or choosing a calm spot nearby.`,
+    Bossy: `${name} may show it by making a preference very clear and expecting the room to adjust.`,
+    Curious: `${name} may show it by inspecting, sniffing, watching, or testing the situation before committing.`,
+    Lazy: `${name} may show it by wanting the answer brought closer: comfort first, effort later.`,
+    Nervous: `${name} may show it through hesitation, alertness, or needing the room to feel predictable again.`,
+    Foodie: `${name} may show it through food rhythm, treat interest, or comfort around familiar routines.`,
+    Protective: `${name} may show it by monitoring the room and checking whether their safe space is handled.`,
+    Independent: `${name} may show it by needing choice, space, and the freedom to come closer on their own terms.`,
+    Cuddly: `${name} may show it through warmth, touch, leaning in, or wanting closeness to make the message clear.`,
+    Jealous: `${name} may show it by tracking attention and needing a simple reminder that they still matter.`,
+    Energetic: `${name} may show it through restless movement, quick reactions, or needing activity before calm.`,
+  }[primary];
+}
+
+function actionCopy(personalities: PetPersonality[], category: QuestionCategory) {
+  const primary = primaryPersonality(personalities);
+  const base = {
+    Clingy: "offer a few calm minutes of attention without making it a big performance",
+    Shy: "lower the noise, move slowly, and let them come closer first",
+    Playful: "turn the answer into a tiny game, treat hunt, or silly check-in",
+    Dramatic: "acknowledge the big feelings, then reset the room with something familiar",
+    Quiet: "keep the routine simple and let comfort be boring in the best way",
+    Bossy: "respect the preference, but keep the boundary kind and consistent",
+    Curious: "give them something safe to inspect, sniff, or explore",
+    Lazy: "make comfort easy: soft spot, water nearby, and no unnecessary pressure",
+    Nervous: "use a calm voice, predictable movement, and a quiet reset",
+    Foodie: "use a small treat or mealtime ritual to make the message feel safe",
+    Protective: "reassure them that the home base is handled and they can relax",
+    Independent: "give them choice and space, then let affection happen naturally",
+    Cuddly: "offer closeness, warmth, and a familiar touch if they ask for it",
+    Jealous: "give clear attention without rewarding pushy behavior too much",
+    Energetic: "help them move the energy out before asking them to settle",
+  }[primary];
+
+  if (category === "Care") return `${base}. Watch what changes in their body language after that.`;
+  if (category === "Love") return `${base}. A small repeated ritual will mean more than one grand gesture.`;
+  if (category === "Silly") return `${base}. Do not overthink the comedy; your pet is probably already the director.`;
+  return `${base}. Their mood should soften when they feel understood.`;
+}
+
+function questionFocus(question: string, category: QuestionCategory) {
+  const normalizedQuestion = question.trim().toLowerCase();
+
+  if (normalizedQuestion.includes("feel") || normalizedQuestion.includes("mood")) {
+    return {
+      noun: "feelings",
+      bridge: "For this feelings question",
+      card: "describes the emotional pattern behind it",
+      tone: "answer with emotional patience",
+    };
+  }
+
+  if (normalizedQuestion.includes("need") || normalizedQuestion.includes("care")) {
+    return {
+      noun: "needs",
+      bridge: "For this care question",
+      card: "points to what would help most right now",
+      tone: "answer with practical comfort",
+    };
+  }
+
+  if (normalizedQuestion.includes("love") || normalizedQuestion.includes("bond") || normalizedQuestion.includes("trust")) {
+    return {
+      noun: "bond",
+      bridge: "For this connection question",
+      card: "shows what the bond is asking for",
+      tone: "answer with reassurance and steadiness",
+    };
+  }
+
+  if (normalizedQuestion.startsWith("why")) {
+    return {
+      noun: "reason",
+      bridge: "For this why question",
+      card: "shows the reason underneath the behavior",
+      tone: "answer by looking beneath the surface",
+    };
+  }
+
+  if (normalizedQuestion.startsWith("how") || normalizedQuestion.includes("what should") || normalizedQuestion.includes("what can i do")) {
+    return {
+      noun: "next step",
+      bridge: "For this action question",
+      card: "shows the best next step",
+      tone: "answer with one small action",
+    };
+  }
+
+  if (normalizedQuestion.startsWith("when")) {
+    return {
+      noun: "timing",
+      bridge: "For this timing question",
+      card: "shows the pace to follow",
+      tone: "answer without rushing the signal",
+    };
+  }
+
+  if (category === "Care") {
+    return {
+      noun: "comfort",
+      bridge: "For this care question",
+      card: "points to comfort first",
+      tone: "answer with practical comfort",
+    };
+  }
+
+  if (category === "Love") {
+    return {
+      noun: "connection",
+      bridge: "For this love question",
+      card: "shows what the connection needs",
+      tone: "answer with reassurance and steadiness",
+    };
+  }
+
+  if (category === "Silly") {
+    return {
+      noun: "signal",
+      bridge: "For this lighthearted question",
+      card: "keeps the message playful",
+      tone: "answer lightly",
+    };
+  }
+
+  return {
+    noun: "message",
+    bridge: "For this question",
+    card: "shows the message underneath",
+    tone: "answer in your pet's natural rhythm",
+  };
+}
+
+type CardQuestionSignal = {
+  answer: string;
+  reason: string;
+  action: string;
+};
+
+function cardQuestionSignal(card: PetTarotCard, name: string): CardQuestionSignal {
+  const [rankOrMajor, suit] = card.cardId.split("-");
+
+  const suitDetails: Record<
+    string,
+    {
+      area: string;
+      reason: string;
+      action: string;
+      signal: string;
+    }
+  > = {
+    wands: {
+      area: "play, movement, and attention",
+      reason: "energy, instinct, and the urge to do something",
+      action: "offer a toy invitation, a chase moment, or a new thing to inspect",
+      signal: "more brightness in their body",
+    },
+    cups: {
+      area: "affection, trust, and emotional reassurance",
+      reason: "feelings, bonding, and the need to feel safe with you",
+      action: "make your voice softer, offer closeness, and let the mood settle",
+      signal: "a softer face, slower body, or choosing to stay near you",
+    },
+    swords: {
+      area: "quiet space, clearer signals, and less pressure",
+      reason: "noise, tension, boundaries, and mental overstimulation",
+      action: "lower the stimulation, simplify the room, and give one clear cue",
+      signal: "less alertness and more relaxed body language",
+    },
+    pentacles: {
+      area: "body comfort, routine, and practical care",
+      reason: "food, rest, touch, territory, and everyday needs",
+      action: "check food, water, litter, bedding, temperature, and familiar routine",
+      signal: "more physical ease or a return to normal habits",
+    },
+  };
+
+  const suitDetail = suit ? suitDetails[suit] : undefined;
+  const minorRankSignals: Record<string, (detail: NonNullable<typeof suitDetail>) => CardQuestionSignal> = {
+    ace: (detail) => ({
+      answer: `${name} wants a fresh start around ${detail.area}`,
+      reason: `${card.name} is an Ace, so the message is a first spark, not a finished answer`,
+      action: `begin with one small opening: ${detail.action}`,
+    }),
+    two: (detail) => ({
+      answer: `${name} is choosing between two needs around ${detail.area}`,
+      reason: `${card.name} is a Two, so the message is about choice, balance, and what draws them closer`,
+      action: `offer two gentle options and watch which one gets ${detail.signal}`,
+    }),
+    three: (detail) => ({
+      answer: `${name} wants you to join the pattern, not just observe it`,
+      reason: `${card.name} is a Three, so the message is about shared rhythm and cooperation through ${detail.reason}`,
+      action: `participate lightly, then look for ${detail.signal}`,
+    }),
+    four: (detail) => ({
+      answer: `${name} needs a pause and a stable base`,
+      reason: `${card.name} is a Four, so the message is about safety, structure, and holding the moment still`,
+      action: `make the environment steady first, then ${detail.action}`,
+    }),
+    five: (detail) => ({
+      answer: `${name} is reacting to a small conflict or discomfort`,
+      reason: `${card.name} is a Five, so the message points to friction in ${detail.reason}`,
+      action: `remove one possible stressor and see whether there is ${detail.signal}`,
+    }),
+    six: (detail) => ({
+      answer: `${name} wants something familiar to feel good again`,
+      reason: `${card.name} is a Six, so the answer comes through repair, memory, and returning to comfort`,
+      action: `bring back a trusted ritual, then ${detail.action}`,
+    }),
+    seven: (detail) => ({
+      answer: `${name} is interested, but not fully convinced yet`,
+      reason: `${card.name} is a Seven, so the message is about testing, waiting, and deciding from a distance`,
+      action: `give space and let ${name} approach before you ask for more`,
+    }),
+    eight: (detail) => ({
+      answer: `${name} needs repetition before the message becomes clear`,
+      reason: `${card.name} is an Eight, so the answer is built through routine, practice, and repeated signals`,
+      action: `repeat the same gentle cue and watch whether it creates ${detail.signal}`,
+    }),
+    nine: (detail) => ({
+      answer: `${name} is close to feeling settled, but wants one last comfort`,
+      reason: `${card.name} is a Nine, so the message is nearly complete but still protective of its own space`,
+      action: `give the final bit of support without crowding them`,
+    }),
+    ten: (detail) => ({
+      answer: `${name} has reached the limit of this energy`,
+      reason: `${card.name} is a Ten, so the message is full, heavy, or ready to be completed`,
+      action: `stop adding more stimulation and help the moment wind down`,
+    }),
+    page: (detail) => ({
+      answer: `${name} is sending a small curious signal`,
+      reason: `${card.name} is a Page, so the answer arrives as a beginner message through ${detail.reason}`,
+      action: `treat the tiny sign as meaningful and respond with ${detail.action}`,
+    }),
+    knight: (detail) => ({
+      answer: `${name} wants movement now, not later`,
+      reason: `${card.name} is a Knight, so the message comes fast, restless, and direct`,
+      action: `respond quickly but keep it controlled: ${detail.action}`,
+    }),
+    queen: (detail) => ({
+      answer: `${name} wants to feel emotionally understood`,
+      reason: `${card.name} is a Queen, so the answer is about care, sensitivity, and reading the room well`,
+      action: `lead with softness, then look for ${detail.signal}`,
+    }),
+    king: (detail) => ({
+      answer: `${name} wants a clear boundary and a confident response`,
+      reason: `${card.name} is a King, so the message asks for calm leadership around ${detail.reason}`,
+      action: `choose the rule or ritual, keep it steady, and do not keep changing the signal`,
+    }),
+  };
+
+  const minorSignal = suitDetail ? minorRankSignals[rankOrMajor]?.(suitDetail) : undefined;
+  if (minorSignal) return minorSignal;
+
+  const majorSignals: Record<string, CardQuestionSignal> = {
+    "0": {
+      answer: `${name} is ready for a small fresh start`,
+      reason: "The Fool points to curiosity, trust, and a low-pressure beginning",
+      action: "offer something simple and safe to explore",
+    },
+    "1": {
+      answer: `${name} wants one clear cue from you`,
+      reason: "The Magician points to focus and intentional action",
+      action: "choose one small signal instead of trying everything at once",
+    },
+    "2": {
+      answer: `${possessiveName(name)} answer is subtle, so watch the quiet signs`,
+      reason: "The High Priestess points to instinct, silence, and hidden signals",
+      action: "notice where they look, pause, sniff, or settle",
+    },
+    "3": {
+      answer: `${name} wants more softness and care`,
+      reason: "The Empress points to comfort, nurturing, and feeling held",
+      action: "make the environment warmer, gentler, and easier to relax in",
+    },
+    "4": {
+      answer: `${name} wants structure that feels reliable`,
+      reason: "The Emperor points to order, boundaries, and a steady room",
+      action: "return to the familiar routine and keep the rules calm",
+    },
+    "5": {
+      answer: `${name} wants the familiar ritual, not a brand-new solution`,
+      reason: "The Hierophant points to trust built through repeated habits",
+      action: "use the routine they already understand",
+    },
+    "6": {
+      answer: `${name} is asking for connection and a clear choice`,
+      reason: "The Lovers points to bonding, alignment, and choosing each other",
+      action: "offer two gentle options and let their body choose",
+    },
+    "7": {
+      answer: `${name} has energy that needs direction`,
+      reason: "The Chariot points to drive, movement, and momentum",
+      action: "guide the energy into play, movement, or a focused reset",
+    },
+    "8": {
+      answer: `${name} needs patience more than pressure`,
+      reason: "Strength points to gentleness, courage, and soft control",
+      action: "stay calm and let trust do the work",
+    },
+    "9": {
+      answer: `${name} needs quiet space before the answer gets clear`,
+      reason: "The Hermit points to solitude, truth, and stepping back",
+      action: "give them room, then watch whether they return by choice",
+    },
+    "10": {
+      answer: `${possessiveName(name)} mood is shifting, so the answer changes with the moment`,
+      reason: "Wheel of Fortune points to timing, cycles, and a turn in the room",
+      action: "follow the first clear change in their behavior today",
+    },
+    "11": {
+      answer: `${name} wants balance restored`,
+      reason: "Justice points to fairness, truth, and noticing what is out of proportion",
+      action: "check what changed in the routine, attention, or environment",
+    },
+    "12": {
+      answer: `${name} needs you to pause and see this differently`,
+      reason: "The Hanged Man points to slowing down and changing perspective",
+      action: "stop pushing for a signal and let the meaning arrive indirectly",
+    },
+    "13": {
+      answer: `${name} is ready to let one mood pass`,
+      reason: "Death points to release, endings, and a reset after change",
+      action: "help the old energy clear instead of trying to keep it going",
+    },
+    "14": {
+      answer: `${name} needs a gentler rhythm`,
+      reason: "Temperance points to balance, healing, and blending energies slowly",
+      action: "make the next step moderate, soft, and easy to accept",
+    },
+    "15": {
+      answer: `${name} is stuck in a pattern that needs a reset`,
+      reason: "The Devil points to attachment, habit, and repeating loops",
+      action: "interrupt the loop kindly with a new texture, sound, toy, or routine cue",
+    },
+    "16": {
+      answer: `${name} is reacting to something that suddenly feels too much`,
+      reason: "The Tower points to disruption, surprise, and a shaken room",
+      action: "change the environment first and let them settle before asking again",
+    },
+    "17": {
+      answer: `${name} is looking for reassurance and hope`,
+      reason: "The Star points to renewal, trust, and a soft emotional reset",
+      action: "keep the moment gentle and let your calm become the message",
+    },
+    "18": {
+      answer: `${name} is moving by instinct, not logic`,
+      reason: "The Moon points to uncertainty, mystery, and subtle fears",
+      action: "watch the tiny signals and do not force a clear answer too soon",
+    },
+    "19": {
+      answer: `${name} wants warmth, clarity, and simple joy`,
+      reason: "The Sun points to openness, happiness, and easy reassurance",
+      action: "make the next moment bright, simple, and affectionate",
+    },
+    "20": {
+      answer: `${name} is giving you a wake-up signal`,
+      reason: "Judgement points to noticing the message you cannot ignore",
+      action: "treat the behavior as meaningful and respond directly",
+    },
+    "21": {
+      answer: `${name} wants to feel fully at home in this moment`,
+      reason: "The World points to belonging, completion, and everything clicking into place",
+      action: "bring them back to the place, person, or ritual that feels complete",
+    },
+  };
+
   return (
-    <div className={`animal-spirit-card ${revealed ? "is-revealed" : ""} ${compact ? "is-compact" : ""}`}>
-      <div className="animal-card-aura" style={{ background: animal.aura }} />
-      <div className="animal-card-face animal-card-back">
-        <div className="animal-card-inner-ring" />
-        <PawPrint size={compact ? 26 : 34} strokeWidth={1.5} />
-        <span>Animal Tarot</span>
+    majorSignals[rankOrMajor] ?? {
+      answer: `${name} is answering through instinct`,
+      reason: `${card.name} points to ${card.keywords.slice(0, 2).join(" and ") || "the first clear signal"}`,
+      action: "trust the first steady sign you notice",
+    }
+  );
+}
+
+function cardAnswersQuestion({
+  question,
+  category,
+  name,
+  card,
+}: {
+  question: string;
+  category: QuestionCategory;
+  name: string;
+  card: PetTarotCard;
+}) {
+  const cleanQuestion = question.trim().replace(/[?.!]+$/, "");
+  const normalizedQuestion = cleanQuestion.toLowerCase();
+  const startsLikeYesNo = /^(is|are|am|do|does|did|can|could|should|will|would|has|have)\b/.test(normalizedQuestion);
+  const signal = cardQuestionSignal(card, name);
+  const finish = (label: string, answer: string) =>
+    `${label}: ${answer}.\n\nWhy this card: ${signal.reason}.\n\nNext: ${signal.action}.`;
+
+  if (normalizedQuestion.includes("want") && normalizedQuestion.includes("know")) {
+    return finish("Answer", signal.answer);
+  }
+
+  if (normalizedQuestion.includes("feel") || normalizedQuestion.includes("mood")) {
+    return finish("Feeling", signal.answer);
+  }
+
+  if (normalizedQuestion.includes("need") || normalizedQuestion.includes("care")) {
+    return finish("Need", signal.answer);
+  }
+
+  if (normalizedQuestion.includes("love") || normalizedQuestion.includes("bond") || normalizedQuestion.includes("trust")) {
+    return finish("Connection", signal.answer);
+  }
+
+  if (normalizedQuestion.startsWith("why")) {
+    return finish("Reason", signal.answer);
+  }
+
+  if (normalizedQuestion.startsWith("how")) {
+    return finish("How to respond", signal.action);
+  }
+
+  if (normalizedQuestion.includes("what should") || normalizedQuestion.includes("what can i do")) {
+    return finish("What to do", signal.action);
+  }
+
+  if (normalizedQuestion.startsWith("when")) {
+    return finish("Timing", `wait until ${signal.answer.toLowerCase()}`);
+  }
+
+  if (startsLikeYesNo) {
+    return finish("Short answer", `yes, if this matches what you are seeing: ${signal.answer}`);
+  }
+
+  if (category === "Care") return finish("Care answer", signal.answer);
+  if (category === "Love") return finish("Love answer", signal.answer);
+  if (category === "Silly") return finish("Silly answer", signal.answer);
+  return finish("Answer", signal.answer);
+}
+
+function quickAnswer({
+  petName,
+  animalType,
+  personalities,
+  personalityNote,
+  category,
+  question,
+  card,
+}: {
+  petName: string;
+  animalType: PetType;
+  personalities: PetPersonality[];
+  personalityNote: string;
+  category: QuestionCategory;
+  question: string;
+  card: PetTarotCard;
+}) {
+  const name = petName.trim() || "Your pet";
+  const personality = personalityAnswer(personalities);
+  const petKind = animalType === "Other" ? "pet" : animalType.toLowerCase();
+  const note = personalityNote.trim() ? ` Keep your note in mind: ${personalityNote.trim()}.` : "";
+  const answerLine = cardAnswersQuestion({ question, category, name, card });
+  const petLine = `For ${name}: as a ${petKind} with a ${personalityPhrase(personalities)} personality, this may show up in their own style. ${personalityBehavior(
+    personalities,
+    name,
+  )} Best next step: ${personality.support}.${note}`;
+  return `${answerLine}\n\n${petLine}`;
+}
+
+function deepAnswer({
+  petName,
+  personalities,
+  personalityNote,
+  category,
+  cards,
+}: {
+  petName: string;
+  personalities: PetPersonality[];
+  personalityNote: string;
+  category: QuestionCategory;
+  cards: PetTarotCard[];
+}) {
+  const name = petName.trim() || "Your pet";
+  const [feeling, message, action] = cards;
+  const primary = primaryPersonality(personalities);
+  const personality = personalityAnswer(personalities);
+  const customNote = personalityNote.trim()
+    ? ` Your description of them matters here: ${personalityNote.trim()}.`
+    : "";
+  return [
+    {
+      label: "Feeling",
+      card: feeling,
+      copy: `${possessiveName(name)} ${primary.toLowerCase()} side may be feeling ${
+        feeling?.keywords[0] ?? "a lot"
+      } underneath the surface. For this personality, ${personality.read}.${customNote} ${CATEGORY_TONE[category]}`,
+    },
+    {
+      label: "Message",
+      card: message,
+      copy: `${message?.name ?? "This card"} says: ${personality.saying}. Read the small signs through their ${personalityPhrase(
+        personalities,
+      )} nature, not just the loud ones.`,
+    },
+    {
+      label: "Action",
+      card: action,
+      copy: `The next move for a ${primary.toLowerCase()} pet is simple: ${personality.support}. ${actionCopy(
+        personalities,
+        category,
+      )}`,
+    },
+  ];
+}
+
+function PetCard({
+  card,
+  selected,
+  onSelect,
+  disabled,
+  reveal = true,
+  index,
+  style,
+}: {
+  card: PetTarotCard;
+  selected: boolean;
+  onSelect: () => void;
+  disabled?: boolean;
+  reveal?: boolean;
+  index?: number;
+  style?: CSSProperties;
+}) {
+  if (!reveal) {
+    return (
+      <div
+        className={`pet-card-choice pet-card-choice-visual ${selected ? "is-selected" : ""} ${disabled ? "is-disabled" : ""}`}
+        style={style}
+      >
+        <TarotCardVisual
+          card={toRitualCard(card, index)}
+          compact
+          faceDown
+          subtleBack
+          selected={selected}
+          active={selected}
+          backStyle="rose"
+          className="pet-tarot-visual"
+          ariaLabel={`Choose hidden card ${typeof index === "number" ? index + 1 : ""}`}
+          onClick={disabled ? undefined : onSelect}
+        />
+        <span>{typeof index === "number" ? `Card ${index + 1}` : "Hidden card"}</span>
       </div>
-      <div className="animal-card-face animal-card-front">
-        {cardImage && (
-          <SafeImage
-            src={cardImage}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            fallbackClassName="absolute inset-0 h-full w-full rounded-[20px]"
-            fallbackLabel="Spirit"
-          />
-        )}
-        <div className="animal-card-veils" />
-        <div className="animal-card-symbol" style={{ borderColor: animal.aura, color: animal.aura }}>
-          <Icon size={compact ? 28 : 38} strokeWidth={1.45} />
-        </div>
-        <div className="animal-card-copy">
-          <span>{animal.title}</span>
-          <strong>{animal.name}</strong>
-        </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      className={`pet-card-choice hint-tap-sparkle ${selected ? "is-selected" : ""}`}
+    >
+      <div className="pet-card-image">
+        <SafeImage
+          src={card.image}
+          alt={card.name}
+          className="h-full w-full object-cover"
+          fallbackClassName="h-full w-full rounded-[14px]"
+          fallbackLabel="Card"
+        />
+      </div>
+      <span>{card.name}</span>
+    </button>
+  );
+}
+
+function ownerFanStyle(index: number, total: number, selected: boolean): CSSProperties {
+  const center = (total - 1) / 2;
+  const distance = index - center;
+  const rotation = Math.max(-7, Math.min(7, distance * 0.22));
+
+  return {
+    transform: `rotate(${rotation}deg) ${selected ? "translateY(-18px) scale(1.08)" : ""}`,
+    zIndex: selected ? 200 + index : index,
+  };
+}
+
+function ReadingBlock({
+  label,
+  card,
+  children,
+}: {
+  label: string;
+  card?: PetTarotCard;
+  children: string;
+}) {
+  const paragraphs = children.split(/\n{2,}/).filter(Boolean);
+
+  return (
+    <div className="pet-reading-block">
+      <p>{label}</p>
+      {card && <strong>{card.name}</strong>}
+      <div className="pet-reading-copy">
+        {paragraphs.map((paragraph) => (
+          <span key={paragraph}>{paragraph}</span>
+        ))}
       </div>
     </div>
   );
 }
 
-function ReadingBlock({
-  label,
-  children,
+function StepNav({
+  previousLabel = "Previous",
+  nextLabel = "Next",
+  onPrevious,
+  onNext,
+  previousDisabled,
+  nextDisabled,
 }: {
-  label: string;
-  children: string;
+  previousLabel?: string;
+  nextLabel?: string;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  previousDisabled?: boolean;
+  nextDisabled?: boolean;
 }) {
   return (
-    <div className="hint-subtle-card rounded-[18px] px-4 py-3">
-      <p className="font-sans text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: GLASS.faint }}>
-        {label}
-      </p>
-      <p className="mt-2 font-sans text-[13px] leading-relaxed" style={{ color: GLASS.muted }}>
-        {children}
-      </p>
+    <div className="pet-step-nav">
+      <button
+        type="button"
+        onClick={onPrevious}
+        className="pet-nav-button is-previous hint-tap-sparkle"
+        disabled={previousDisabled || !onPrevious}
+      >
+        {previousLabel}
+      </button>
+      <button
+        type="button"
+        onClick={onNext}
+        className="pet-nav-button is-next hint-tap-sparkle"
+        disabled={nextDisabled || !onNext}
+      >
+        {nextLabel}
+      </button>
+    </div>
+  );
+}
+
+type WheelStageSize = {
+  width: number;
+  height: number;
+};
+
+type PetWheelGeometry = {
+  centerX: number;
+  centerY: number;
+  radius: number;
+  startAngle: number;
+};
+
+type PetWheelLayout = {
+  x: number;
+  y: number;
+  rotate: number;
+  zIndex: number;
+  angle: number;
+};
+
+const PET_WHEEL_CARD_W = 58;
+const PET_WHEEL_CARD_H = 92;
+const PET_WHEEL_STEP_SCALE = 0.74;
+const PET_WHEEL_DRAG_SENSITIVITY = 0.0048;
+
+function positiveModulo(value: number, total: number) {
+  return ((value % total) + total) % total;
+}
+
+function petWheelStep(total: number) {
+  return ((Math.PI * 2) / Math.max(total, 1)) * PET_WHEEL_STEP_SCALE;
+}
+
+function petWheelDisplayNumber(index: number, total: number) {
+  return positiveModulo(index, total) + 1;
+}
+
+function getPetWheelGeometry(size: WheelStageSize): PetWheelGeometry {
+  const shorter = Math.min(size.width, size.height);
+  const radius = shorter * 0.95;
+  return {
+    centerX: size.width,
+    centerY: size.height + radius * 0.43,
+    radius,
+    startAngle: -Math.PI * 0.86,
+  };
+}
+
+function getPetWheelLayout(
+  index: number,
+  rotation: number,
+  total: number,
+  geometry: PetWheelGeometry,
+): PetWheelLayout {
+  const angle = geometry.startAngle + rotation + index * petWheelStep(total);
+  const x = geometry.centerX + Math.cos(angle) * geometry.radius;
+  const y = geometry.centerY + Math.sin(angle) * geometry.radius;
+  return {
+    x,
+    y,
+    rotate: angle + Math.PI / 2,
+    zIndex: Math.round(y),
+    angle,
+  };
+}
+
+function getPetWheelCardHit(
+  layout: PetWheelLayout,
+  width: number,
+  height: number,
+  radialOffset: number,
+  localX: number,
+  localY: number,
+  padding = 6,
+) {
+  const originX = layout.x + Math.cos(layout.angle) * radialOffset;
+  const originY = layout.y + Math.sin(layout.angle) * radialOffset;
+  const dx = localX - originX;
+  const dy = localY - originY;
+  const cos = Math.cos(layout.rotate);
+  const sin = Math.sin(layout.rotate);
+  const cardX = dx * cos + dy * sin;
+  const cardY = -dx * sin + dy * cos;
+
+  const insideCore =
+    cardX >= -width / 2 &&
+    cardX <= width / 2 &&
+    cardY >= -height &&
+    cardY <= 0;
+  const insidePadded =
+    cardX >= -width / 2 - padding &&
+    cardX <= width / 2 + padding &&
+    cardY >= -height - padding &&
+    cardY <= padding;
+
+  if (!insidePadded) return null;
+
+  return {
+    centerDistance: Math.hypot(cardX, cardY + height / 2),
+    insideCore,
+  };
+}
+
+function PetWheelPicker({
+  title,
+  subtitle,
+  cards,
+  selectedIds,
+  selectionGoal,
+  onToggle,
+  onClose,
+  onDone,
+  doneLabel = "Next",
+}: {
+  title: string;
+  subtitle: string;
+  cards: PetTarotCard[];
+  selectedIds: string[];
+  selectionGoal: number;
+  onToggle: (cardId: string) => void;
+  onClose: () => void;
+  onDone: () => void;
+  doneLabel?: string;
+}) {
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const stageToggleRef = useRef<string | null>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startRotation: number;
+    moved: boolean;
+  } | null>(null);
+  const [stageSize, setStageSize] = useState<WheelStageSize>({ width: 430, height: 760 });
+  const [fanRotation, setFanRotation] = useState(0);
+  const selectedSet = new Set(selectedIds);
+  const total = Math.max(cards.length, 1);
+  const done = selectedIds.length >= selectionGoal;
+  const geometry = getPetWheelGeometry(stageSize);
+  const wheelStep = petWheelStep(total);
+  const pickTarget = {
+    x: stageSize.width * 0.58,
+    y: stageSize.height * 0.52,
+  };
+  const targetAngle = Math.atan2(pickTarget.y - geometry.centerY, pickTarget.x - geometry.centerX);
+  const virtualCenterIndex = Math.round((targetAngle - geometry.startAngle - fanRotation) / wheelStep);
+  const cardBackImageUrl = ANIMAL_TAROT_CARD_BACK_IMAGE;
+
+  const wheelCards = cards.map((card, index) => {
+    const virtualIndex = index + Math.round((virtualCenterIndex - index) / total) * total;
+    return {
+      card,
+      index,
+      virtualIndex,
+      displayNumber: petWheelDisplayNumber(virtualIndex, total),
+      layout: getPetWheelLayout(virtualIndex, fanRotation, total, geometry),
+    };
+  });
+
+  let activeWheelCard: (typeof wheelCards)[number] | null = null;
+  let activeDistance = Number.POSITIVE_INFINITY;
+  for (const item of wheelCards) {
+    const distance = Math.hypot(item.layout.x - pickTarget.x, item.layout.y - pickTarget.y);
+    if (distance < activeDistance) {
+      activeDistance = distance;
+      activeWheelCard = item;
+    }
+  }
+
+  const visibleWheelCards = wheelCards.filter(({ layout }) => (
+    layout.x > -240 &&
+    layout.x < stageSize.width + 260 &&
+    layout.y > stageSize.height * 0.08 &&
+    layout.y < stageSize.height + 260
+  ));
+  const activeSelected = activeWheelCard ? selectedSet.has(activeWheelCard.card.cardId) : false;
+  const activeLift = activeSelected ? 34 : 0;
+  const activeBadge = activeWheelCard
+    ? {
+        x: activeWheelCard.layout.x + Math.cos(activeWheelCard.layout.angle) * activeLift,
+        y: activeWheelCard.layout.y + Math.sin(activeWheelCard.layout.angle) * activeLift,
+        rotate: activeWheelCard.layout.rotate,
+        number: activeWheelCard.displayNumber,
+      }
+    : null;
+
+  useEffect(() => {
+    const updateSize = () => {
+      const rect = stageRef.current?.getBoundingClientRect();
+      if (!rect || rect.width <= 0 || rect.height <= 0) return;
+      setStageSize({ width: rect.width, height: rect.height });
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    const observer =
+      typeof ResizeObserver !== "undefined" && stageRef.current
+        ? new ResizeObserver(updateSize)
+        : null;
+    if (observer && stageRef.current) observer.observe(stageRef.current);
+
+    return () => {
+      window.removeEventListener("resize", updateSize);
+      observer?.disconnect();
+    };
+  }, []);
+
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startRotation: fanRotation,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    if (Math.hypot(deltaX, deltaY) > 8) drag.moved = true;
+    if (!drag.moved) return;
+    setFanRotation(drag.startRotation + (deltaX - deltaY * 0.7) * PET_WHEEL_DRAG_SENSITIVITY);
+  }
+
+  function handlePointerUp(event: PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (drag && drag.pointerId === event.pointerId && !drag.moved) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      let targetCard: { cardId: string; score: number; zIndex: number } | null = null;
+
+      for (const item of visibleWheelCards) {
+        const isSelected = selectedSet.has(item.card.cardId);
+        if (!isSelected && done) continue;
+        const lift = isSelected ? 34 : 0;
+        const hit = getPetWheelCardHit(
+          item.layout,
+          PET_WHEEL_CARD_W,
+          PET_WHEEL_CARD_H,
+          lift,
+          localX,
+          localY,
+          isSelected ? 30 : 4,
+        );
+        if (!hit) continue;
+        const effectiveZIndex = item.layout.zIndex + (isSelected ? 120 : 0);
+        const score = hit.centerDistance + (hit.insideCore ? 0 : 80) + (isSelected ? -8 : 0);
+        if (
+          !targetCard ||
+          score < targetCard.score - 2 ||
+          (Math.abs(score - targetCard.score) <= 2 && effectiveZIndex > targetCard.zIndex)
+        ) {
+          targetCard = { cardId: item.card.cardId, score, zIndex: effectiveZIndex };
+        }
+      }
+
+      if (targetCard) {
+        stageToggleRef.current = targetCard.cardId;
+        onToggle(targetCard.cardId);
+        window.setTimeout(() => {
+          stageToggleRef.current = null;
+        }, 0);
+      }
+    }
+
+    window.setTimeout(() => {
+      dragRef.current = null;
+    }, 0);
+  }
+
+  return (
+    <div className="pet-wheel-fullscreen">
+      <button type="button" className="pet-wheel-back" onClick={onClose} aria-label="Back">
+        <ArrowLeft size={26} strokeWidth={1.8} />
+      </button>
+      <div className="pet-wheel-room-pill">
+        <Sparkles size={17} strokeWidth={1.7} />
+        <span>Animal Q&amp;A</span>
+      </div>
+
+      <div className="pet-wheel-copy">
+        <p>{title}</p>
+        <span>{subtitle}</span>
+      </div>
+
+      <div
+        ref={stageRef}
+        className="pet-wheel-stage"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onWheel={(event) => setFanRotation((current) => current - event.deltaY * 0.0014)}
+        aria-label="Animal tarot rotating card picker"
+      >
+        <div
+          className="pet-wheel-orbit"
+          style={{
+            left: geometry.centerX - geometry.radius,
+            top: geometry.centerY - geometry.radius,
+            width: geometry.radius * 2,
+            height: geometry.radius * 2,
+          }}
+        />
+        {visibleWheelCards.map(({ card, virtualIndex, displayNumber, layout }) => {
+          const isSelected = selectedSet.has(card.cardId);
+          const isActive = activeWheelCard?.card.cardId === card.cardId;
+          const isDisabled = !isSelected && done;
+          const lift = isSelected ? 34 : 0;
+          return (
+            <button
+              key={`${card.cardId}-${virtualIndex}`}
+              type="button"
+              className={`pet-wheel-card ${isSelected ? "is-selected" : ""}`}
+              data-card-id={card.cardId}
+              data-display-number={displayNumber}
+              disabled={isDisabled}
+              onClick={(event) => {
+                event.preventDefault();
+                if (stageToggleRef.current === card.cardId) return;
+                if (isSelected) {
+                  event.stopPropagation();
+                  onToggle(card.cardId);
+                }
+              }}
+              aria-label={`${isSelected ? "Unselect" : "Select"} card ${displayNumber}`}
+              style={{
+                left: layout.x + Math.cos(layout.angle) * lift,
+                top: layout.y + Math.sin(layout.angle) * lift,
+                width: PET_WHEEL_CARD_W,
+                height: PET_WHEEL_CARD_H,
+                zIndex: layout.zIndex + (isSelected ? 120 : 0),
+                backgroundImage: `url("${cardBackImageUrl}")`,
+                transform: `translate(-50%, -100%) rotate(${layout.rotate}rad)`,
+              }}
+            >
+              <span className="pet-wheel-card-gloss" />
+            </button>
+          );
+        })}
+
+        {activeBadge && (
+          <div
+            className="pet-wheel-number-badge"
+            style={{
+              left: activeBadge.x,
+              top: activeBadge.y,
+              transform: `translate(-50%, -100%) rotate(${activeBadge.rotate}rad)`,
+            }}
+          >
+            <span style={{ transform: `translateX(-50%) rotate(${-activeBadge.rotate}rad)` }}>
+              {activeBadge.number}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <button type="button" className="pet-wheel-close" onClick={onClose}>
+        Close
+      </button>
+      <div className="pet-wheel-count">
+        {selectedIds.length} / {selectionGoal}
+      </div>
+      {done && (
+        <button type="button" className="pet-wheel-next" onClick={onDone}>
+          {doneLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PetDeckFlowPicker({
+  petName,
+  cards,
+  onStop,
+  onClose,
+}: {
+  petName: string;
+  cards: PetTarotCard[];
+  onStop: (source: StopSource, card: PetTarotCard) => void;
+  onClose: () => void;
+}) {
+  const [fallbackVisible, setFallbackVisible] = useState(false);
+  const activeIndexRef = useRef(0);
+  const stoppedRef = useRef(false);
+  const cardsRef = useRef(cards);
+  const petDisplayName = petName.trim() || "your pet";
+  const flowCards = cards.length ? Array.from({ length: 9 }, (_, slot) => slot) : [];
+
+  useEffect(() => {
+    cardsRef.current = cards;
+  }, [cards]);
+
+  function stopDeck(source: StopSource) {
+    const availableCards = cardsRef.current;
+    if (stoppedRef.current || !availableCards.length) return;
+    stoppedRef.current = true;
+    const card = availableCards[positiveModulo(activeIndexRef.current, availableCards.length)] ?? availableCards[0]!;
+    onStop(source, card);
+  }
+
+  useEffect(() => {
+    if (!cards.length) return undefined;
+    activeIndexRef.current = 0;
+    stoppedRef.current = false;
+    setFallbackVisible(false);
+
+    const flowTimer = window.setInterval(() => {
+      activeIndexRef.current = positiveModulo(activeIndexRef.current + 1, cards.length);
+    }, 1800);
+    const fallbackTimer = window.setTimeout(() => {
+      if (!stoppedRef.current) setFallbackVisible(true);
+    }, 16000);
+    const autoStopTimer = window.setTimeout(() => {
+      stopDeck("deck");
+    }, 19500);
+
+    return () => {
+      window.clearInterval(flowTimer);
+      window.clearTimeout(fallbackTimer);
+      window.clearTimeout(autoStopTimer);
+    };
+    // Timers intentionally restart only when a new flowing deck is created.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards.length]);
+
+  return (
+    <div className={`pet-wheel-fullscreen pet-flow-fullscreen ${fallbackVisible ? "has-fallback" : ""}`}>
+      <button type="button" className="pet-wheel-back" onClick={onClose} aria-label="Back">
+        <ArrowLeft size={26} strokeWidth={1.8} />
+      </button>
+      <div className="pet-wheel-room-pill">
+        <PawPrint size={17} strokeWidth={1.7} />
+        <span>Animal Q&amp;A</span>
+      </div>
+
+      <div className="pet-wheel-copy pet-flow-copy">
+        <p>Pet stop ritual</p>
+        <span>Let {petDisplayName} tap, sniff, or touch the screen to stop the deck.</span>
+      </div>
+
+      <button
+        type="button"
+        className="pet-flow-stage"
+        onPointerUp={() => stopDeck("pet")}
+        aria-label={`Let ${petDisplayName} touch the screen to stop the deck`}
+      >
+        <div className="pet-flow-aura" aria-hidden />
+        <div className="pet-flow-track" aria-hidden>
+          {flowCards.map((slot) => (
+            <span
+              key={`flow-slot-${slot}`}
+              className="pet-flow-card"
+              style={{
+                "--flow-delay": `${slot * -1.8}s`,
+                backgroundImage: `url("${ANIMAL_TAROT_CARD_BACK_IMAGE}")`,
+              } as CSSProperties}
+            />
+          ))}
+        </div>
+        <div className="pet-flow-center-window" aria-hidden />
+        <span className="pet-flow-stop-hint">
+          {cards.length ? "Touch anywhere on the flowing deck" : "Preparing the deck"}
+        </span>
+      </button>
+
+      <div className="pet-flow-owner-panel">
+        {fallbackVisible ? (
+          <>
+            <p>{petDisplayName} is staying mysterious. Let the deck choose the message.</p>
+            <button type="button" onClick={() => stopDeck("deck")}>
+              Let the deck choose
+            </button>
+          </>
+        ) : (
+          <>
+            <p>If {petDisplayName} looks toward the phone, moves closer, sniffs, or settles nearby, you can confirm it.</p>
+            <button type="button" onClick={() => stopDeck("owner")}>
+              I saw {possessiveName(petName)} choice
+            </button>
+          </>
+        )}
+      </div>
+
+      <button type="button" className="pet-wheel-close" onClick={onClose}>
+        Close
+      </button>
+      <div className="pet-wheel-count">78 cards flowing</div>
     </div>
   );
 }
 
 export function AnimalTarotView() {
-  const anonId = useMemo(() => getAnonId(), []);
-  const fallbackAssignedCardId = useMemo(() => fallbackAnimalId(anonId), [anonId]);
-  const [receipt, setReceipt] = useState<DailyReceipt | null>(null);
-  const [phase, setPhase] = useState<DrawPhase>("loading");
-  const [saved, setSaved] = useState(false);
-  const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [petName, setPetName] = useState("Mochi");
+  const [animalType, setAnimalType] = useState<PetType>("Cat");
+  const [personalities, setPersonalities] = useState<PetPersonality[]>(["Playful"]);
+  const [personalityNote, setPersonalityNote] = useState("");
+  const [showPersonalityNote, setShowPersonalityNote] = useState(false);
+  const [showAllPersonalities, setShowAllPersonalities] = useState(false);
+  const [category, setCategory] = useState<QuestionCategory>("Mood");
+  const [question, setQuestion] = useState("");
+  const [depth, setDepth] = useState<ReadingDepth>("quick");
+  const [drawnCards, setDrawnCards] = useState<PetTarotCard[]>([]);
+  const [ownerSelectedIds, setOwnerSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [stopSource, setStopSource] = useState<StopSource | null>(null);
+  const [step, setStep] = useState<Step>("profile");
+
+  const Icon = animalIcon(animalType);
+  const ownerSelectionGoal = depth === "quick" ? 5 : 10;
+  const selectionGoal = depth === "quick" ? 1 : 3;
+  const ownerCards = drawnCards.filter((card) => ownerSelectedIds.includes(card.cardId));
+  const chosenCards = drawnCards.filter((card) => selectedIds.includes(card.cardId));
+  const petDisplayName = petName.trim() || "your pet";
+  const selectedQuestion = question.trim() || `What does ${petName.trim() || "my pet"} want me to know today?`;
+  const visiblePersonalities = showAllPersonalities
+    ? PET_PERSONALITIES
+    : PET_PERSONALITIES.slice(0, PERSONALITY_PREVIEW_COUNT);
+  const stopSourceCopy =
+    stopSource === "pet"
+      ? `${petDisplayName} stopped the deck.`
+      : stopSource === "owner"
+        ? `You confirmed the card ${petDisplayName} was drawn to.`
+        : stopSource === "deck"
+          ? `${petDisplayName} stayed mysterious. The deck chose the message.`
+          : "";
+
+  const quickAnswerCopy = useMemo(() => {
+    if (!chosenCards[0]) return "";
+    return quickAnswer({
+      petName,
+      animalType,
+      personalities,
+      personalityNote,
+      category,
+      question: selectedQuestion,
+      card: chosenCards[0],
+    });
+  }, [animalType, category, chosenCards, personalities, personalityNote, petName, selectedQuestion]);
+
+  const deepBlocks = useMemo(() => {
+    if (chosenCards.length < 3) return [];
+    return deepAnswer({ petName, personalities, personalityNote, category, cards: chosenCards });
+  }, [category, chosenCards, personalities, personalityNote, petName]);
+
+  function startDraw() {
+    const seed = `${petName}:${animalType}:${personalities.join("-")}:${personalityNote}:${category}:${selectedQuestion}:${Date.now()}`;
+    setDepth("quick");
+    setDrawnCards(drawCards(seed, RITUAL_TAROT_DECK.length));
+    setOwnerSelectedIds([]);
+    setSelectedIds([]);
+    setStopSource(null);
+    setStep("cards");
+  }
+
+  function stopFlow(source: StopSource, card: PetTarotCard) {
+    setStopSource(source);
+    setSelectedIds([card.cardId]);
+    setStep("answer");
+  }
+
+  function toggleOwnerCard(cardId: string) {
+    setOwnerSelectedIds((current) => {
+      if (current.includes(cardId)) return current.filter((id) => id !== cardId);
+      if (current.length >= ownerSelectionGoal) return current;
+      return [...current, cardId];
+    });
+  }
+
+  function toggleCard(cardId: string) {
+    setSelectedIds((current) => {
+      if (current.includes(cardId)) return current.filter((id) => id !== cardId);
+      if (current.length >= selectionGoal) return current;
+      return [...current, cardId];
+    });
+  }
+
+  function togglePersonality(item: PetPersonality) {
+    setPersonalities((current) => {
+      if (current.includes(item)) {
+        const next = current.filter((personality) => personality !== item);
+        return next.length ? next : current;
+      }
+      return [...current, item];
+    });
+  }
+
+  function resetQuiz() {
+    setDrawnCards([]);
+    setOwnerSelectedIds([]);
+    setSelectedIds([]);
+    setStopSource(null);
+    setStep("profile");
+  }
 
   useEffect(() => {
-    let cancelled = false;
-    setPhase("loading");
-    getOrCreateDailyReceipt("animal-tarot", { anonId, fallbackAssignedCardId })
-      .then((nextReceipt) => {
-        if (cancelled) return;
-        setReceipt(nextReceipt);
-        setPhase(nextReceipt.openedAt ? "revealed" : "intro");
-        setReceiptError(nextReceipt.source === "local-fallback"
-          ? "This draw is saved on this device for today."
-          : null);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setReceipt(null);
-        setPhase("intro");
-        setReceiptError("Animal Tarot will save this draw on this device for today.");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [anonId, fallbackAssignedCardId]);
-
-  const animal = getAnimalById(receipt?.assignedCardId ?? fallbackAssignedCardId);
-  const companion = companionCard(animal.companionCardId);
-  const revealed = phase === "revealed";
-  const revealing = phase === "revealing";
-  const loading = phase === "loading";
-  const canReplay = Boolean(receipt?.openedAt);
-  const fallbackMode = receipt?.source === "local-fallback";
-
-  function drawAnimal() {
-    if (!receipt) {
-      setReceiptError("Animal Tarot is preparing today's draw. Try again in a moment.");
-      return;
+    resetQuiz();
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
     }
-    setSaved(false);
-    setPhase("revealing");
-    window.setTimeout(() => {
-      openDailyReceipt("animal-tarot", { anonId, fallbackAssignedCardId })
-        .then((opened) => {
-          setReceipt(opened);
-          setReceiptError(opened.source === "local-fallback"
-            ? "This opened draw is saved on this device for today."
-            : null);
-          setPhase("revealed");
-        })
-        .catch(() => {
-          setReceiptError("Animal Tarot could not finish this draw. Try again in a moment.");
-          setPhase(receipt.openedAt ? "revealed" : "intro");
-        });
-    }, 1280);
+    // Start fresh at the Animal Q&A room whenever the module is opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const referenceWidth = { "--hint-app-width": "400px" } as CSSProperties;
+
+  if (step === "owner" || step === "cards") {
+    return (
+      <div className="h-full w-full" style={referenceWidth}>
+        <PetDeckFlowPicker
+          petName={petName}
+          cards={drawnCards}
+          onStop={stopFlow}
+          onClose={() => setStep("question")}
+        />
+      </div>
+    );
   }
 
-  function replayReveal() {
-    setSaved(false);
-    setPhase("revealing");
-    window.setTimeout(() => setPhase("revealed"), 1180);
-  }
-
-  function saveToCollection() {
-    saveLocalCollectionUnlock(companion.cardId, "animal");
-    setSaved(true);
-  }
+  const renderStep = step as Step;
 
   return (
-    <AppScreen>
-      <ScreenHeader
-        eyebrow="Animal Tarot"
-        title="Animal Terrace"
-        subtitle="One animal, one companion card, one clean message for today."
-        sigil={PawPrint}
-        backHref="/app"
-        backLabel="Home"
-      />
+    <div className="h-full w-full" style={referenceWidth}>
+      <AppScreen>
+      <header className="animal-tarot-hero mb-6">
+        <div className="animal-hero-orbit" aria-hidden />
+        <div className="relative z-10">
+          <p className="font-sans text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: ACCENT.gold }}>
+            Animal Q&amp;A Room
+          </p>
+          <h1 className="mt-2 font-serif text-[34px] leading-none sm:text-[42px]" style={{ color: GLASS.text }}>
+            Animal Q&A
+          </h1>
+          <p className="mt-3 max-w-2xl font-sans text-[13px] leading-relaxed sm:text-[14px]" style={{ color: GLASS.muted }}>
+            Ask a question, draw cards, then let your pet choose by touch, sniff, stare, sound, or pure owner instinct.
+          </p>
+        </div>
+      </header>
 
-      <GlassPanel hero className="animal-tarot-stage" padded={false}>
+      <GlassPanel hero className="animal-tarot-stage pet-qa-stage" padded={false}>
         <div className="animal-stage-sky" aria-hidden />
-        <div className="relative z-10 grid gap-4 p-4 sm:p-5">
-          <div className="animal-card-stage">
-            {(revealing || revealed) && <div className="animal-burst-rings" aria-hidden />}
-            <SpiritCard animal={animal} cardImage={companion.image} revealed={revealed || revealing} />
+        <div className="relative z-10 grid gap-5 p-5 sm:p-6">
+          <div className="pet-qa-status">
+            <span className={renderStep === "profile" ? "is-active" : ""}>Profile</span>
+            <span className={renderStep === "question" ? "is-active" : ""}>Question</span>
+            <span className={renderStep === "owner" || renderStep === "cards" ? "is-active" : ""}>Pick</span>
+            <span className={renderStep === "answer" ? "is-active" : ""}>Answer</span>
           </div>
 
-          <div>
-            {receiptError && (
-              <div className="hint-info-callout mb-4 rounded-[18px] px-4 py-3">
-                <p className="font-sans text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: EMBER }}>
-                  {fallbackMode ? "Saved for today" : "Draw is preparing"}
-                </p>
-                <p className="mt-1 font-sans text-[12px] leading-relaxed" style={{ color: GLASS.muted }}>
-                  {receiptError}
-                </p>
+          {renderStep === "profile" && (
+            <section className="pet-qa-panel">
+              <SectionLabel>Pet profile</SectionLabel>
+              <div className="pet-profile-top">
+                <div className="pet-avatar">
+                  <Icon size={34} strokeWidth={1.5} />
+                </div>
+                <label className="pet-input-label">
+                  Pet name
+                  <input value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="Mochi" />
+                </label>
               </div>
-            )}
-            <SectionLabel>{revealed ? animal.title : "Mystical animal ritual"}</SectionLabel>
-            {loading && (
-              <div className="py-6">
-                <h2 className="font-sans text-[24px] font-black leading-tight" style={{ color: GLASS.text }}>
-                  Finding today’s animal.
-                </h2>
-                <p className="mt-4 font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>
-                  Preparing today’s locked draw.
-                </p>
-              </div>
-            )}
 
-            {!loading && !revealed && !revealing && (
-              <>
-                <h2 className="font-sans text-[24px] font-black leading-tight" style={{ color: GLASS.text }}>
-                  Let one animal step forward.
-                </h2>
-                <p className="mt-3 max-w-lg font-sans text-[13px] leading-relaxed" style={{ color: GLASS.muted }}>
-                  Treat it like an instinct card: one animal, one companion tarot card, one clean message for today.
-                </p>
-                <button type="button" onClick={drawAnimal} className="animal-primary-button hint-tap-sparkle mt-4" disabled={!receipt}>
-                  <Sparkles size={16} />
-                  Draw animal card
-                </button>
-                <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                  {[
-                    ["1", "Hold the question loosely"],
-                    ["2", "Draw one animal"],
-                    ["3", "Use the prompt today"],
-                  ].map(([step, copy]) => (
-                    <div key={step} className="hint-subtle-card hint-card-lift rounded-[18px] px-3 py-3">
-                      <span className="font-serif text-[22px]" style={{ color: ACCENT.gold }}>{step}</span>
-                      <p className="mt-1 font-sans text-[11px] leading-snug" style={{ color: GLASS.muted }}>{copy}</p>
-                    </div>
+              <div className="pet-field-group">
+                <p>Animal type</p>
+                <div className="pet-pill-grid">
+                  {PET_TYPES.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setAnimalType(type)}
+                      className={animalType === type ? "is-selected" : ""}
+                    >
+                      {type}
+                    </button>
                   ))}
                 </div>
-              </>
-            )}
-
-            {revealing && (
-              <div className="py-6">
-                <h2 className="font-sans text-[24px] font-black leading-tight" style={{ color: GLASS.text }}>
-                  The terrace is opening.
-                </h2>
-                <p className="mt-4 font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>
-                  The animal is stepping through the card. Stay with the first feeling you notice.
-                </p>
               </div>
-            )}
 
-            {revealed && (
-              <div className="animal-reading">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="font-sans text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: ACCENT.aqua }}>
-                      Today's animal
-                    </p>
-                    <h2 className="mt-1 font-sans text-[28px] font-black leading-none" style={{ color: GLASS.text }}>
-                      {animal.name}
-                    </h2>
-                  </div>
-                  <div className="hint-segment rounded-full px-3 py-1.5 font-sans text-[10px] font-black uppercase tracking-[0.16em]" data-active="true">
-                    Companion: {companion.name}
-                  </div>
+              <div className="pet-field-group">
+                <p>Personality <span>pick one or more</span></p>
+                <div className="pet-pill-grid">
+                  {visiblePersonalities.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => togglePersonality(item)}
+                      className={personalities.includes(item) ? "is-selected" : ""}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                  {showAllPersonalities && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPersonalityNote((current) => !current)}
+                      className="pet-description-pill hint-tap-sparkle"
+                    >
+                      <MessageCircle size={15} />
+                      {showPersonalityNote ? "Hide description" : "Add your description"}
+                    </button>
+                  )}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAllPersonalities((current) => !current)}
+                  className="pet-more-button hint-tap-sparkle"
+                >
+                  {showAllPersonalities ? "Show less" : "More personalities"}
+                </button>
+              </div>
 
-                <div className="mt-5 grid gap-3">
-                  <ReadingBlock label="Emotional meaning">{animal.emotionalMeaning}</ReadingBlock>
-                  <ReadingBlock label="Today's message">{animal.todaysMessage}</ReadingBlock>
-                  <ReadingBlock label="Reflection prompt">{animal.reflectionPrompt}</ReadingBlock>
-                  <ReadingBlock label="Energy task">{animal.task}</ReadingBlock>
+              {showPersonalityNote && (
+                <label className="pet-input-label">
+                  Describe your pet
+                  <textarea
+                    value={personalityNote}
+                    onChange={(event) => setPersonalityNote(event.target.value)}
+                    placeholder="Example: needy in the morning, ignores me at night, loves snacks, scared of strangers..."
+                  />
+                </label>
+              )}
+
+              <StepNav previousDisabled onNext={() => setStep("question")} nextLabel="Next" />
+            </section>
+          )}
+
+          {renderStep === "question" && (
+            <section className="pet-qa-panel">
+              <SectionLabel>Choose a topic</SectionLabel>
+              <div className="pet-category-grid">
+                {CATEGORY_OPTIONS.map((item) => {
+                  const CategoryIcon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setCategory(item.id)}
+                      className={category === item.id ? "is-selected" : ""}
+                    >
+                      <CategoryIcon size={18} />
+                      <strong>{item.label}</strong>
+                      <span>{item.prompt}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <label className="pet-input-label mt-4">
+                Your question
+                <textarea
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  placeholder={`What does ${petName.trim() || "my pet"} want me to know?`}
+                />
+              </label>
+
+              <div className="pet-flow-intro-card">
+                <Sparkles size={18} />
+                <div>
+                  <strong>78 cards will flow for {petDisplayName}.</strong>
+                  <span>
+                    Let {petDisplayName} tap, sniff, or touch the screen to stop the deck. If you notice a clear
+                    reaction, confirm the card {petDisplayName} was drawn to. If {petDisplayName} stays mysterious,
+                    the deck will choose the message.
+                  </span>
                 </div>
               </div>
-            )}
+              <StepNav onPrevious={() => setStep("profile")} onNext={startDraw} nextLabel="Begin ritual" />
+            </section>
+          )}
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              {loading && (
-                <button type="button" className="animal-primary-button hint-tap-sparkle is-loading" disabled>
-                  <Moon size={16} />
-                  Loading lock
+          {renderStep === "owner" && (
+            <section className="pet-qa-panel">
+              <div className="pet-owner-fan-stage">
+                <div className="pet-fan-progress" aria-hidden>
+                  {Array.from({ length: ownerSelectionGoal }).map((_, index) => (
+                    <span key={index} className={index < ownerSelectedIds.length ? "is-filled" : ""} />
+                  ))}
+                </div>
+                <div className="pet-fan-heading">
+                  <SectionLabel>{depth === "quick" ? "Owner picks 5" : "Owner picks 10"}</SectionLabel>
+                  <h2>Choose your cards</h2>
+                  <p>Only the backs are visible. Pick by instinct first.</p>
+                </div>
+                <div className="pet-card-grid is-owner-deck" aria-label="Horizontal face-down tarot deck">
+                  {drawnCards.map((card, index) => (
+                    <PetCard
+                      key={card.cardId}
+                      card={card}
+                      index={index}
+                      reveal={false}
+                      style={ownerFanStyle(index, drawnCards.length, ownerSelectedIds.includes(card.cardId))}
+                      selected={ownerSelectedIds.includes(card.cardId)}
+                      disabled={!ownerSelectedIds.includes(card.cardId) && ownerSelectedIds.length >= ownerSelectionGoal}
+                      onSelect={() => toggleOwnerCard(card.cardId)}
+                    />
+                  ))}
+                </div>
+                <div className="pet-fan-bottom">
+                  <p>
+                    Swipe sideways to browse the deck. Pick {ownerSelectionGoal} cards, then place them near {petName.trim() || "your pet"}.
+                  </p>
+                  <strong>
+                    {ownerSelectedIds.length} / {ownerSelectionGoal} selected
+                  </strong>
+                </div>
+              </div>
+              <div className="pet-draw-actions">
+                <button type="button" onClick={startDraw} className="animal-secondary-button hint-tap-sparkle">
+                  <RefreshCcw size={15} />
+                  Shuffle again
                 </button>
-              )}
-              {revealing && (
-                <button type="button" className="animal-primary-button hint-tap-sparkle is-loading" disabled>
-                  <Moon size={16} />
-                  Revealing
+              </div>
+              <StepNav
+                onPrevious={() => setStep("question")}
+                onNext={() => {
+                  setSelectedIds([]);
+                  setStep("cards");
+                }}
+                nextLabel="Next"
+                nextDisabled={ownerSelectedIds.length !== ownerSelectionGoal}
+              />
+            </section>
+          )}
+
+          {renderStep === "cards" && (
+            <section className="pet-qa-panel">
+              <SectionLabel>{depth === "quick" ? "Let your pet pick 1" : "Let your pet pick 3"}</SectionLabel>
+              <h2 className="pet-qa-heading">Place your phone near {petName.trim() || "your pet"} and watch their first reaction.</h2>
+              <p className="pet-qa-copy">
+                A paw touch, nose touch, sniff, stare, moving closer, sound, or your gut feeling can count.
+              </p>
+              <div className={`pet-card-grid ${depth === "deep" ? "is-deep" : ""}`}>
+                {ownerCards.map((card, index) => (
+                  <PetCard
+                    key={card.cardId}
+                    card={card}
+                    index={index}
+                    reveal={false}
+                    selected={selectedIds.includes(card.cardId)}
+                    disabled={!selectedIds.includes(card.cardId) && selectedIds.length >= selectionGoal}
+                    onSelect={() => toggleCard(card.cardId)}
+                  />
+                ))}
+              </div>
+              <div className="pet-draw-actions">
+                <button type="button" onClick={startDraw} className="animal-secondary-button hint-tap-sparkle">
+                  <RefreshCcw size={15} />
+                  Start over
                 </button>
+              </div>
+              <StepNav
+                onPrevious={() => setStep("owner")}
+                onNext={() => setStep("answer")}
+                nextLabel="Next"
+                nextDisabled={selectedIds.length !== selectionGoal}
+              />
+            </section>
+          )}
+
+          {renderStep === "answer" && (
+            <section className="pet-qa-panel">
+              <SectionLabel>{depth === "quick" ? "Pet answer" : "Deep pet answer"}</SectionLabel>
+              <h2 className="pet-qa-heading">{petName.trim() || "Your pet"} answered through the cards.</h2>
+              <p className="pet-qa-question">Question: {selectedQuestion}</p>
+              {stopSourceCopy && <p className="pet-answer-source">{stopSourceCopy}</p>}
+              {chosenCards.length > 0 && (
+                <div className={`pet-answer-card-strip ${chosenCards.length > 1 ? "is-many" : ""}`} aria-label="Chosen card faces">
+                  {chosenCards.map((card, index) => (
+                    <figure key={card.cardId} className="pet-answer-card-face">
+                      <div className="pet-answer-card-image">
+                        <SafeImage
+                          src={card.image}
+                          alt={card.name}
+                          className="h-full w-full object-cover"
+                          fallbackClassName="h-full w-full rounded-[14px]"
+                          fallbackLabel="Card"
+                        />
+                      </div>
+                      <figcaption>{chosenCards.length > 1 ? `${index + 1}. ${card.name}` : card.name}</figcaption>
+                    </figure>
+                  ))}
+                </div>
               )}
-              {revealed && (
-                <>
-                  <button type="button" onClick={saveToCollection} className="animal-primary-button hint-tap-sparkle">
-                    {saved ? <Check size={16} /> : <Bookmark size={16} />}
-                    {saved ? "Saved locally" : "Save to Collection"}
-                  </button>
-                  <button type="button" onClick={canReplay ? replayReveal : drawAnimal} className="animal-secondary-button hint-tap-sparkle">
-                    <RefreshCcw size={15} />
-                    Replay reveal
-                  </button>
-                </>
+              {depth === "quick" ? (
+                <div className="grid gap-3">
+                  {quickAnswerCopy && <ReadingBlock label="Question answer">{quickAnswerCopy}</ReadingBlock>}
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {deepBlocks.map((block) => (
+                    <ReadingBlock key={block.label} label={block.label} card={block.card}>
+                      {block.copy}
+                    </ReadingBlock>
+                  ))}
+                </div>
               )}
-            </div>
-          </div>
+              <StepNav
+                previousLabel="Previous"
+                nextLabel="New pet profile"
+                onPrevious={() => setStep("cards")}
+                onNext={resetQuiz}
+              />
+            </section>
+          )}
         </div>
       </GlassPanel>
-
-      <section className="mt-6 grid gap-3 sm:grid-cols-2">
-        <Link href="/app/tarot" className="animal-action-card hint-tap-sparkle hint-card-lift">
-          <Sparkles size={17} />
-          <span>Draw in Tarot Room</span>
-        </Link>
-        <Link href="/app/daily" className="animal-action-card hint-tap-sparkle hint-card-lift">
-          <Moon size={17} />
-          <span>Open Daily Draw</span>
-        </Link>
-        <Link href="/app/collection" className="animal-action-card hint-tap-sparkle hint-card-lift">
-          <Bookmark size={17} />
-          <span>Open Collection</span>
-        </Link>
-        <Link href="/app/ask" className="animal-action-card hint-tap-sparkle hint-card-lift">
-          <MessageCircle size={17} />
-          <span>Ask Hint</span>
-        </Link>
-      </section>
-    </AppScreen>
+      </AppScreen>
+    </div>
   );
 }
