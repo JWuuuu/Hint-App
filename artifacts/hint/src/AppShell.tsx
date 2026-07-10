@@ -63,8 +63,8 @@ function isCreamStyleRoute(location: string): boolean {
   return CREAM_STYLE_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
-function onboardingOwnsScreen(location: string): boolean {
-  if (new URLSearchParams(location.split("?", 2)[1] ?? "").get("onboarding") === "reset") return true;
+function onboardingOwnsScreen(): boolean {
+  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("onboarding") === "reset") return true;
   try {
     return window.localStorage.getItem(HINT_ONBOARDING_COMPLETE_STORAGE_KEY) !== "1";
   } catch {
@@ -100,7 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isProductRoute = !["/privacy", "/terms", "/disclaimer", "/contact", "/about"].includes(location);
   const referenceHomeRoute = location === "/app" || location === "/";
   const creamStyleRoute = !referenceHomeRoute && isCreamStyleRoute(location);
-  const showNav = isProductRoute && !onboardingOwnsScreen(location) && !NAV_HIDDEN_ROUTES.some(
+  const showNav = isProductRoute && !onboardingOwnsScreen() && !NAV_HIDDEN_ROUTES.some(
     (r) => location === r || location.startsWith(r + "/"),
   );
 
