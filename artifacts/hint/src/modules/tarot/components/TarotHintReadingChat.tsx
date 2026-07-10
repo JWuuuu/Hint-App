@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { History, Home, SendHorizontal } from "lucide-react";
 import { useLocation } from "wouter";
 import { useSendTarotChatMessage, type TarotCardDraw } from "@workspace/api-client-react";
 import { apiUrl } from "../../../lib/api";
-import { triggerFeedback } from "../../../lib/feedback";
 import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { getCardKeywords, type RitualCard } from "../logic/createHiddenDeck";
 import type { TarotCardArtId } from "../logic/cardImageMap";
@@ -51,9 +50,9 @@ type StructuredTarotReading = {
 };
 
 const FOLLOW_UPS = [
-  { label: "Next step", prompt: "What should I do next?" },
-  { label: "Hidden block", prompt: "What should I stop holding?" },
-  { label: "Quiet truth", prompt: "What is the quiet truth here?" },
+  "What should I do next?",
+  "What should I stop holding?",
+  "What is the quiet truth here?",
 ];
 
 const MAJOR_MEANINGS: Record<string, { keywords: string[]; upright: string; reversed: string }> = {
@@ -345,51 +344,27 @@ function getSignalLanguage(signalType: StructuredSignalType) {
   }
 }
 
-function formatQuestionLead(question?: string) {
-  const clean = question?.replace(/\s+/g, " ").trim();
-  if (!clean) return "For this question";
-  return `For "${compactSentence(clean, 72)}"`;
+function questionLead() {
+  return "For this question, ";
 }
 
-function buildOverallReading(
-  cards: RitualCard[],
-  question?: string,
-): { signalType: StructuredSignalType; text: string } {
+function buildOverallReading(cards: RitualCard[]): { signalType: StructuredSignalType; text: string } {
   const signalType = getReadingSignal(cards);
   const signal = getSignalLanguage(signalType);
   return {
     signalType,
-    text: `${formatQuestionLead(question)}, this spread gives ${signal.label}: ${signal.direction}.`,
+    text: `${questionLead()}the answer is: ${signal.direction}.`,
   };
-}
-
-function buildPositionFrame(position: string, index: number, cardCount: number) {
-  const normalized = position.toLowerCase();
-  if (/past|before|root|arrival/.test(normalized)) {
-    return "This shows what shaped the situation before now";
-  }
-  if (/present|now|signal|approach|draw|challenge/.test(normalized)) {
-    return "This shows the pressure or truth active right now";
-  }
-  if (/future|next|direction|gain|outcome/.test(normalized)) {
-    return "This points to the direction opening next";
-  }
-  if (cardCount === 3 && index === 0) return "This shows what brought you here";
-  if (cardCount === 3 && index === 1) return "This shows what is active right now";
-  if (cardCount === 3 && index === 2) return "This points to the next movement";
-  return `In the ${position} position, this is the part asking for attention`;
 }
 
 function buildCardMeaning(card: RitualCard, index: number, spread: SpreadChoice): StructuredCardMeaning {
   const position = getSpreadPositionLabel(spread, index);
   const orientation = card.orientation === "reversed" ? "reversed" : "upright";
-  const positionFrame = buildPositionFrame(position, index, spread.cardCount);
-  const cardMeaning = compactSentence(getReadableCardMeaning(card).sentence, 120);
   return {
     position,
     card_name: card.name,
     orientation,
-    meaning: compactSentence(`${positionFrame}: ${cardMeaning}`, 170),
+    meaning: compactSentence(getReadableCardMeaning(card).sentence, 145),
   };
 }
 
@@ -412,12 +387,12 @@ function buildFinalGuidance(signalType: StructuredSignalType) {
 function buildFollowUpInvitation(question?: string, focusLabel?: string) {
   const lower = `${question ?? ""} ${focusLabel ?? ""}`.toLowerCase();
   if (/love|relationship|dating|connection|reconcile|breakup|their|him|her|them/.test(lower)) {
-    return "If you tell me what has been happening between you two, I can read where this connection is actually stuck.";
+    return "Ask about any card if you want the deeper layer of this connection.";
   }
   if (/work|job|career|exam|school|application|offer/.test(lower)) {
-    return "If you tell me what decision is in front of you, I can help you see which card is giving the strongest signal.";
+    return "Ask about any card if you want the deeper layer of this decision.";
   }
-  return "If you tell me the part that feels hardest to read, I can help you follow where these cards are pointing next.";
+  return "Ask about any card if you want the deeper layer.";
 }
 
 function buildLocalStructuredReading(
@@ -427,7 +402,7 @@ function buildLocalStructuredReading(
   story?: string,
   focusLabel?: string,
 ): StructuredTarotReading {
-  const overall = buildOverallReading(cards, question);
+  const overall = buildOverallReading(cards);
   return {
     signal_type: overall.signalType,
     overall_summary: overall.text,
@@ -453,19 +428,16 @@ function compactStructuredReading(reading: StructuredTarotReading): StructuredTa
 function buildFollowUpReply(question: string, cards: RitualCard[]) {
   const anchor = cards[0];
   const cleanQuestion = question.replace(/\s+/g, " ").trim();
-  const anchorLine = anchor
-    ? compactSentence(getReadableCardMeaning(anchor).sentence, 150)
-    : "Name what is true, then choose the smallest action that matches it.";
-  return `For "${compactSentence(cleanQuestion, 88)}", the useful signal is the whole spread pattern, not only one card. ${anchorLine} The clean move is to name the pressure, then choose the smallest action that does not betray what you already know.`;
+  return `For "${cleanQuestion}", the cards are still pointing back to the whole pattern, not only one card. ${anchor ? getReadableCardMeaning(anchor).sentence : "Name what is true, then choose the smallest action that matches it."} Tell me the part that feels hardest to read, and I can stay with that thread.`;
 }
 
 function structuredReadingToText(reading: StructuredTarotReading) {
   return [
-    `Overall Reading: ${reading.overall_summary}`,
-    "Card Breakdown:",
+    `Answer: ${reading.overall_summary}`,
+    "Cards:",
     ...reading.cards.map((card) => `${card.position} - ${card.card_name} (${card.orientation}): ${card.meaning}`),
-    `Final Guidance: ${reading.final_action_advice}`,
-    `Follow Up: ${reading.follow_up_invitation}`,
+    `Next Step: ${reading.final_action_advice}`,
+    `Ask More: ${reading.follow_up_invitation}`,
   ].join("\n\n");
 }
 
@@ -515,7 +487,6 @@ export function TarotHintReadingChat({
   archiveOnOpen = true,
 }: TarotHintReadingChatProps) {
   const [, navigate] = useLocation();
-  const shouldReduceMotion = useReducedMotion();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -647,7 +618,6 @@ export function TarotHintReadingChat({
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || chatMutation.isPending) return;
-    triggerFeedback("tap");
     setError(null);
     const userMessage: LocalChatMessage = {
       id: newMessageId(),
@@ -684,7 +654,6 @@ export function TarotHintReadingChat({
           content: reply.message,
         },
       ]);
-      triggerFeedback("success");
     } catch {
       setError("The live reading line is quiet right now, so this reply used the local reading context.");
       setMessages([
@@ -695,7 +664,6 @@ export function TarotHintReadingChat({
           content: buildFollowUpReply(trimmed, selectedCards),
         },
       ]);
-      triggerFeedback("soft");
     }
   }
 
@@ -707,7 +675,6 @@ export function TarotHintReadingChat({
   }
 
   function leaveTo(path: string) {
-    triggerFeedback("soft");
     setSaveNotice(true);
     if (leaveTimerRef.current !== null) {
       window.clearTimeout(leaveTimerRef.current);
@@ -744,7 +711,7 @@ export function TarotHintReadingChat({
         )}
       </AnimatePresence>
 
-      <header className="relative z-10 border-b border-[#e4c174]/10 px-5 pb-3 pl-16 pt-[calc(var(--hint-safe-top)+0.75rem)] sm:px-7 sm:pb-3.5 sm:pl-20">
+      <header className="relative z-10 border-b border-[#e4c174]/10 px-5 py-3 pl-16 sm:px-7 sm:py-3.5 sm:pl-20">
         <p className="font-sans text-[10px] uppercase tracking-[0.28em] text-[#e4c174]/70">Tarot room</p>
         <h1 className="mt-1 font-serif text-[26px] leading-tight text-[#f7ead0] sm:text-[34px]">
           Read my Hint
@@ -783,7 +750,7 @@ export function TarotHintReadingChat({
           <motion.section
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: shouldReduceMotion ? 0 : 0.42, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.36, ease: "easeOut" }}
             className="w-full rounded-[14px] border border-[#e4c174]/14 bg-[#201426]/56 p-3 shadow-[0_18px_44px_rgba(0,0,0,0.20)] backdrop-blur-sm"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -794,10 +761,10 @@ export function TarotHintReadingChat({
                 {selectedCards.length} cards
               </p>
             </div>
-            <div className="snap-x snap-mandatory overflow-x-auto pb-2 [scrollbar-width:none]">
+            <div className="overflow-x-auto pb-2 [scrollbar-width:none]">
               <div className={`mx-auto flex ${selectedCards.length === 1 ? "justify-center" : "justify-start"} gap-3 sm:gap-4`}>
                 {selectedCards.map((card, index) => (
-                  <div key={card.visualId} className={`${previewItemWidth} shrink-0 snap-center text-center`}>
+                  <div key={card.visualId} className={`${previewItemWidth} shrink-0 text-center`}>
                     <TarotCardVisual
                       card={card}
                       faceDown={false}
@@ -826,7 +793,7 @@ export function TarotHintReadingChat({
             <motion.article
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: shouldReduceMotion ? 0 : 0.4, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.34, ease: "easeOut" }}
               className="rounded-[14px] border border-[#e4c174]/14 bg-[#201426]/48 p-3.5 shadow-[0_14px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm sm:p-4"
             >
               <p className="font-sans text-[10px] uppercase tracking-[0.24em] text-[#e4c174]/76">
@@ -834,12 +801,12 @@ export function TarotHintReadingChat({
               </p>
               <div className="mt-3 space-y-3">
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Overall Reading</h3>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Answer</h3>
                   <p className="mt-1.5 font-sans text-[15px] leading-6 text-[#f7ead0]/92 sm:text-[16px]">{reading.overall_summary}</p>
                 </section>
                 <section>
                   <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">
-                    Card Breakdown
+                    Cards
                   </h3>
                   <div className="mt-2 grid gap-2 md:grid-cols-2">
                     {reading.cards.map((card, index) => (
@@ -858,11 +825,11 @@ export function TarotHintReadingChat({
                   </div>
                 </section>
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Final Guidance</h3>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Next step</h3>
                   <p className="mt-1.5 font-sans text-[13.5px] leading-6 text-[#f7ead0]/88 sm:text-sm">{reading.final_action_advice}</p>
                 </section>
                 <section>
-                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Follow Up</h3>
+                  <h3 className="font-sans text-[11px] uppercase tracking-[0.18em] text-[#d8c7a6]/62">Want more?</h3>
                   <p className="mt-1.5 font-serif text-[15px] italic leading-6 text-[#f7ead0]/88 sm:text-[16px]">{reading.follow_up_invitation}</p>
                 </section>
               </div>
@@ -873,7 +840,7 @@ export function TarotHintReadingChat({
                 key={message.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: shouldReduceMotion ? 0 : 0.24, ease: "easeOut" }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
                 className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
@@ -891,7 +858,7 @@ export function TarotHintReadingChat({
         </div>
       </div>
 
-      <div className="relative z-20 border-t border-[#e4c174]/10 bg-[#140d1c]/90 px-5 pb-[calc(var(--hint-safe-bottom)+1rem)] pt-2.5 backdrop-blur-md sm:px-7">
+      <div className="relative z-20 border-t border-[#e4c174]/10 bg-[#140d1c]/90 px-5 pb-4 pt-2.5 backdrop-blur-md sm:px-7">
         <div className="mx-auto max-w-4xl">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="font-sans text-[11px] text-[#d8c7a6]/54">
@@ -917,15 +884,15 @@ export function TarotHintReadingChat({
             </div>
           </div>
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-            {FOLLOW_UPS.map((followUp) => (
+            {FOLLOW_UPS.map((question) => (
               <button
-                key={followUp.label}
+                key={question}
                 type="button"
-                onClick={() => void send(followUp.prompt)}
+                onClick={() => void send(question)}
                 disabled={chatMutation.isPending}
                 className="shrink-0 rounded-full border border-[#e4c174]/18 bg-white/[0.035] px-3.5 py-2 font-serif text-[13px] italic text-[#d8c7a6]/82 transition-colors hover:border-[#e4c174]/36 hover:text-[#ffe8aa] disabled:cursor-wait disabled:opacity-55"
               >
-                {followUp.label}
+                {question}
               </button>
             ))}
           </div>

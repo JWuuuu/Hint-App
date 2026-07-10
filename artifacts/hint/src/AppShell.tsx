@@ -1,7 +1,6 @@
 ﻿import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { MotionConfig } from "framer-motion";
 import {
   CalendarDays,
   History,
@@ -36,19 +35,18 @@ import { useLanguage } from "./lib/i18n";
 import { triggerFeedback } from "./lib/feedback";
 
 /** Full-screen flows own their navigation, so the global bottom nav is hidden there. */
-const NAV_HIDDEN_ROUTES = [
-  "/tarot",
-  "/ask",
-  "/login",
-  "/signup",
-  "/app/tarot",
-  "/app/ask",
-  "/app/login",
-  "/app/signup",
-  "/app/animal-tarot",
-];
+const NAV_HIDDEN_ROUTES = ["/tarot", "/ask", "/login", "/app/tarot", "/app/ask", "/app/login"];
 const HINT_LAUNCH_SEEN_STORAGE_KEY = "hint_launch_seen_v2";
 const ENABLE_LAUNCH_INTRO = true;
+const CREAM_STYLE_ROUTES = [
+  "/app/daily",
+  "/app/readings",
+  "/readings",
+  "/app/profile",
+  "/app/astrology",
+  "/app/collection",
+  "/app/personalities",
+] as const;
 
 function hasLaunchIntroPreviewFlag(): boolean {
   if (typeof window === "undefined") return false;
@@ -57,6 +55,11 @@ function hasLaunchIntroPreviewFlag(): boolean {
 
 function getLaunchIntroVariant(): LaunchIntroVariant {
   return "cinematic";
+}
+
+function isCreamStyleRoute(location: string): boolean {
+  const pathname = location.split(/[?#]/, 1)[0]?.replace(/\/+$/, "") || "/";
+  return CREAM_STYLE_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
 /**
@@ -79,13 +82,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       return true;
     }
   });
-  const [showLaunchIntro, setShowLaunchIntro] = useState(() => isFirstLaunch || hasLaunchIntroPreviewFlag());
+  const [showLaunchIntro, setShowLaunchIntro] = useState(true);
   const [launchIntroLeaving, setLaunchIntroLeaving] = useState(false);
   const [launchIntroRunKey, setLaunchIntroRunKey] = useState(0);
   const isLaunchIntroPreview = hasLaunchIntroPreviewFlag();
   const launchIntroVariant = getLaunchIntroVariant();
   const isProductRoute = !["/privacy", "/terms", "/disclaimer", "/contact", "/about"].includes(location);
   const referenceHomeRoute = location === "/app" || location === "/";
+  const creamStyleRoute = !referenceHomeRoute && isCreamStyleRoute(location);
   const showNav = isProductRoute && !NAV_HIDDEN_ROUTES.some(
     (r) => location === r || location.startsWith(r + "/"),
   );
@@ -137,11 +141,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [location]);
 
   useEffect(() => {
-    if (!isFirstLaunch && !isLaunchIntroPreview) {
-      setShowLaunchIntro(false);
-      setLaunchIntroLeaving(false);
-      return;
-    }
     if (!showLaunchIntro) return;
 
     const shouldReduceLaunchMotion = reduceMotion && !isLaunchIntroPreview;
@@ -171,71 +170,76 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [location]);
 
   return (
-    <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
-      <PointerProvider>
-        <div
-          data-hint-theme={theme}
-          className="hint-app-shell-root fixed inset-0 overflow-hidden"
-        >
-          {!referenceHomeRoute ? (
-            <>
-              {/* Atmosphere stack — back to front */}
-              <CelestialBackdrop theme={theme} />
-              <Moonlight />
-              <Haze />
-              <Particles />
-              <RoomLight />
-              <Vignette />
-              <Grain />
-            </>
-          ) : null}
+    <PointerProvider>
+      <div
+        data-hint-theme={theme}
+        data-hint-cream-route={creamStyleRoute ? "true" : undefined}
+        className={[
+          "hint-app-shell-root fixed inset-0 overflow-hidden",
+          creamStyleRoute ? "hint-cream-route" : "",
+        ].join(" ")}
+      >
+        {!referenceHomeRoute && !creamStyleRoute ? (
+          <>
+            {/* Atmosphere stack — back to front */}
+            <CelestialBackdrop theme={theme} />
+            <Moonlight />
+            <Haze />
+            <Particles />
+            <RoomLight />
+            <Vignette />
+            <Grain />
+          </>
+        ) : null}
 
-          {/* Route content sits above the atmosphere.
-              Pages own their own scroll model — AppShell does not impose
-              one, so chat-style pages can pin an input to the bottom while
-              scrollable pages (like the home dashboard) handle their own
-              overflow. */}
-          <div className="absolute inset-0 z-20">
-            {children}
-          </div>
-
-          {showNav ? (
-            <AppNavigationChrome location={location} theme={theme} />
-          ) : null}
-
-          {ENABLE_LAUNCH_INTRO && isProductRoute && !referenceHomeRoute && showLaunchIntro ? (
-            <AppLaunchIntro
-              theme={theme}
-              leaving={launchIntroLeaving}
-              firstLaunch={isFirstLaunch}
-              preview={isLaunchIntroPreview}
-              variant={launchIntroVariant}
-            />
-          ) : null}
+        {/* Route content sits above the atmosphere.
+            Pages own their own scroll model — AppShell does not impose
+            one, so chat-style pages can pin an input to the bottom while
+            scrollable pages (like the home dashboard) handle their own
+            overflow. */}
+        <div className="absolute inset-0 z-20">
+          {children}
         </div>
-      </PointerProvider>
-    </MotionConfig>
+
+        {showNav ? (
+          <AppNavigationChrome location={location} theme={theme} creamStyleRoute={creamStyleRoute} />
+        ) : null}
+
+        {ENABLE_LAUNCH_INTRO && isProductRoute && !referenceHomeRoute && !creamStyleRoute && showLaunchIntro ? (
+          <AppLaunchIntro
+            theme={theme}
+            leaving={launchIntroLeaving}
+            firstLaunch={isFirstLaunch}
+            preview={isLaunchIntroPreview}
+            variant={launchIntroVariant}
+          />
+        ) : null}
+      </div>
+    </PointerProvider>
   );
 }
 
 function AppNavigationChrome({
   location,
   theme,
+  creamStyleRoute,
 }: {
   location: string;
   theme: HintTheme;
+  creamStyleRoute: boolean;
 }) {
   const isDark = theme === "dark";
   const { t } = useLanguage();
   const referenceHome = location === "/app" || location === "/";
+  const lightChrome = referenceHome || creamStyleRoute;
   const chromeSurface = referenceHome
-    ? "linear-gradient(180deg, rgba(255,254,251,0.94), rgba(250,244,238,0.82))"
+    ? "linear-gradient(180deg, rgba(255,254,250,0.78), rgba(250,244,238,0.66))"
     : "var(--hint-dock-bg, var(--hint-nav-bg, var(--hint-liquid-panel)))";
   const chromeBorder = referenceHome
-    ? "rgba(218,199,187,0.50)"
+    ? "rgba(218,199,187,0.24)"
     : "var(--hint-dock-border, var(--hint-liquid-border, var(--hint-border)))";
   const chromeShadow = referenceHome
-    ? "0 20px 48px rgba(102, 79, 67, 0.105), 0 8px 22px rgba(177,137,190,0.055), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -16px 28px rgba(129,91,111,0.032)"
+    ? "0 18px 42px rgba(102, 79, 67, 0.060), 0 6px 16px rgba(177,137,190,0.024), inset 0 1px 0 rgba(255,255,255,0.66), inset 0 -14px 24px rgba(129,91,111,0.014)"
     : "var(--hint-dock-shadow, var(--hint-nav-shadow, var(--hint-liquid-shadow)))";
   const appTabs: AppTabItem[] = [
     { href: "/app", label: t("nav.today"), icon: Home, exact: true },
@@ -248,24 +252,24 @@ function AppNavigationChrome({
     <nav
       aria-label="App"
       data-app-tabbar
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-6 pb-[calc(var(--hint-safe-bottom)+0.45rem)]"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-4 pb-[calc(var(--hint-safe-bottom)+0.35rem)]"
     >
       <div
         aria-hidden
-        className="absolute inset-x-0 bottom-0 -z-10 h-[calc(4.35rem+var(--hint-safe-bottom))]"
+        className="absolute inset-x-0 bottom-0 -z-10 h-[calc(5.25rem+var(--hint-safe-bottom))]"
         style={{
           background: "var(--hint-dock-veil)",
         }}
       />
       <div
-        className="hint-glass-nav hint-app-dock pointer-events-auto mx-auto grid h-[62px] w-full max-w-[var(--hint-app-width)] grid-cols-5 gap-1 overflow-visible rounded-[31px] border p-1.5"
+        className="hint-glass-nav hint-app-dock pointer-events-auto mx-auto grid h-[66px] w-full max-w-[var(--hint-app-width)] grid-cols-5 gap-1 overflow-visible rounded-[33px] border p-1.5"
         data-reference-home={referenceHome ? "true" : "false"}
         style={{
           background: chromeSurface,
           borderColor: chromeBorder,
           boxShadow: chromeShadow,
-          backdropFilter: "blur(50px) saturate(1.9) brightness(1.07) contrast(1.03)",
-          WebkitBackdropFilter: "blur(50px) saturate(1.9) brightness(1.07) contrast(1.03)",
+          backdropFilter: "blur(46px) saturate(1.75) brightness(1.06) contrast(1.02)",
+          WebkitBackdropFilter: "blur(46px) saturate(1.75) brightness(1.06) contrast(1.02)",
         }}
       >
         {appTabs.map((tab) => (
@@ -273,7 +277,7 @@ function AppNavigationChrome({
             key={tab.href}
             item={tab}
             active={isActiveAppTab(location, tab)}
-            isDark={referenceHome ? false : isDark}
+            isDark={lightChrome ? false : isDark}
             referenceHome={referenceHome}
           />
         ))}
@@ -290,18 +294,21 @@ type AppTabItem = {
   featured?: boolean;
 };
 
-function HintAiMark({ active }: { active: boolean }) {
+function HintAiMark({ active, referenceHome = false }: { active: boolean; referenceHome?: boolean }) {
   return (
     <span
       aria-hidden
-      className="relative grid size-[52px] place-items-center overflow-hidden rounded-full"
+      className={[
+        "relative grid place-items-center overflow-hidden rounded-full",
+        referenceHome ? "size-[60px]" : "size-[52px]",
+      ].join(" ")}
       style={{
         background: active
-          ? "radial-gradient(circle at 34% 20%, rgba(255,244,252,0.98), rgba(213,166,221,0.74) 40%, rgba(120,84,141,0.96) 100%)"
-          : "radial-gradient(circle at 34% 20%, rgba(255,243,252,0.94), rgba(208,161,216,0.66) 42%, rgba(126,91,148,0.92) 100%)",
+          ? "radial-gradient(circle at 34% 20%, rgba(255,244,252,0.98), rgba(207,161,215,0.70) 40%, rgba(123,87,143,0.94) 100%)"
+          : "radial-gradient(circle at 34% 20%, rgba(255,243,252,0.94), rgba(207,163,216,0.64) 42%, rgba(132,98,151,0.88) 100%)",
         color: "#fff8f4",
         boxShadow:
-          "0 0 0 5px rgba(255,255,255,0.70), 0 15px 30px rgba(105,77,120,0.21), inset 0 1px 0 rgba(255,255,255,0.66), inset 0 -10px 20px rgba(63,38,83,0.14), inset 0 0 0 1px rgba(255,255,255,0.48)",
+          "0 0 0 5px rgba(255,255,255,0.62), 0 12px 25px rgba(105,77,120,0.15), 0 0 28px rgba(195,145,206,0.18), inset 0 1px 0 rgba(255,255,255,0.64), inset 0 -10px 20px rgba(63,38,83,0.11), inset 0 0 0 1px rgba(255,255,255,0.42)",
       }}
     >
       <span
@@ -337,14 +344,14 @@ function AppTab({
       onPointerDown={() => triggerFeedback(featured ? "select" : "tap")}
       className={[
         "hint-app-tab hint-pressable hint-tap-sparkle relative flex min-w-0 flex-col items-center justify-center px-1 text-center transition hover:-translate-y-0.5 active:scale-[0.98]",
-        featured ? "h-[50px] overflow-visible rounded-[24px]" : "h-[50px] gap-0.5 rounded-[24px]",
+        featured ? "h-[52px] overflow-visible rounded-[26px]" : "h-[52px] gap-0.5 rounded-[26px]",
       ].join(" ")}
       style={{
         color: featured
           ? "var(--hint-special-action-text)"
           : active
-            ? isDark ? "#f8f1e8" : "#29252e"
-            : isDark ? "rgba(248,241,232,0.62)" : "#7b747a",
+            ? isDark ? "#f8f1e8" : "#2d2934"
+            : isDark ? "rgba(248,241,232,0.62)" : "#777178",
         background: "transparent",
         border: "1px solid transparent",
         boxShadow: "none",
@@ -359,20 +366,27 @@ function AppTab({
         style={{ background: active ? "linear-gradient(90deg, transparent, rgba(255,255,255,0.58), transparent)" : "transparent" }}
       />
       {featured ? (
-        <span className="hint-app-tab-orb pointer-events-none absolute left-1/2 top-[-25px] -translate-x-1/2">
-          <HintAiMark active={active} />
+        <span className={[
+          "hint-app-tab-orb pointer-events-none absolute left-1/2 -translate-x-1/2",
+          referenceHome ? "top-[-21px]" : "top-[-25px]",
+        ].join(" ")}>
+          <HintAiMark active={active} referenceHome={referenceHome} />
         </span>
       ) : (
         <Icon className="size-[21px] shrink-0" strokeWidth={active ? 2.35 : 1.9} />
       )}
-      <span
-        className={[
-          "hint-app-tab-label max-w-full truncate font-sans font-black leading-none",
-          featured ? "absolute inset-x-0 bottom-[4px] text-[10px]" : "text-[11px]",
-        ].join(" ")}
-      >
-        {item.label}
-      </span>
+      {featured && referenceHome ? (
+        <span className="sr-only">{item.label}</span>
+      ) : (
+        <span
+          className={[
+            "hint-app-tab-label max-w-full truncate font-sans font-semibold leading-none",
+            featured ? "absolute inset-x-0 bottom-[4px] text-[10px]" : "text-[11px]",
+          ].join(" ")}
+        >
+          {item.label}
+        </span>
+      )}
     </Link>
   );
 }

@@ -45,7 +45,7 @@ function CollectionCardTile({
           ? "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)"
           : "var(--hint-deck-card-bg)",
         boxShadow: card.unlocked || rewardPending
-          ? "0 14px 34px rgba(75,52,92,0.14), inset 0 1px 0 rgba(255,255,255,0.14)"
+          ? "0 14px 30px color-mix(in srgb, var(--hint-lavender) 10%, transparent), inset 0 1px 0 rgba(255,255,255,0.42)"
           : "inset 0 0 28px color-mix(in srgb, var(--hint-gold, #cba866) 7%, transparent)",
       }}
     >
@@ -164,7 +164,7 @@ export function CardCollectionView() {
             color: "var(--hint-text)",
             background: "color-mix(in srgb, var(--hint-surface-soft) 86%, transparent)",
             borderColor: "color-mix(in srgb, var(--hint-gold, #cba866) 34%, var(--hint-border))",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22), 0 10px 24px color-mix(in srgb, var(--hint-gold, #cba866) 10%, transparent)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22), 0 10px 24px color-mix(in srgb, var(--hint-gold, #cba866) 10%, transparent)",
           }}
         >
           Draw in Tarot Room
@@ -179,7 +179,7 @@ export function CardCollectionView() {
         rewardOpened={selectedRareCardId === rewardCardId ? rewardOpened : selectedRareCard.unlocked}
         lockedMessage={
           selectedRareCardId === rewardCardId
-            ? `Today's reward stays in your deck once opened. Next reset: ${formatDate(dailyReward?.expiresAt ?? fallbackReward.expiresAt)}.`
+            ? `Today's reward stays in your deck once opened. Next reset: ${formatDate(dailyReward?.expiresAt ?? fallbackReward.expiresAt)}.${dailyReward?.source === "local-fallback" ? " Backend lock is unavailable, so this is using local fallback state." : ""}`
             : "Unlocked cards can replay the moment. Locked rare cards wait for their own daily reward."
         }
       />

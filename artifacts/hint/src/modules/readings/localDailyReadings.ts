@@ -8,6 +8,14 @@ const UPDATED_EVENT = "hint:local-daily-readings-updated";
 type StoredDailyReading = ReadingSummary & {
   anonId: string;
   source: "daily-pull";
+  cardId?: string;
+  keyword?: string;
+};
+
+export type DailyReadingMemory = {
+  cardId?: string;
+  cardName: string;
+  createdAt: string;
 };
 
 function readAll(): StoredDailyReading[] {
@@ -37,7 +45,9 @@ export function saveLocalDailyReading(pull: DailyPull, createdAt = new Date()): 
     id: `daily-${today}`,
     anonId,
     source: "daily-pull",
+    cardId: pull.cardId,
     cardName: pull.cardName,
+    keyword: pull.keyword,
     whisper: pull.whisper,
     spreadType: "daily-pull",
     question: "Tonight's daily card",
@@ -59,6 +69,20 @@ export function listLocalDailyReadings(anonId = getAnonId()): ReadingSummary[] {
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
+}
+
+export function listLocalDailyReadingMemory(anonId = getAnonId()): DailyReadingMemory[] {
+  return readAll()
+    .filter((reading) => reading.anonId === anonId)
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .map((reading) => ({
+      cardId: reading.cardId,
+      cardName: reading.cardName,
+      createdAt: reading.createdAt,
+    }));
 }
 
 export function getLocalDailyReading(id: string, anonId = getAnonId()): ReadingSummary | null {

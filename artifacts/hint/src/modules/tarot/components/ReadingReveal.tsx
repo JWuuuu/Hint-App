@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import type { RitualCard } from "../logic/createHiddenDeck";
 import type { TarotCardArtId } from "../logic/cardImageMap";
 import type { TarotCardBackId, TarotCardBackStyle } from "../logic/cardBacks";
@@ -7,12 +7,6 @@ import type { SpreadChoice } from "../../hold/useHoldFlow";
 import { TarotCardVisual } from "./TarotCardVisual";
 import type { WashRitualTheme } from "./CardWashRitual";
 import { getSpreadPositionLabel } from "../logic/spreadLabels";
-
-const REVEAL_EASE = [0.18, 0.78, 0.18, 1] as const;
-const AUTO_REVEAL_INITIAL_DELAY_MS = 520;
-const AUTO_REVEAL_CARD_INTERVAL_MS = 1650;
-const AUTO_REVEAL_ADVANCE_DELAY_MS = 1180;
-const MANUAL_REVEAL_ADVANCE_DELAY_MS = 560;
 
 type ReadingRevealProps = {
   selectedCards: RitualCard[];
@@ -28,6 +22,30 @@ type ReadingRevealProps = {
   onRestart: () => void;
 };
 
+function revealGridClass(count: number) {
+  if (count === 1) return "grid-cols-1 max-w-sm";
+  if (count === 2) return "grid-cols-1 min-[520px]:grid-cols-2 max-w-2xl";
+  if (count === 3) return "grid-cols-1 min-[520px]:grid-cols-3 max-w-3xl";
+  if (count <= 5) return "grid-cols-2 min-[520px]:grid-cols-3 xl:grid-cols-5 max-w-5xl";
+  return "grid-cols-2 min-[520px]:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 max-w-5xl 2xl:max-w-6xl";
+}
+
+function revealCardSizeClass(count: number) {
+  if (count === 1) return "";
+  if (count === 2) return "!h-[202px] !w-[124px] sm:!h-[256px] sm:!w-[156px] md:!h-[288px] md:!w-[176px]";
+  if (count === 3) return "!h-[172px] !w-[106px] min-[520px]:!h-[164px] min-[520px]:!w-[100px] sm:!h-[236px] sm:!w-[144px] md:!h-[276px] md:!w-[168px]";
+  if (count <= 5) return "!h-[142px] !w-[88px] sm:!h-[216px] sm:!w-[132px] md:!h-[250px] md:!w-[152px]";
+  return "!h-[150px] !w-[92px] sm:!h-[200px] sm:!w-[122px] md:!h-[232px] md:!w-[142px] 2xl:!h-[214px] 2xl:!w-[130px]";
+}
+
+function revealCardShellClass(count: number) {
+  if (count === 1) return "h-[218px] w-[132px] sm:h-[264px] sm:w-[160px] md:h-[294px] md:w-[178px]";
+  if (count === 2) return "h-[202px] w-[124px] sm:h-[256px] sm:w-[156px] md:h-[288px] md:w-[176px]";
+  if (count === 3) return "h-[172px] w-[106px] min-[520px]:h-[164px] min-[520px]:w-[100px] sm:h-[236px] sm:w-[144px] md:h-[276px] md:w-[168px]";
+  if (count <= 5) return "h-[142px] w-[88px] sm:h-[216px] sm:w-[132px] md:h-[250px] md:w-[152px]";
+  return "h-[150px] w-[92px] sm:h-[200px] sm:w-[122px] md:h-[232px] md:w-[142px] 2xl:h-[214px] 2xl:w-[130px]";
+}
+
 export function ReadingReveal({
   selectedCards,
   revealedIds,
@@ -40,235 +58,56 @@ export function ReadingReveal({
   onContinue,
   onReveal,
 }: ReadingRevealProps) {
-  const reducedMotion = useReducedMotion();
   const [readyToReveal, setReadyToReveal] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const carouselRef = useRef<HTMLDivElement | null>(null);
-  const thumbnailRef = useRef<HTMLDivElement | null>(null);
-  const carouselSyncFrameRef = useRef<number | null>(null);
-  const carouselLockTimerRef = useRef<number | null>(null);
-  const carouselTargetIndexRef = useRef<number | null>(null);
   const sequenceStartedRef = useRef("");
   const onRevealRef = useRef(onReveal);
-  const allRevealed =
-    selectedCards.length > 0 &&
-    selectedCards.every((card) => revealedIds.includes(card.visualId));
+  const allRevealed = selectedCards.every((card) => revealedIds.includes(card.visualId));
   const oneCard = selectedCards.length === 1;
   const revealProgress = selectedCards.length === 0 ? 0 : revealedIds.length / selectedCards.length;
   const sequenceKey = useMemo(
     () => selectedCards.map((card) => card.visualId).join("|"),
     [selectedCards],
   );
+  const title = allRevealed
+    ? "The cards are open."
+    : autoReveal
+      ? "The cards are opening."
+      : "These are the cards that came through.";
+  const subtitle = allRevealed
+    ? "Read what they are pointing toward."
+    : autoReveal
+      ? "Let the spread reveal itself in the order you selected."
+      : oneCard
+      ? `Turn ${getSpreadPositionLabel(spread, 0)} when you are ready.`
+      : "Turn each card when you are ready.";
+  const gridClass = revealGridClass(selectedCards.length);
+  const cardSizeClass = revealCardSizeClass(selectedCards.length);
+  const cardShellClass = revealCardShellClass(selectedCards.length);
   const pageOverlay = theme?.chamberOverlay ?? "var(--hint-page-bg)";
   const starClassName = theme?.starClassName ?? "";
-  const safeActiveIndex = Math.min(
-    Math.max(activeIndex, 0),
-    Math.max(selectedCards.length - 1, 0),
-  );
-  const activeCard = selectedCards[safeActiveIndex];
-  const activeRevealed = activeCard
-    ? revealedIds.includes(activeCard.visualId)
-    : false;
-  const activeLabel = activeCard
-    ? getSpreadPositionLabel(spread, safeActiveIndex)
-    : oneCard
-      ? getSpreadPositionLabel(spread, 0)
-      : "";
-  const title = allRevealed
-    ? "Your spread is open."
-    : autoReveal
-      ? "Opening the spread."
-      : activeRevealed
-        ? "Card is open."
-        : "Let the card turn.";
-  const subtitle = allRevealed
-    ? "Your full reading is ready."
-    : autoReveal
-      ? `${activeLabel || "The next card"} is coming into focus.`
-      : activeCard
-        ? `${activeLabel} - ${activeRevealed ? activeCard.name : "tap the center card when you are ready."}`
-        : "The spread is preparing.";
-  const modeLabel = allRevealed ? "Ready to read" : autoReveal ? "Opening" : "Reveal";
-  const nextUnrevealedIndex = selectedCards.findIndex(
-    (card) => !revealedIds.includes(card.visualId),
-  );
-  const nextIndex =
-    nextUnrevealedIndex >= 0 ? nextUnrevealedIndex : safeActiveIndex;
-  const revealTextColor = theme ? "#fff0df" : "var(--hint-text)";
-  const revealMutedColor = theme
-    ? "rgba(244,222,229,0.82)"
-    : "var(--hint-muted)";
-  const revealLabelColor = theme
-    ? "rgba(255,240,223,0.78)"
-    : "var(--hint-muted)";
-  const revealPillBackground = theme
-    ? "rgba(255,244,250,0.13)"
-    : "transparent";
-  const revealPillBorder = theme
-    ? "rgba(255,244,250,0.18)"
-    : "var(--hint-border)";
 
   useEffect(() => {
     onRevealRef.current = onReveal;
   }, [onReveal]);
 
-  useEffect(
-    () => () => {
-      if (carouselSyncFrameRef.current !== null) {
-        window.cancelAnimationFrame(carouselSyncFrameRef.current);
-      }
-      if (carouselLockTimerRef.current !== null) {
-        window.clearTimeout(carouselLockTimerRef.current);
-      }
-    },
-    [],
-  );
-
   useEffect(() => {
     setReadyToReveal(false);
     sequenceStartedRef.current = "";
-    setActiveIndex(0);
-    const timer = window.setTimeout(
-      () => setReadyToReveal(true),
-      reducedMotion ? 80 : 360,
-    );
+    const timer = window.setTimeout(() => setReadyToReveal(true), 760);
     return () => window.clearTimeout(timer);
-  }, [reducedMotion, sequenceKey]);
-
-  useEffect(() => {
-    let latestRevealedIndex = -1;
-    selectedCards.forEach((card, index) => {
-      if (revealedIds.includes(card.visualId)) latestRevealedIndex = index;
-    });
-
-    let advanceTimer: number | undefined;
-
-    if (!allRevealed && latestRevealedIndex >= 0) {
-      const nextIndexAfterReveal = Math.min(
-        latestRevealedIndex + 1,
-        selectedCards.length - 1,
-      );
-      advanceTimer = window.setTimeout(
-        () => setActiveIndex(nextIndexAfterReveal),
-        reducedMotion
-          ? 0
-          : autoReveal
-            ? AUTO_REVEAL_ADVANCE_DELAY_MS
-            : MANUAL_REVEAL_ADVANCE_DELAY_MS,
-      );
-      return () => {
-        if (advanceTimer !== undefined) window.clearTimeout(advanceTimer);
-      };
-    }
-
-    if (latestRevealedIndex >= 0) {
-      setActiveIndex(latestRevealedIndex);
-    }
-
-    return undefined;
-  }, [allRevealed, autoReveal, reducedMotion, revealedIds, selectedCards]);
+  }, [sequenceKey]);
 
   useEffect(() => {
     if (!autoReveal || !readyToReveal || sequenceStartedRef.current === sequenceKey) return;
     sequenceStartedRef.current = sequenceKey;
     const timers = selectedCards.map((card, index) =>
-      window.setTimeout(
-        () => onRevealRef.current(card.visualId),
-        reducedMotion
-          ? 40 + index * 90
-          : AUTO_REVEAL_INITIAL_DELAY_MS + index * AUTO_REVEAL_CARD_INTERVAL_MS,
-      ),
+      window.setTimeout(() => onRevealRef.current(card.visualId), 220 + index * 430),
     );
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [autoReveal, readyToReveal, reducedMotion, selectedCards, sequenceKey]);
-
-  useEffect(() => {
-    const track = carouselRef.current;
-    if (!track || selectedCards.length === 0) return;
-    const target = track.querySelector<HTMLElement>(
-      `[data-reveal-card-index="${safeActiveIndex}"]`,
-    );
-    if (!target) return;
-
-    const nextLeft = Math.max(
-      0,
-      target.offsetLeft - (track.clientWidth - target.clientWidth) / 2,
-    );
-    carouselTargetIndexRef.current = safeActiveIndex;
-    track.scrollTo({
-      left: nextLeft,
-      behavior: reducedMotion ? "auto" : "smooth",
-    });
-
-    if (carouselLockTimerRef.current !== null) {
-      window.clearTimeout(carouselLockTimerRef.current);
-    }
-    carouselLockTimerRef.current = window.setTimeout(
-      () => {
-        carouselTargetIndexRef.current = null;
-        carouselLockTimerRef.current = null;
-      },
-      reducedMotion ? 60 : 540,
-    );
-  }, [reducedMotion, safeActiveIndex, selectedCards.length]);
-
-  useEffect(() => {
-    const rail = thumbnailRef.current;
-    if (!rail || selectedCards.length === 0) return;
-    const target = rail.querySelector<HTMLElement>(
-      `[data-reveal-thumb-index="${safeActiveIndex}"]`,
-    );
-    if (!target) return;
-
-    const nextLeft = Math.max(
-      0,
-      target.offsetLeft - (rail.clientWidth - target.clientWidth) / 2,
-    );
-    rail.scrollTo({
-      left: nextLeft,
-      behavior: reducedMotion ? "auto" : "smooth",
-    });
-  }, [reducedMotion, safeActiveIndex, selectedCards.length]);
-
-  function syncActiveIndexFromCarousel() {
-    if (carouselTargetIndexRef.current !== null) return;
-    const track = carouselRef.current;
-    if (!track) return;
-    if (carouselSyncFrameRef.current !== null) {
-      window.cancelAnimationFrame(carouselSyncFrameRef.current);
-    }
-    carouselSyncFrameRef.current = window.requestAnimationFrame(() => {
-      carouselSyncFrameRef.current = null;
-      const cards = Array.from(
-        track.querySelectorAll<HTMLElement>("[data-reveal-card-index]"),
-      );
-      const center = track.scrollLeft + track.clientWidth / 2;
-      let closestIndex = safeActiveIndex;
-      let closestDistance = Number.POSITIVE_INFINITY;
-
-      cards.forEach((card) => {
-        const index = Number(card.dataset.revealCardIndex ?? 0);
-        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-        const distance = Math.abs(cardCenter - center);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = index;
-        }
-      });
-
-      setActiveIndex((current) =>
-        current === closestIndex ? current : closestIndex,
-      );
-    });
-  }
+  }, [autoReveal, readyToReveal, selectedCards, sequenceKey]);
 
   return (
-    <motion.section
-      className="relative flex h-full w-full flex-col overflow-hidden px-4 pb-[calc(var(--hint-safe-bottom)+1.1rem)] pt-6 text-center"
-      initial={reducedMotion ? false : { opacity: 0.96 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: reducedMotion ? 0 : 0.48, ease: REVEAL_EASE }}
-    >
+    <section className="relative h-full w-full overflow-y-auto overflow-x-hidden px-4 py-8 text-center sm:py-10">
       <div className="absolute inset-0" style={{ background: pageOverlay }} />
       <div className={`pointer-events-none absolute inset-0 ${starClassName}`} />
       <div className="pointer-events-none absolute inset-x-0 top-[18%] mx-auto h-[58%] max-w-5xl rounded-full blur-3xl" style={{ background: "color-mix(in srgb, var(--hint-rose, #f0b6cf) 12%, transparent)" }} />
@@ -276,395 +115,135 @@ export function ReadingReveal({
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-[45%] h-[410px] w-[410px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl"
         style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--hint-aqua, #9dded9) 15%, transparent), transparent 60%)" }}
-        animate={
-          reducedMotion
-            ? { opacity: allRevealed ? 0.28 : 0.22, scale: 1 }
-            : { opacity: allRevealed ? 0.32 : [0.18, 0.42, 0.18], scale: allRevealed ? 1.02 : [0.88, 1.08, 0.88] }
-        }
-        transition={{ duration: 5.6, repeat: reducedMotion || allRevealed ? 0 : Infinity, ease: "easeInOut" }}
+        animate={{ opacity: allRevealed ? 0.32 : [0.18, 0.42, 0.18], scale: allRevealed ? 1.02 : [0.88, 1.08, 0.88] }}
+        transition={{ duration: 5.6, repeat: allRevealed ? 0 : Infinity, ease: "easeInOut" }}
       />
       <motion.div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-[45%] h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full border"
         style={{ borderColor: "color-mix(in srgb, var(--hint-gold, #dcc383) 18%, transparent)" }}
-        animate={reducedMotion ? { opacity: 0.24, scale: 1 } : { opacity: [0.16, 0.46, 0.16], scale: [0.9, 1.16, 0.9] }}
-        transition={{ duration: 6.2, repeat: reducedMotion ? 0 : Infinity, ease: "easeInOut" }}
+        animate={{ opacity: [0.16, 0.46, 0.16], scale: [0.9, 1.16, 0.9] }}
+        transition={{ duration: 6.2, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-[45%] h-[180px] w-[180px] -translate-x-1/2 -translate-y-1/2 rounded-full border"
         style={{ borderColor: "color-mix(in srgb, var(--hint-aqua, #9dded9) 15%, transparent)" }}
-        animate={reducedMotion ? { opacity: 0.18, scale: 1 } : { opacity: [0.12, 0.38, 0.12], scale: [1.08, 0.92, 1.08] }}
-        transition={{ duration: 5.4, repeat: reducedMotion ? 0 : Infinity, ease: "easeInOut" }}
+        animate={{ opacity: [0.12, 0.38, 0.12], scale: [1.08, 0.92, 1.08] }}
+        transition={{ duration: 5.4, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      <motion.div
-        className="relative z-30 mx-auto w-full max-w-[22rem] shrink-0 rounded-[28px] border border-white/14 bg-white/[0.075] p-4 text-left shadow-[0_18px_54px_rgba(0,0,0,0.12)] backdrop-blur-md"
-        initial={reducedMotion ? false : { opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: reducedMotion ? 0 : 0.52, ease: REVEAL_EASE }}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <p
-            className="text-[10px] font-black uppercase tracking-[0.18em]"
-            style={{ color: revealLabelColor }}
-          >
-            {modeLabel}
-          </p>
-          <span
-            className="rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]"
-            style={{
-              background: revealPillBackground,
-              borderColor: revealPillBorder,
-              color: revealLabelColor,
-            }}
-          >
-            {revealedIds.length} / {selectedCards.length}
+      <div className="relative z-30 mx-auto mb-7 max-w-3xl sm:mb-9">
+        <p className="font-serif text-[30px] leading-tight sm:text-[42px]" style={{ color: "var(--hint-text)" }}>{title}</p>
+        <p className="mt-3 font-sans text-sm sm:text-[15px]" style={{ color: "var(--hint-muted)" }}>{subtitle}</p>
+        <div className="hint-status-pill mx-auto mt-4 flex w-fit flex-wrap items-center justify-center gap-2 rounded-full border px-3 py-2 font-sans text-[10px] uppercase tracking-[0.14em] backdrop-blur-md">
+          <span style={{ color: "var(--hint-gold)" }}>
+            {allRevealed ? "Spread revealed" : autoReveal ? "Opening sequence" : "Manual reveal"}
           </span>
+          <span className="h-1 w-1 rounded-full" style={{ background: "var(--hint-aqua)" }} />
+          <span>{revealedIds.length} / {selectedCards.length}</span>
         </div>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${title}-${safeActiveIndex}-${activeRevealed}`}
-            initial={reducedMotion ? false : { opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reducedMotion ? undefined : { opacity: 0, y: -6 }}
-            transition={{ duration: reducedMotion ? 0 : 0.28, ease: REVEAL_EASE }}
-          >
-            <p
-              className="mt-2 font-serif text-[25px] leading-tight"
-              style={{
-                color: revealTextColor,
-                textShadow: theme ? "0 12px 30px rgba(0,0,0,0.34)" : undefined,
-              }}
-            >
-              {title}
-            </p>
-            <p
-              className="mt-2 font-sans text-[12.5px] leading-snug"
-              style={{ color: revealMutedColor }}
-            >
-              {subtitle}
-            </p>
-          </motion.div>
-        </AnimatePresence>
-        <div className="mt-3 h-1 w-full overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--hint-border) 62%, transparent)" }}>
+        <div className="mx-auto mt-3 h-1 w-full max-w-[18rem] overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--hint-border) 62%, transparent)" }}>
           <motion.div
             className="h-full rounded-full"
             style={{ background: "linear-gradient(90deg, var(--hint-aqua), var(--hint-rose), var(--hint-gold))", boxShadow: "0 0 18px color-mix(in srgb, var(--hint-gold) 22%, transparent)" }}
             initial={{ width: "0%" }}
             animate={{ width: `${Math.round(revealProgress * 100)}%` }}
-            transition={{ duration: reducedMotion ? 0 : 0.72, ease: REVEAL_EASE }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
           />
-        </div>
-      </motion.div>
-
-      <div className="relative z-20 mx-auto mt-4 flex min-h-0 w-full max-w-[22rem] flex-1 flex-col items-center">
-        <div className="relative min-h-0 w-full flex-1">
-          <div
-            ref={carouselRef}
-            className="no-scrollbar flex h-full min-h-0 w-full snap-x snap-mandatory touch-pan-x scroll-smooth overflow-x-auto overscroll-x-contain [scrollbar-width:none]"
-            onScroll={syncActiveIndexFromCarousel}
-            aria-label="Revealed tarot cards"
-          >
-            {selectedCards.map((card, index) => {
-              const revealed = revealedIds.includes(card.visualId);
-              const active = index === safeActiveIndex;
-              const label = getSpreadPositionLabel(spread, index);
-              const canReveal = !autoReveal && !revealed && readyToReveal;
-
-              return (
-                <motion.div
-                  key={card.visualId}
-                  data-reveal-card-index={index}
-                  className="flex min-w-full snap-center flex-col items-center justify-center px-2"
-                  style={{ scrollSnapStop: "always" }}
-                  initial={
-                    reducedMotion
-                      ? false
-                      : { opacity: 0, y: 22, scale: 0.94, rotate: index % 2 === 0 ? -1.6 : 1.6 }
-                  }
-                  animate={{
-                    opacity: active ? 1 : 0.46,
-                    y: 0,
-                    scale: active ? 1 : 0.91,
-                    rotate: active ? 0 : index < safeActiveIndex ? -1.8 : 1.8,
-                  }}
-                  transition={{
-                    duration: reducedMotion ? 0 : 0.54,
-                    delay: reducedMotion ? 0 : Math.min(index, 4) * 0.035,
-                    ease: REVEAL_EASE,
-                  }}
-                >
-                  <motion.div
-                    className="relative grid place-items-center rounded-[38px] border border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.06))] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.22)] backdrop-blur-md"
-                    animate={{
-                      boxShadow: active
-                        ? "0 28px 76px rgba(0,0,0,0.25), 0 0 38px color-mix(in srgb, var(--hint-gold) 16%, transparent)"
-                        : "0 18px 44px rgba(0,0,0,0.14)",
-                    }}
-                    transition={{ duration: reducedMotion ? 0 : 0.42, ease: REVEAL_EASE }}
-                  >
-                    <motion.div
-                      className="pointer-events-none absolute -inset-7 rounded-[34px] blur-2xl"
-                      style={{
-                        background:
-                          "radial-gradient(circle, color-mix(in srgb, var(--hint-gold) 24%, transparent), color-mix(in srgb, var(--hint-aqua) 9%, transparent) 45%, transparent 72%)",
-                      }}
-                      animate={{
-                        opacity: active
-                          ? revealed
-                            ? 0.82
-                            : [0.26, 0.58, 0.26]
-                          : 0.16,
-                        scale: active
-                          ? revealed
-                            ? 1.04
-                            : [0.9, 1.03, 0.9]
-                          : 0.92,
-                      }}
-                      transition={{
-                        duration: 2.6,
-                        repeat: reducedMotion || revealed || !active ? 0 : Infinity,
-                        ease: "easeInOut",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      disabled={!canReveal}
-                      onClick={() => {
-                        if (canReveal) onReveal(card.visualId);
-                      }}
-                      tabIndex={active ? 0 : -1}
-                      className={`group relative grid place-items-center rounded-[30px] border border-white/16 bg-white/8 px-4 py-4 shadow-[0_18px_48px_rgba(0,0,0,0.16)] backdrop-blur-sm transition active:scale-[0.985] ${
-                        canReveal ? "cursor-pointer" : "cursor-default"
-                      }`}
-                      aria-label={
-                        revealed ? `${label}, ${card.name}` : `Reveal ${label}`
-                      }
-                    >
-                      <motion.div
-                        layoutId={`pick-card-${card.visualId}`}
-                        transition={{
-                          type: "spring",
-                          stiffness: 130,
-                          damping: 20,
-                          mass: 0.85,
-                        }}
-                      >
-                        <TarotCardVisual
-                          card={card}
-                          faceDown={!revealed}
-                          revealed={revealed}
-                          active={!revealed && active}
-                          backStyle={backStyle}
-                          cardBackId={cardBackId}
-                          cardArtId={cardArtId}
-                          positionLabel={label}
-                          ariaLabel={revealed ? undefined : `${label}, face-down`}
-                          showFrontCaption={false}
-                          className="!h-[266px] !w-[164px]"
-                        />
-                      </motion.div>
-                      <AnimatePresence>
-                        {active && !revealed && !autoReveal && readyToReveal ? (
-                          <motion.span
-                            className="pointer-events-none absolute bottom-3 rounded-full bg-[#fff8ec]/92 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#3c3047] shadow-[0_8px_22px_rgba(0,0,0,0.18)]"
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 8 }}
-                            transition={{ duration: 0.24 }}
-                          >
-                            Tap to open
-                          </motion.span>
-                        ) : null}
-                      </AnimatePresence>
-                    </button>
-                  </motion.div>
-
-                  <div className="mt-3 grid min-h-[54px] justify-items-center gap-1">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={`${card.visualId}-${revealed ? "open" : "closed"}-${active ? "active" : "idle"}`}
-                        className="grid justify-items-center gap-1"
-                        initial={reducedMotion ? false : { opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={reducedMotion ? undefined : { opacity: 0, y: -8 }}
-                        transition={{ duration: reducedMotion ? 0 : 0.26, ease: REVEAL_EASE }}
-                      >
-                        <p
-                          className="hint-status-pill max-w-[17rem] truncate rounded-full border px-3 py-1.5 font-sans text-[10px] uppercase tracking-[0.14em]"
-                          style={{
-                            background: revealPillBackground,
-                            borderColor: revealPillBorder,
-                            color: revealLabelColor,
-                          }}
-                        >
-                          {index + 1} / {selectedCards.length} · {label}
-                        </p>
-                        <p
-                          className="max-w-[19rem] truncate font-serif text-[21px] leading-tight"
-                          style={{
-                            color: revealTextColor,
-                            textShadow: theme
-                              ? "0 10px 24px rgba(0,0,0,0.32)"
-                              : undefined,
-                          }}
-                        >
-                          {revealed
-                            ? card.name
-                            : autoReveal
-                              ? active
-                                ? "Opening now"
-                                : "Waiting"
-                              : "Tap to reveal"}
-                        </p>
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-4 left-0 z-10 w-8"
-            style={{
-              background: theme
-                ? "linear-gradient(90deg, rgba(11,8,27,0.34), transparent)"
-                : "linear-gradient(90deg, rgba(255,244,250,0.38), transparent)",
-            }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-4 right-0 z-10 w-8"
-            style={{
-              background: theme
-                ? "linear-gradient(270deg, rgba(11,8,27,0.34), transparent)"
-                : "linear-gradient(270deg, rgba(255,244,250,0.38), transparent)",
-            }}
-          />
-        </div>
-
-        <div className="mt-4 w-full shrink-0">
-          <div
-            aria-hidden
-            className="mx-auto mb-3 flex h-2 max-w-[14rem] items-center justify-center gap-1.5 overflow-hidden"
-          >
-            {selectedCards.map((card, index) => {
-              const revealed = revealedIds.includes(card.visualId);
-              const active = index === safeActiveIndex;
-              return (
-                <span
-                  key={card.visualId}
-                  className={`h-1.5 rounded-full transition-[width,opacity,background] duration-300 ${
-                    active ? "w-5 opacity-100" : "w-1.5"
-                  }`}
-                  style={{
-                    background: active
-                      ? "linear-gradient(90deg, var(--hint-aqua), var(--hint-gold))"
-                      : revealed
-                        ? "color-mix(in srgb, var(--hint-gold) 62%, transparent)"
-                        : "color-mix(in srgb, var(--hint-border) 72%, transparent)",
-                    opacity: active ? 1 : revealed ? 0.72 : 0.42,
-                  }}
-                />
-              );
-            })}
-          </div>
-          <div className="flex items-center justify-between px-1">
-            <p
-              className="text-[9px] font-black uppercase tracking-[0.16em]"
-              style={{ color: revealLabelColor }}
-            >
-              Spread cards
-            </p>
-            <p
-              className="text-[9px] font-black uppercase tracking-[0.16em]"
-              style={{ color: revealLabelColor }}
-            >
-              {selectedCards.length} total
-            </p>
-          </div>
-          <div
-            ref={thumbnailRef}
-            className={`no-scrollbar mt-2 flex snap-x snap-mandatory gap-2 touch-pan-x scroll-smooth overflow-x-auto overscroll-x-contain [scrollbar-width:none] ${
-              allRevealed ? "pb-[4.35rem]" : "pb-1"
-            }`}
-          >
-            {selectedCards.map((card, index) => {
-              const revealed = revealedIds.includes(card.visualId);
-              const active = index === safeActiveIndex;
-              const label = getSpreadPositionLabel(spread, index);
-              const queued = !revealed && index === nextIndex;
-
-              return (
-                <button
-                  key={card.visualId}
-                  type="button"
-                  data-reveal-thumb-index={index}
-                  aria-current={active ? "true" : undefined}
-                  onClick={() => {
-                    setActiveIndex(index);
-                    if (!autoReveal && !revealed && readyToReveal) {
-                      onReveal(card.visualId);
-                    }
-                  }}
-                  className={`relative grid w-[3.8rem] shrink-0 snap-center justify-items-center gap-1 rounded-[16px] border px-1.5 py-1.5 text-center transition active:scale-[0.97] ${
-                    active
-                      ? "border-[#f1d390]/70 bg-white/18"
-                      : "border-white/10 bg-white/[0.045]"
-                  }`}
-                  style={{
-                    boxShadow: active
-                      ? "0 12px 30px rgba(0,0,0,0.20), 0 0 24px rgba(241,211,144,0.16)"
-                      : undefined,
-                  }}
-                >
-                  {queued ? (
-                    <span className="absolute -right-0.5 -top-0.5 z-10 h-2.5 w-2.5 rounded-full bg-[#ffe0a3] shadow-[0_0_12px_rgba(255,224,163,0.62)]" />
-                  ) : null}
-                  <TarotCardVisual
-                    card={card}
-                    faceDown={!revealed}
-                    revealed={revealed}
-                    active={!revealed}
-                    backStyle={backStyle}
-                    cardBackId={cardBackId}
-                    cardArtId={cardArtId}
-                    positionLabel={label}
-                    ariaLabel={revealed ? undefined : `${label}, face-down`}
-                    showFrontCaption={false}
-                    className="!h-[66px] !w-[41px]"
-                  />
-                  <span
-                    className="max-w-[3.25rem] truncate text-[7.5px] font-black uppercase tracking-[0.08em]"
-                    style={{ color: revealLabelColor }}
-                  >
-                    {index + 1}. {label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
 
-      {allRevealed && onContinue ? (
-        <motion.div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-40 flex justify-center bg-gradient-to-t from-black/42 via-black/18 to-transparent px-4 pb-[calc(var(--hint-safe-bottom)+0.7rem)] pt-8"
-          initial={{ opacity: 0, y: 16, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: reducedMotion ? 0 : 0.46, ease: REVEAL_EASE }}
+      <div className={`relative z-10 mx-auto grid w-full ${gridClass} place-items-start gap-x-4 gap-y-7 sm:gap-x-6 sm:gap-y-8`}>
+        {selectedCards.map((card, index) => {
+          const revealed = revealedIds.includes(card.visualId);
+          const label = getSpreadPositionLabel(spread, index);
+          const canReveal = !autoReveal && !revealed && readyToReveal;
+          const isNextAutoCard = autoReveal && !revealed && revealedIds.length === index;
+          return (
+            <motion.div
+              key={card.visualId}
+              layoutId={`spread-card-${card.visualId}`}
+              initial={{ opacity: 0, y: 18, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: index * 0.08, type: "spring", stiffness: 165, damping: 23 }}
+              className={`relative grid justify-items-center gap-3 text-center ${canReveal ? "cursor-pointer" : ""}`}
+              onClick={canReveal ? () => onReveal(card.visualId) : undefined}
+            >
+              <motion.div
+                animate={{
+                  y: revealed ? [0, -10, 0] : 0,
+                  scale: revealed ? [1, 1.035, 1] : 1,
+                }}
+                transition={{ duration: 0.92, ease: [0.2, 0.74, 0.18, 1] }}
+                className={`relative grid place-items-center ${cardShellClass}`}
+              >
+                <motion.div
+                  className="pointer-events-none absolute -inset-6 rounded-[24px] blur-2xl"
+                  style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--hint-gold) 24%, transparent), color-mix(in srgb, var(--hint-aqua) 9%, transparent) 45%, transparent 72%)" }}
+                  animate={{
+                    opacity: revealed ? 0.82 : isNextAutoCard ? [0.28, 0.7, 0.28] : 0.24,
+                    scale: revealed ? 1.08 : isNextAutoCard ? [0.86, 1.04, 0.86] : 0.86,
+                  }}
+                  transition={{ duration: 0.92, ease: [0.2, 0.74, 0.18, 1] }}
+                />
+                {!revealed && (canReveal || isNextAutoCard) && (
+                  <motion.div
+                    aria-hidden
+                    className="pointer-events-none absolute -inset-3 rounded-[18px] border"
+                    style={{ borderColor: "color-mix(in srgb, var(--hint-gold) 30%, transparent)" }}
+                    animate={{ opacity: [0.22, 0.62, 0.22], scale: [0.96, 1.05, 0.96] }}
+                    transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                )}
+                {revealed && (
+                  <motion.div
+                    aria-hidden
+                    className="pointer-events-none absolute -inset-5 rounded-[22px] border"
+                    style={{ borderColor: "color-mix(in srgb, var(--hint-aqua) 24%, transparent)" }}
+                    initial={{ opacity: 0.7, scale: 0.78 }}
+                    animate={{ opacity: 0, scale: 1.28 }}
+                    transition={{ duration: 0.7, ease: "easeOut" }}
+                  />
+                )}
+                <TarotCardVisual
+                  card={card}
+                  faceDown={!revealed}
+                  revealed={revealed}
+                  active={!revealed}
+                  backStyle={backStyle}
+                  cardBackId={cardBackId}
+                  cardArtId={cardArtId}
+                  positionLabel={label}
+                  ariaLabel={revealed ? undefined : `${label}, face-down`}
+                  showFrontCaption={false}
+                  className={cardSizeClass}
+                />
+              </motion.div>
+              <div className="grid justify-items-center gap-1.5">
+                <p className="hint-status-pill max-w-[11rem] truncate rounded-full border px-3 py-1.5 font-sans text-[10px] uppercase tracking-[0.14em] sm:text-[11px] sm:tracking-[0.18em]" style={{ color: "var(--hint-muted)" }}>
+                  {label}
+                </p>
+                {revealed && (
+                  <p className="max-w-[11rem] truncate font-serif text-[16px] leading-tight" style={{ color: "var(--hint-text)" }}>
+                    {card.name}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {allRevealed && (
+        <button
+          type="button"
+          onClick={onContinue}
+          className="hint-soft-button hint-tap-sparkle relative z-10 mt-10 rounded-full px-7 py-3.5 font-sans text-xs uppercase tracking-[0.18em] transition-[background,transform] hover:scale-[1.02]"
         >
-          <button
-            type="button"
-            onClick={onContinue}
-            className="hint-soft-button hint-tap-sparkle pointer-events-auto w-full max-w-[19rem] rounded-full px-7 py-3.5 font-sans text-xs uppercase tracking-[0.18em] shadow-[0_18px_46px_rgba(0,0,0,0.24)] backdrop-blur-xl transition-[background,transform] active:scale-[0.985]"
-          >
-            Read my Hint
-          </button>
-        </motion.div>
-      ) : null}
-    </motion.section>
+          Read my Hint
+        </button>
+      )}
+    </section>
   );
 }

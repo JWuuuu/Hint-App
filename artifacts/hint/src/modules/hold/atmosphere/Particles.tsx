@@ -153,9 +153,6 @@ export function Particles({ density = 1, seed = 7 }: Props) {
           14%  { opacity: 0; }
           100% { opacity: 0; transform: translate3d(var(--shoot-x), var(--shoot-y), 0) rotate(var(--shoot-rot)) scaleX(1); }
         }
-        .hint-shoot {
-          display: none;
-        }
         @media (prefers-reduced-motion: reduce) {
           .hint-star  { animation: none !important; opacity: var(--star-op) !important; transform: none !important; }
           .hint-tier  { animation: none !important; }
