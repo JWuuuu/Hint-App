@@ -15,6 +15,11 @@ import { getAnonId, getLocalDateString } from "../../lib/identity";
 import { useLanguage } from "../../lib/i18n";
 import { useProfile } from "../../lib/useProfile";
 import { readBirthProfile } from "../../lib/astro/userBirthProfile";
+import {
+  listLocalDailyReadingMemory,
+  subscribeToLocalDailyReadings,
+} from "../readings/localDailyReadings";
+import type { DailyCardMemory } from "../../lib/tarot/skyGuidedTarot";
 
 const OPTION_WINDOW = [-2, -1, 0, 1, 2] as const;
 const PERIODS = [
@@ -218,6 +223,7 @@ function buildPeriodSummary({
   anchor,
   language,
   birthDetails,
+  dailyHistory,
 }: {
   period: PeriodMode;
   anchor: Date;
@@ -226,7 +232,11 @@ function buildPeriodSummary({
     birthDate?: string | null;
     birthTime?: string | null;
     birthPlace?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    timezoneOffset?: number | null;
   };
+  dailyHistory?: DailyCardMemory[];
 }): PeriodSummary | null {
   const dates = datesInPeriod(period, anchor);
   if (!dates.length) return null;
@@ -237,6 +247,7 @@ function buildPeriodSummary({
       date,
       language,
       birthDetails,
+      dailyHistory,
     }),
   );
   const scores = averageScores(reports);
@@ -276,7 +287,7 @@ function PeriodScoreBar({ score }: { score: DailyScore }) {
           {score.score}
         </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.07)" }}>
+      <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "color-mix(in srgb, var(--hint-border) 54%, transparent)" }}>
         <div
           className="h-full rounded-full transition-[width] duration-500 ease-out"
           style={{
@@ -616,19 +627,21 @@ export function DailyPullView() {
   const { language, t } = useLanguage();
   const { profile } = useProfile();
   const [birthProfile, setBirthProfile] = useState(() => readBirthProfile());
-  const activeBirthDetails = profile?.birthDate
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const activeBirthDetails = profile?.birthDate || birthProfile
     ? {
-        birthDate: profile.birthDate,
-        birthTime: profile.birthTime,
-        birthPlace: profile.birthPlace,
+        birthDate: profile?.birthDate ?? birthProfile?.birthDate,
+        birthTime: profile?.birthTime ?? birthProfile?.birthTime,
+        birthPlace: profile?.birthPlace ?? birthProfile?.birthPlace,
+        latitude: birthProfile?.latitude,
+        longitude: birthProfile?.longitude,
+        timezoneOffset: birthProfile?.timezoneOffset,
       }
-    : birthProfile
-      ? {
-          birthDate: birthProfile.birthDate,
-          birthTime: birthProfile.birthTime,
-          birthPlace: birthProfile.birthPlace,
-        }
-      : null;
+    : null;
+  const dailyHistory = useMemo(
+    () => listLocalDailyReadingMemory().slice(0, 30),
+    [historyVersion],
+  );
   const today = useMemo(() => startOfLocalDay(), []);
   const activeOffset = period === "day" ? selectedOffset : periodOffsets[period];
   const selectedDate = useMemo(() => getPeriodAnchor(period, today, activeOffset), [activeOffset, period, today]);
@@ -676,8 +689,20 @@ export function DailyPullView() {
             anchor: selectedDate,
             language,
             birthDetails: activeBirthDetails ?? undefined,
+            dailyHistory,
           }),
-    [activeBirthDetails?.birthDate, activeBirthDetails?.birthPlace, activeBirthDetails?.birthTime, language, period, selectedDate],
+    [
+      activeBirthDetails?.birthDate,
+      activeBirthDetails?.birthPlace,
+      activeBirthDetails?.birthTime,
+      activeBirthDetails?.latitude,
+      activeBirthDetails?.longitude,
+      activeBirthDetails?.timezoneOffset,
+      dailyHistory,
+      language,
+      period,
+      selectedDate,
+    ],
   );
 
   useEffect(() => {
@@ -710,6 +735,14 @@ export function DailyPullView() {
       window.removeEventListener("storage", syncBirthProfile);
     };
   }, []);
+
+  useEffect(
+    () =>
+      subscribeToLocalDailyReadings(() =>
+        setHistoryVersion((version) => version + 1),
+      ),
+    [],
+  );
 
   function saveNote() {
     if (!pull || note === savedNote) return;
@@ -763,7 +796,7 @@ export function DailyPullView() {
       />
 
       <section className="relative mb-3">
-        <GlassPanel padded={false} className="p-2.5">
+        <GlassPanel padded={false} className="p-3">
           <div className="mb-2 flex items-center gap-2">
             <div
               className="grid min-w-0 flex-1 grid-cols-4 gap-1 rounded-full border p-1"
@@ -930,6 +963,7 @@ export function DailyPullView() {
           key={selectedDateKey}
           detailed
           dateOverride={selectedDate}
+          dailyHistory={dailyHistory}
           className="mb-4"
         />
       )}

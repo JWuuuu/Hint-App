@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Link, useLocation, useRoute } from "wouter";
+import { Link, useRoute } from "wouter";
 import { BookOpen, CalendarDays, HelpCircle } from "lucide-react";
 import { ACCENT, GLASS } from "../hold/atmosphere";
 import { AppScreen, ScreenHeader, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
@@ -79,7 +79,7 @@ const CARD_NAMES_ZH: Record<string, string> = {
 
 function displayReading(reading: ReadingSummary, language: HintLanguage) {
   if (language !== "zh") {
-    return { cardName: reading.cardName, whisper: sanitizeReadingCopy(reading.whisper) };
+    return { cardName: reading.cardName, whisper: reading.whisper };
   }
 
   const cardName = CARD_NAMES_ZH[reading.cardName] ?? reading.cardName;
@@ -87,14 +87,6 @@ function displayReading(reading: ReadingSummary, language: HintLanguage) {
     cardName,
     whisper: `这次解读的核心提示来自「${cardName}」。旧记录会保留原始生成内容，但这里先用中文帮你回到这张牌的重点。`,
   };
-}
-
-function sanitizeReadingCopy(copy = "") {
-  return copy
-    .replace(/^Short Answer\s*:?\s*/i, "")
-    .replace(/^What does the card mean\?\s*/i, "")
-    .replace(/^For this question,\s*the answer is:\s*/i, "The saved reading points to: ")
-    .trim();
 }
 
 function ReadingCard({
@@ -112,7 +104,7 @@ function ReadingCard({
 
   return (
     <Link
-      href={`/app/readings/${reading.id}`}
+      href={`/readings/${reading.id}`}
       className={`hint-liquid-panel flex gap-3.5 rounded-[22px] ${featured ? "px-4 py-4" : "px-3.5 py-3.5"}`}
       style={{ borderColor: GLASS.border }}
     >
@@ -162,7 +154,7 @@ function tarotToSummary(reading: LocalTarotReading): ReadingSummary {
   return {
     id: reading.id,
     cardName: reading.spreadLabel,
-    whisper: sanitizeReadingCopy(reading.shortAnswer),
+    whisper: reading.shortAnswer,
     spreadType: reading.spreadType,
     question: reading.question,
     territory: reading.focusLabel ?? "tarot",
@@ -262,7 +254,7 @@ function QuestionCard({
           style={{
             color: ACCENT.gold,
             borderColor: "rgba(206,178,110,0.26)",
-            background: "rgba(206,178,110,0.09)",
+            background: "color-mix(in srgb, var(--hint-gold) 10%, var(--hint-surface-soft))",
           }}
         >
           {SPREAD_LABELS[item.spreadType] ?? item.spreadType}
@@ -275,7 +267,7 @@ function QuestionCard({
         {item.focus}
       </p>
       <Link
-        href={`/app/readings/${item.readingId ?? item.id}`}
+        href={`/readings/${item.readingId ?? item.id}`}
         className="hint-soft-button mt-4 inline-flex h-10 items-center justify-center rounded-full px-4 font-sans text-[12px] font-bold"
         style={{
           color: "var(--hint-special-action-text)",
@@ -292,7 +284,7 @@ function EmptyPanel({ children }: { children: ReactNode }) {
     <div
       className="rounded-[22px] px-4 py-5 text-center font-sans text-[13px] leading-relaxed"
       style={{
-        background: "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)",
+        background: "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)",
         border: `1px dashed ${GLASS.border}`,
         color: GLASS.muted,
         boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)",
@@ -515,7 +507,7 @@ function AstrologyArchiveGrid({ profile }: { profile: BirthProfile | null }) {
               <span className="font-sans text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: ACCENT.gold }}>
                 Astrology
               </span>
-              <span className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: GLASS.faint, borderColor: GLASS.border, background: "rgba(255,255,255,0.04)" }}>
+              <span className="rounded-full border px-2.5 py-1 font-sans text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: GLASS.faint, borderColor: GLASS.border, background: "color-mix(in srgb, var(--hint-surface-soft) 78%, transparent)" }}>
                 {item.label}
               </span>
             </div>
@@ -635,7 +627,7 @@ export function ReadingsView() {
       <div
         className="mb-7 flex gap-2 overflow-x-auto rounded-[14px] border p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{
-          background: "rgba(255,255,255,0.045)",
+          background: "color-mix(in srgb, var(--hint-surface-soft) 82%, transparent)",
           borderColor: GLASS.border,
         }}
       >
@@ -644,7 +636,7 @@ export function ReadingsView() {
             <span>{tab.label}</span>
             <span
               className="ml-2 rounded-full px-2 py-0.5 text-[10px]"
-              style={{ background: activeTab === tab.key ? "rgba(206,178,110,0.16)" : "rgba(255,255,255,0.05)" }}
+              style={{ background: activeTab === tab.key ? "color-mix(in srgb, var(--hint-gold) 16%, transparent)" : "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)" }}
             >
               {tab.count}
             </span>
@@ -766,13 +758,8 @@ export function ReadingsView() {
 
 export function ReadingDetailView() {
   const { t } = useLanguage();
-  const [location] = useLocation();
-  const [, appParams] = useRoute("/app/readings/:id");
-  const [, legacyParams] = useRoute("/readings/:id");
-  const pathId =
-    location.match(/^\/app\/readings\/([^/?#]+)/)?.[1] ??
-    location.match(/^\/readings\/([^/?#]+)/)?.[1];
-  const id = appParams?.id ?? legacyParams?.id ?? pathId ?? "";
+  const [, params] = useRoute("/readings/:id");
+  const id = params?.id ?? "";
   const anonId = getAnonId();
   const [chatOpen, setChatOpen] = useState(false);
   const { data } = useListReadings({ anonId });
@@ -821,7 +808,7 @@ export function ReadingDetailView() {
           eyebrow={t("readings.detail")}
           title={tarotReading.spreadLabel}
           subtitle={tarotReading.focusLabel ?? t("readings.savedTarot")}
-          backHref="/app/readings"
+          backHref="/readings"
           backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
@@ -882,7 +869,7 @@ export function ReadingDetailView() {
           <SectionLabel>{t("readings.answer")}</SectionLabel>
           <GlassPanel>
             <p className="font-serif text-[18px] leading-relaxed" style={{ color: GLASS.text }}>
-              {sanitizeReadingCopy(tarotReading.shortAnswer)}
+              {tarotReading.shortAnswer}
             </p>
             <div className="mt-4 grid gap-2 md:grid-cols-2">
               {tarotReading.cardMeanings.map((meaning, index) => (
@@ -911,7 +898,7 @@ export function ReadingDetailView() {
           eyebrow={t("readings.detail")}
           title={fallbackReading.cardName}
           subtitle={t("readings.savedReading")}
-          backHref="/app/readings"
+          backHref="/readings"
           backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
@@ -921,7 +908,7 @@ export function ReadingDetailView() {
         />
         <GlassPanel hero>
           <p className="font-sans text-[14px] leading-relaxed" style={{ color: GLASS.muted }}>
-            {sanitizeReadingCopy(fallbackReading.whisper)}
+            {fallbackReading.whisper}
           </p>
         </GlassPanel>
       </AppScreen>
@@ -935,7 +922,7 @@ export function ReadingDetailView() {
           eyebrow={t("readings.questionDetail")}
           title={SPREAD_LABELS[question.spreadType] ?? question.spreadType}
           subtitle={question.focus}
-          backHref="/app/readings"
+          backHref="/readings"
           backLabel={t("nav.history")}
         />
         <ReadingDetailMeta
@@ -958,7 +945,7 @@ export function ReadingDetailView() {
         eyebrow={t("nav.history")}
         title={t("readings.notFound")}
         subtitle={t("readings.notFoundBody")}
-        backHref="/app/readings"
+        backHref="/readings"
         backLabel={t("nav.history")}
       />
       <EmptyPanel>{t("readings.notFoundHint")}</EmptyPanel>

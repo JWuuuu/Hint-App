@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import {
+  ArrowLeft,
   ArrowRight,
   BookOpen,
+  Bookmark,
   BriefcaseBusiness,
   Check,
   Coins,
@@ -40,9 +43,15 @@ import { CardSigil } from "../../hold/components/CardSigil";
 import { getDefaultTarotCardBackForStyle, getTarotCardBackImage } from "../../tarot/logic/cardBacks";
 import { getTarotCardImage } from "../../tarot/logic/cardImageMap";
 import { useLanguage } from "../../../lib/i18n";
-import { generateSkyCardReading } from "../../../lib/readings/generateSkyCardReading";
+import {
+  generateSkyCardReading,
+  type SkyCardReading,
+} from "../../../lib/readings/generateSkyCardReading";
+import type { SkySignal } from "../../../lib/tarot/skyGuidedTarot";
+import { THEME_LABELS } from "../../../lib/tarot/tarotThemeMap";
 import {
   listLocalDailyReadings,
+  listLocalDailyReadingMemory,
   saveLocalDailyReading,
 } from "../../readings/localDailyReadings";
 import { useProfile } from "../../../lib/useProfile";
@@ -55,6 +64,16 @@ import { SafeImage } from "../../../shared/ui/SafeImage";
 
 const SKY_DECK_CARD_BACK_IMAGE = getTarotCardBackImage(getDefaultTarotCardBackForStyle("nocturne"));
 const DAILY_SIGNAL_INTRO_COMPLETIONS_KEY = "hint_home_daily_signal_intro_completions_v1";
+const REFERENCE_REVEAL_DUST = [
+  { left: "6%", top: "24%", size: 3, delay: 0.1, glow: 0.62 },
+  { left: "14%", top: "66%", size: 2, delay: 0.8, glow: 0.52 },
+  { left: "23%", top: "78%", size: 2.5, delay: 1.3, glow: 0.58 },
+  { left: "88%", top: "20%", size: 2.4, delay: 0.35, glow: 0.64 },
+  { left: "96%", top: "35%", size: 2, delay: 1.1, glow: 0.48 },
+  { left: "91%", top: "62%", size: 3.2, delay: 0.65, glow: 0.72 },
+  { left: "83%", top: "76%", size: 2, delay: 1.55, glow: 0.50 },
+  { left: "3%", top: "82%", size: 2.2, delay: 1.9, glow: 0.54 },
+] as const;
 
 type DailySignalIntroCompletions = Record<string, string>;
 
@@ -104,26 +123,23 @@ type RoomShortcutData = {
 const REFERENCE_HOME_ASSETS = {
   moonScene: "/reference-home/moon-scene.png",
 } as const;
-const REFERENCE_HOME_COPY = {
-  date: "SATURDAY, JUN 27",
-  theme: "Detach",
-  themeLine: "Today asks you to step back before choosing.",
-  evidence: ["Venus conjunct Saturn", "Moon in the 9th house"],
-  scores: {
-    overall: 71,
-    love: 73,
-    wealth: 74,
-    career: 77,
-    study: 64,
-    people: 66,
-  },
-} as const;
 
 const REFERENCE_CARD_BACKGROUND =
-  "radial-gradient(circle at 18% -8%, rgba(255,255,255,0.74), transparent 46%), radial-gradient(circle at 92% 112%, rgba(211, 176, 216, 0.13), transparent 52%), radial-gradient(circle at -10% 108%, rgba(226, 178, 121, 0.09), transparent 48%), linear-gradient(145deg, rgba(255,254,251,0.76), rgba(249,243,236,0.52))";
-const REFERENCE_CARD_BORDER = "rgba(185, 153, 128, 0.18)";
+  "linear-gradient(180deg, rgba(255,253,248,0.88), rgba(255,252,247,0.88))";
+const REFERENCE_CARD_BORDER = "rgba(185, 153, 128, 0.095)";
 const REFERENCE_CARD_SHADOW =
-  "0 22px 54px rgba(93, 72, 58, 0.068), 0 8px 22px rgba(151,112,154,0.034), inset 0 1px 0 rgba(255,255,255,0.72), inset 0 -18px 42px rgba(190,142,122,0.034)";
+  "0 16px 38px rgba(93, 72, 58, 0.028), inset 0 1px 0 rgba(255,255,255,0.66), inset 0 -14px 30px rgba(190,142,122,0.006)";
+const REFERENCE_TYPE = {
+  ink: "#292630",
+  inkSoft: "#342f39",
+  body: "#46414a",
+  muted: "#5f5862",
+  label: "#524d55",
+  faint: "#776f78",
+  purple: "#a879ab",
+  purpleDeep: "#7d5784",
+  score: "#b17ca2",
+} as const;
 
 const LOCALE_BY_LANGUAGE: Record<string, string> = {
   en: "en-US",
@@ -139,6 +155,22 @@ function formatAppDate(date: string, language: string) {
     month: "short",
     day: "numeric",
   }).format(new Date(`${date}T12:00:00`));
+}
+
+function formatReferenceDate(date: string, language: string) {
+  return formatAppDate(date, language).toUpperCase();
+}
+
+function compactCardKeyword(keyword?: string) {
+  return keyword?.split(/[·,|/]/)[0]?.trim();
+}
+
+function referenceThemeTitle(report: DailyReport) {
+  return compactCardKeyword(report.card.keyword) || report.card.cardName || report.title;
+}
+
+function referenceThemeLine(report: DailyReport) {
+  return report.card.do || report.card.themeNote || report.summary;
 }
 
 function profileInitial(name?: string | null) {
@@ -1460,7 +1492,7 @@ function DailyHintSection({
             )}
             {lockNotice && (
               <p className="mt-3 rounded-full border px-3 py-2 font-sans text-[10px] font-semibold leading-tight" style={{ color: "var(--hint-muted)", background: "color-mix(in srgb, var(--hint-surface-soft) 72%, transparent)", borderColor: "var(--hint-border)" }}>
-                Saved on this device for today. The same card will stay open until tomorrow's sky changes.
+                Offline daily lock active. This result will use local fallback until the API returns.
               </p>
             )}
           </div>
@@ -2227,7 +2259,7 @@ function AppActionList({ cards }: { cards: RoomShortcutData[] }) {
           const Icon = card.icon;
           return (
             <motion.div
-              key={card.href}
+              key={card.title}
               initial={{ opacity: 0, y: 8 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.45 }}
@@ -2278,21 +2310,110 @@ function ReferenceOrbitBackdrop() {
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <span
         className="absolute left-[-6rem] top-[9rem] h-[20rem] w-[20rem] rounded-full blur-3xl"
-        style={{ background: "rgba(231, 208, 205, 0.075)" }}
+        style={{ background: "rgba(231, 208, 205, 0.060)" }}
       />
       <span
         className="absolute right-[-7rem] top-[-1rem] h-[22rem] w-[22rem] rounded-full blur-3xl"
-        style={{ background: "rgba(229, 207, 176, 0.092)" }}
+        style={{ background: "rgba(229, 207, 176, 0.072)" }}
       />
       <span
         className="absolute inset-0"
         style={{
           background: "linear-gradient(118deg, transparent 0%, rgba(255,255,255,0.17) 45%, transparent 64%)",
-          opacity: 0.42,
+          opacity: 0.34,
         }}
       />
+      <svg
+        viewBox="0 0 472 230"
+        className="absolute left-1/2 top-0 h-[230px] w-full max-w-[472px] -translate-x-1/2"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <radialGradient id="reference-top-planet" cx="38%" cy="30%" r="62%">
+            <stop offset="0" stopColor="#e8cfc6" stopOpacity="0.92" />
+            <stop offset="0.48" stopColor="#c8a3af" stopOpacity="0.76" />
+            <stop offset="1" stopColor="#927aa7" stopOpacity="0.68" />
+          </radialGradient>
+          <linearGradient id="reference-top-gold-line" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0" stopColor="#d5a76d" stopOpacity="0.18" />
+            <stop offset="0.55" stopColor="#d9b98d" stopOpacity="0.34" />
+            <stop offset="1" stopColor="#d5a76d" stopOpacity="0.12" />
+          </linearGradient>
+        </defs>
+        <g fill="none" strokeLinecap="round">
+          <path
+            d="M316 -6 C282 21 255 36 226 68"
+            stroke="rgba(255,255,255,0.44)"
+            strokeWidth="0.72"
+          />
+          <path
+            d="M338 16 C381 -7 437 1 463 42 C489 84 470 135 428 157"
+            stroke="url(#reference-top-gold-line)"
+            strokeWidth="0.82"
+          />
+          <path
+            d="M374 38 C403 10 445 25 455 63 C465 104 435 137 394 132"
+            stroke="rgba(202,157,104,0.18)"
+            strokeWidth="0.72"
+          />
+          <path
+            d="M326 94 L359 118 L389 102 L420 135"
+            stroke="rgba(203,158,103,0.18)"
+            strokeWidth="0.72"
+          />
+          <path
+            d="M245 80 C279 58 335 60 382 84"
+            stroke="rgba(222,174,111,0.18)"
+            strokeWidth="0.82"
+          />
+          <ellipse
+            cx="305"
+            cy="84"
+            rx="72"
+            ry="15"
+            transform="rotate(11 305 84)"
+            stroke="rgba(218,168,105,0.22)"
+            strokeWidth="0.72"
+          />
+          <ellipse
+            cx="305"
+            cy="84"
+            rx="54"
+            ry="10"
+            transform="rotate(11 305 84)"
+            stroke="rgba(255,241,214,0.36)"
+            strokeWidth="0.58"
+          />
+          <path
+            d="M247 89 C284 105 343 101 383 80"
+            stroke="rgba(255,246,226,0.22)"
+            strokeWidth="0.62"
+          />
+        </g>
+        <circle cx="305" cy="84" r="9.2" fill="url(#reference-top-planet)" opacity="0.74" />
+        <g fill="rgba(190,139,83,0.38)">
+          <circle cx="350" cy="24" r="1.7" />
+          <circle cx="393" cy="33" r="1.1" />
+          <circle cx="459" cy="42" r="1.4" />
+          <circle cx="328" cy="97" r="1.75" />
+          <circle cx="359" cy="118" r="1.35" />
+          <circle cx="389" cy="102" r="1.25" />
+          <circle cx="420" cy="135" r="1.45" />
+          <circle cx="449" cy="177" r="1.1" />
+        </g>
+        <g fill="rgba(222,174,111,0.18)">
+          <circle cx="426" cy="20" r="0.9" />
+          <circle cx="452" cy="113" r="0.8" />
+          <circle cx="284" cy="83" r="0.75" />
+          <circle cx="236" cy="90" r="0.9" />
+        </g>
+        <g stroke="rgba(214,160,95,0.28)" strokeLinecap="round" strokeWidth="0.76">
+          <path d="M155 101 L155 112 M149 106.5 L160.5 106.5" />
+          <path d="M385 68 L385 75 M381.5 71.5 L388.5 71.5" />
+        </g>
+      </svg>
       <svg viewBox="0 0 440 1120" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
-        <g fill="none" stroke="rgba(190, 146, 102, 0.078)" strokeLinecap="round" strokeWidth="0.78">
+        <g fill="none" stroke="rgba(190, 146, 102, 0.060)" strokeLinecap="round" strokeWidth="0.72">
           <path d="M245 82 C309 24 374 77 425 18" />
           <path d="M253 88 C304 111 365 112 417 75" />
           <ellipse cx="376" cy="74" rx="62" ry="39" transform="rotate(-22 376 74)" opacity="0.78" />
@@ -2300,31 +2421,29 @@ function ReferenceOrbitBackdrop() {
           <path d="M-44 804 C70 724 171 740 246 828" opacity="0.52" />
           <path d="M-24 930 C86 846 190 864 274 962" opacity="0.35" />
         </g>
-        <g fill="none" stroke="rgba(255, 255, 255, 0.42)" strokeLinecap="round" strokeWidth="0.72">
+        <g fill="none" stroke="rgba(255, 255, 255, 0.36)" strokeLinecap="round" strokeWidth="0.66">
           <path d="M430 -10 C379 22 314 43 254 88" />
           <path d="M226 96 C267 72 306 75 343 105" opacity="0.52" />
         </g>
-        <g fill="rgba(191, 143, 93, 0.17)">
+        <g fill="rgba(191, 143, 93, 0.13)">
           <circle cx="268" cy="42" r="2" />
           <circle cx="332" cy="32" r="1.15" />
           <circle cx="392" cy="107" r="1.35" />
           <circle cx="423" cy="25" r="1.05" />
           <circle cx="348" cy="79" r="1.1" />
         </g>
-        <g fill="rgba(218, 174, 116, 0.11)">
+        <g fill="rgba(218, 174, 116, 0.085)">
           <circle cx="312" cy="302" r="1.05" />
           <circle cx="382" cy="384" r="1.25" />
           <circle cx="52" cy="676" r="1" />
           <circle cx="399" cy="748" r="1.1" />
         </g>
-        <g stroke="rgba(214, 160, 95, 0.13)" strokeLinecap="round" strokeWidth="0.82">
+        <g stroke="rgba(214, 160, 95, 0.10)" strokeLinecap="round" strokeWidth="0.76">
           <path d="M350 58 L350 67 M345 62.5 L354.5 62.5" />
           <path d="M390 88 L390 94 M387 91 L393 91" />
           <path d="M205 846 L205 854 M201 850 L209 850" />
         </g>
       </svg>
-      <span className="absolute left-[56%] top-[7.2rem] h-4 w-4 rounded-full" style={{ background: "linear-gradient(145deg, #d5b3ad, #8f7aae)", boxShadow: "0 16px 40px rgba(133,101,153,0.10)", opacity: 0.58 }} />
-      <span className="absolute left-[33%] top-[7.35rem] text-[22px]" style={{ color: "rgba(212, 164, 99, 0.30)" }}>✦</span>
     </div>
   );
 }
@@ -2337,10 +2456,10 @@ function ReferenceHintLogo() {
       onPointerDown={() => triggerFeedback("select")}
       className="hint-pressable relative grid size-[62px] shrink-0 place-items-center overflow-hidden rounded-full border text-center active:scale-95"
       style={{
-        color: "#2d2934",
-        background: "linear-gradient(145deg, rgba(255,254,250,0.74), rgba(248,239,230,0.46))",
-        borderColor: "rgba(191, 159, 132, 0.24)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.74), 0 14px 30px rgba(98,78,64,0.065)",
+        color: REFERENCE_TYPE.ink,
+        background: "linear-gradient(145deg, rgba(255,254,250,0.70), rgba(248,239,230,0.40))",
+        borderColor: "rgba(191, 159, 132, 0.18)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.68), 0 12px 26px rgba(98,78,64,0.044)",
       }}
     >
       <span
@@ -2356,6 +2475,35 @@ function ReferenceHintLogo() {
   );
 }
 
+function referenceDailyCardImage(cardId: string) {
+  return (
+    getTarotCardImage(cardId, "hint-card-2") ??
+    getTarotCardImage(cardId, "hint-classic") ??
+    getTarotCardImage(cardId)
+  );
+}
+
+function referenceDailyCardReading(report: DailyReport): SkyCardReading {
+  if (report.card.skyGuided) {
+    return generateSkyCardReading({
+      cardId: report.card.cardId,
+      cardName: report.card.cardName,
+      cardWhisper: report.card.whisper,
+      sky: report.card.skyGuided,
+      tone: report.card.skyGuided.tone,
+    });
+  }
+
+  const keyword = report.card.keyword?.split("·")[0]?.trim() || "today's signal";
+  return {
+    shortAnswer: `${report.card.cardName} points to ${keyword}. Name the clearest next step and keep it simple.`,
+    cardMeaning: report.card.whisper,
+    whatThisMeans: report.card.themeNote ?? report.summary,
+    followUpChips: ["What should I do next?", "What am I avoiding?", "What needs attention?"],
+    whyThisCard: [report.card.themeNote ?? "This card is today's strongest tarot signal."],
+  };
+}
+
 function ReferenceFloatingHintCard({
   revealed,
   revealing,
@@ -2369,6 +2517,8 @@ function ReferenceFloatingHintCard({
   report: DailyReport;
   onActivate: () => void;
 }) {
+  const cardImage = referenceDailyCardImage(report.card.cardId);
+
   return (
     <motion.button
       type="button"
@@ -2383,46 +2533,80 @@ function ReferenceFloatingHintCard({
       }
       onClick={onActivate}
       className="hint-pressable pointer-events-auto absolute z-10 border-0 bg-transparent p-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#fff1cf] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-wait disabled:opacity-85"
-      style={{ position: "absolute", overflow: "visible", right: 50, top: 32, height: 202, width: 94 }}
+      style={{ position: "absolute", overflow: "visible", right: 62, top: 28, height: 180, width: 94, perspective: 620 }}
       whileTap={receiptReady && !revealing ? { scale: 0.985 } : undefined}
     >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 bottom-[-29px] z-0 h-[62px] w-[194px] -translate-x-1/2 rounded-full"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 50%, rgba(255,252,237,0.70) 0%, rgba(255,239,210,0.42) 28%, rgba(245,206,177,0.18) 54%, rgba(192,157,199,0.07) 70%, transparent 82%)",
+          filter: "blur(0.9px)",
+        }}
+      />
+      <svg
+        aria-hidden
+        viewBox="0 0 196 70"
+        className="pointer-events-none absolute left-1/2 bottom-[-31px] z-0 h-[66px] w-[204px] -translate-x-1/2"
+      >
+        <defs>
+          <radialGradient id="reference-card-base-glow" cx="50%" cy="42%" r="54%">
+            <stop offset="0" stopColor="#fffdf0" stopOpacity="0.82" />
+            <stop offset="0.38" stopColor="#ffedca" stopOpacity="0.42" />
+            <stop offset="1" stopColor="#ffdfb8" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <ellipse cx="98" cy="35" rx="70" ry="17" fill="url(#reference-card-base-glow)" />
+        <ellipse cx="98" cy="34" rx="48" ry="9" fill="rgba(255,253,241,0.34)" />
+        <g fill="none" strokeLinecap="round">
+          <ellipse cx="98" cy="35" rx="58" ry="10" stroke="rgba(255,250,229,0.66)" strokeWidth="0.92" />
+          <ellipse cx="98" cy="35" rx="75" ry="16" stroke="rgba(255,228,190,0.42)" strokeWidth="0.78" />
+          <ellipse cx="98" cy="35" rx="91" ry="23" stroke="rgba(238,199,151,0.26)" strokeWidth="0.66" />
+          <path d="M28 36 C56 49 139 49 169 36" stroke="rgba(255,248,224,0.50)" strokeWidth="0.78" />
+          <path d="M43 35 C67 42 128 42 153 35" stroke="rgba(255,254,244,0.46)" strokeWidth="0.72" />
+        </g>
+      </svg>
       <motion.span
-        className="relative block h-full w-full"
+        className="relative z-10 block h-full w-full"
         animate={{
-          y: [0, -4, 0],
-          rotate: [-0.6, 0.25, -0.6],
-          rotateY: revealing ? [0, 66, 0] : [-3, 1, -3],
+          y: [0, -3, 0],
+          rotate: revealing ? [-0.25, 0.65, -0.1] : [-0.2, 0, -0.2],
+          rotateY: revealing ? [-30, 44, -26] : [-30, -26, -30],
+          rotateX: revealing ? [0.6, 1.2, 0.5] : [0.8, 0.3, 0.8],
         }}
         transition={{
           y: { duration: 5.6, repeat: Infinity, ease: "easeInOut" },
           rotate: { duration: 5.6, repeat: Infinity, ease: "easeInOut" },
           rotateY: revealing ? { duration: 0.9, ease: [0.45, 0, 0.2, 1] } : { duration: 6.8, repeat: Infinity, ease: "easeInOut" },
+          rotateX: { duration: 6.8, repeat: revealing ? 0 : Infinity, ease: "easeInOut" },
         }}
         style={{
           transformStyle: "preserve-3d",
-          filter: "drop-shadow(0 38px 48px rgba(72,45,98,0.22)) drop-shadow(0 0 68px rgba(255,240,207,0.88))",
+          transformOrigin: "43% 52%",
+          filter: "drop-shadow(0 18px 24px rgba(86,58,116,0.06)) drop-shadow(0 0 10px rgba(255,238,205,0.16))",
         }}
       >
       <span
         aria-hidden
-        className="absolute inset-[-10px] rounded-[20px]"
+        className="absolute inset-[-6px] rounded-[20px]"
         style={{
-          background: "linear-gradient(90deg, rgba(255,249,224,0.82), rgba(255,246,232,0.23))",
-          filter: "blur(10px)",
-          transform: "translateX(7px)",
+          background: "linear-gradient(90deg, rgba(255,247,218,0.28), rgba(255,244,230,0.07))",
+          filter: "blur(2px)",
+          transform: "translateX(5px)",
         }}
       />
       <motion.span
         aria-hidden
-        className="absolute left-1/2 top-1/2 h-[198px] w-[174px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        className="absolute left-1/2 top-1/2 h-[180px] w-[158px] -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           background:
-            "conic-gradient(from 45deg, transparent 0deg, rgba(255,244,211,0.40) 54deg, transparent 92deg, rgba(205,169,219,0.23) 168deg, transparent 228deg, rgba(255,244,211,0.35) 306deg, transparent 360deg)",
-          filter: "blur(7px)",
+            "conic-gradient(from 45deg, transparent 0deg, rgba(255,244,211,0.11) 54deg, transparent 92deg, rgba(208,178,220,0.07) 168deg, transparent 228deg, rgba(255,244,211,0.10) 306deg, transparent 360deg)",
+          filter: "blur(3px)",
           mixBlendMode: "screen",
         }}
         animate={{
-          opacity: revealing ? [0, 0.92, 0.36] : revealed ? [0.20, 0.36, 0.20] : [0.08, 0.20, 0.08],
+          opacity: revealing ? [0, 0.46, 0.18] : revealed ? [0.08, 0.16, 0.08] : [0.04, 0.10, 0.04],
           rotate: revealing ? [0, 160] : [0, 34, 0],
           scale: revealing ? [0.82, 1.24, 1.02] : [0.96, 1.05, 0.96],
         }}
@@ -2434,37 +2618,87 @@ function ReferenceFloatingHintCard({
       />
       <span
         aria-hidden
-        className="absolute -right-[8px] top-[12px] h-[calc(100%-16px)] w-[82%] rounded-[13px] border"
+        className="absolute -right-[12px] top-[8px] h-[calc(100%-12px)] w-[82%] rounded-[16px] border"
         style={{
-          background: "linear-gradient(155deg, rgba(255,237,221,0.52), rgba(132,92,161,0.35))",
-          borderColor: "rgba(255,238,209,0.24)",
-          transform: "skewY(0.8deg)",
-          boxShadow: "12px 16px 28px rgba(77,50,105,0.12)",
+          background: "linear-gradient(155deg, rgba(255,242,224,0.48), rgba(177,139,181,0.18))",
+          borderColor: "rgba(255,239,209,0.20)",
+          transform: "translateZ(-17px) rotateY(9deg) skewY(0.65deg)",
+          boxShadow: "10px 14px 24px rgba(77,50,105,0.06)",
         }}
       />
       <span
         aria-hidden
-        className="absolute -right-[5px] top-[7px] h-[calc(100%-8px)] w-3 rounded-r-[13px] border"
+        className="absolute -right-[3px] top-[7px] h-[calc(100%-8px)] w-[14px] rounded-r-[18px] border"
         style={{
-          background: "linear-gradient(90deg, rgba(255,248,232,0.86), rgba(174,132,190,0.46) 42%, rgba(86,58,113,0.58))",
+          background: "linear-gradient(90deg, rgba(255,250,236,0.98), rgba(242,222,216,0.82) 36%, rgba(202,174,207,0.46) 78%, rgba(119,93,145,0.20))",
           borderColor: "rgba(255,233,203,0.36)",
-          boxShadow: "inset 2px 0 0 rgba(255,255,255,0.32), 5px 10px 18px rgba(85,58,108,0.10)",
+          transform: "translateZ(-2px) rotateY(6deg)",
+          boxShadow: "inset 3px 0 0 rgba(255,255,255,0.42), 5px 8px 14px rgba(85,58,108,0.055), 0 0 8px rgba(255,237,205,0.16)",
         }}
       />
       <motion.div
-        className="relative h-full w-full overflow-hidden rounded-[13px] border"
+        className="relative h-full w-full overflow-hidden rounded-[15px] border-2"
         animate={{ scale: revealed ? [1, 1.018, 1.006] : 1 }}
         transition={{ duration: 0.52, ease: "easeOut" }}
         style={{
           background:
-            "radial-gradient(circle at 52% 51%, rgba(255,239,175,0.88), transparent 17%), radial-gradient(circle at 48% 36%, rgba(255,255,255,0.62), transparent 25%), radial-gradient(circle at 82% 14%, rgba(255,255,255,0.32), transparent 20%), linear-gradient(158deg, rgba(239,217,235,0.86), rgba(178,129,193,0.78) 48%, rgba(105,77,150,0.88) 100%)",
+            "radial-gradient(circle at 52% 51%, rgba(255,239,178,0.50), transparent 14%), radial-gradient(circle at 48% 36%, rgba(255,252,238,0.18), transparent 25%), radial-gradient(circle at 82% 14%, rgba(255,255,255,0.13), transparent 20%), linear-gradient(158deg, rgba(232,205,216,0.76), rgba(200,166,196,0.74) 38%, rgba(165,135,184,0.76) 70%, rgba(121,98,154,0.72) 100%)",
           backgroundPosition: "center",
           backgroundSize: "cover",
-          borderColor: "rgba(255,240,213,0.86)",
+          borderColor: "rgba(255,242,219,0.82)",
           boxShadow:
-            "inset 0 1px 0 rgba(255,255,255,0.82), inset 0 0 0 1px rgba(255,238,206,0.38), inset 0 -24px 38px rgba(87,55,103,0.12)",
+            "inset 0 1px 0 rgba(255,255,255,0.80), inset 0 0 0 1px rgba(255,238,206,0.48), inset 0 -18px 26px rgba(88,58,107,0.06), 0 0 0 1px rgba(255,246,226,0.24), 0 0 10px rgba(255,238,206,0.18)",
         }}
       >
+        {revealed && cardImage ? (
+          <SafeImage
+            src={cardImage}
+            alt={report.card.cardName}
+            loading="eager"
+            className="absolute inset-0 z-[2] h-full w-full object-cover"
+            fallbackClassName="absolute inset-0 z-[2] h-full w-full rounded-[15px]"
+            fallbackLabel={report.card.cardName}
+          />
+        ) : null}
+        {revealed ? (
+          <>
+            <span
+              aria-hidden
+              className="absolute inset-0 z-[3]"
+              style={{
+                background:
+                  "linear-gradient(112deg, rgba(255,255,255,0.26), transparent 28%, transparent 66%, rgba(255,238,202,0.18))",
+                mixBlendMode: "screen",
+              }}
+            />
+            <motion.span
+              aria-hidden
+              className="absolute inset-[-3px] z-[4] rounded-[17px]"
+              style={{
+                boxShadow:
+                  "inset 0 0 0 2px rgba(255,239,204,0.88), 0 0 15px rgba(255,223,157,0.40), 0 0 28px rgba(255,235,189,0.18)",
+              }}
+              animate={{ opacity: [0.58, 1, 0.64] }}
+              transition={{ duration: 1.7, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </>
+        ) : null}
+        <span
+          aria-hidden
+          className="absolute inset-[-2px] rounded-[16px]"
+          style={{
+            boxShadow:
+              "inset 0 0 0 2px rgba(255,249,230,0.46), inset -7px 0 0 rgba(255,244,221,0.34), inset 2px 0 0 rgba(255,246,226,0.20), 0 0 7px rgba(255,236,203,0.14)",
+          }}
+        />
+        <span
+          aria-hidden
+          className="absolute bottom-[-8px] left-1/2 h-9 w-[92%] -translate-x-1/2 rounded-full"
+          style={{
+            background: "radial-gradient(ellipse, rgba(255,246,218,0.30), rgba(255,232,196,0.10) 54%, transparent 75%)",
+            filter: "blur(3px)",
+          }}
+        />
         <span
           aria-hidden
           className="absolute inset-0"
@@ -2499,9 +2733,9 @@ function ReferenceFloatingHintCard({
         >
           <defs>
             <linearGradient id="reference-card-foil" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0" stopColor="#fff4d2" stopOpacity="0.82" />
-              <stop offset="0.48" stopColor="#fff4d2" stopOpacity="0.28" />
-              <stop offset="1" stopColor="#ffffff" stopOpacity="0.56" />
+              <stop offset="0" stopColor="#fff4d2" stopOpacity="0.96" />
+              <stop offset="0.48" stopColor="#fff4d2" stopOpacity="0.46" />
+              <stop offset="1" stopColor="#ffffff" stopOpacity="0.70" />
             </linearGradient>
             <radialGradient id="reference-card-star" cx="50%" cy="50%" r="50%">
               <stop offset="0" stopColor="#fffff6" stopOpacity="0.98" />
@@ -2509,42 +2743,71 @@ function ReferenceFloatingHintCard({
               <stop offset="1" stopColor="#ffe897" stopOpacity="0" />
             </radialGradient>
           </defs>
-          <rect x="11" y="10" width="84" height="152" rx="9" fill="none" stroke="url(#reference-card-foil)" strokeWidth="1.05" />
-          <rect x="18" y="21" width="70" height="130" rx="7" fill="none" stroke="#ffeecc" strokeOpacity="0.27" strokeWidth="0.72" />
-          <g fill="none" stroke="#ffeecc" strokeOpacity="0.34" strokeLinecap="round" strokeWidth="0.72">
-            <path d="M28 22 C34 17 41 17 47 22" />
-            <path d="M59 22 C65 17 72 17 78 22" />
-            <path d="M28 150 C34 155 41 155 47 150" />
-            <path d="M59 150 C65 155 72 155 78 150" />
-            <path d="M53 34 C64 58 66 114 53 138 C40 114 42 58 53 34Z" opacity="0.50" />
-            <path d="M24 86 C42 75 64 75 82 86 C64 97 42 97 24 86Z" opacity="0.34" />
-            <path d="M34 40 C45 64 46 110 34 132" opacity="0.11" />
-            <path d="M72 40 C61 64 60 110 72 132" opacity="0.11" />
+          <rect x="10" y="9" width="86" height="154" rx="10" fill="none" stroke="url(#reference-card-foil)" strokeWidth="1.35" />
+          <rect x="15" y="15" width="76" height="142" rx="8" fill="none" stroke="#fff0ca" strokeOpacity="0.58" strokeWidth="0.78" />
+          <rect x="20" y="24" width="66" height="124" rx="7" fill="none" stroke="#fff4d6" strokeOpacity="0.36" strokeWidth="0.64" />
+          <g fill="none" stroke="#fff0ca" strokeOpacity="0.60" strokeLinecap="round" strokeWidth="0.70">
+            <path d="M23 25 C28 17 38 16 45 23" />
+            <path d="M27 21 C27 30 34 31 39 25" opacity="0.70" />
+            <path d="M25 31 C31 29 34 32 35 38" opacity="0.58" />
+            <path d="M60 23 C67 16 77 17 82 25" />
+            <path d="M67 25 C72 31 79 30 79 21" opacity="0.70" />
+            <path d="M71 38 C72 32 75 29 81 31" opacity="0.58" />
+            <path d="M23 147 C28 155 38 156 45 149" />
+            <path d="M27 151 C27 142 34 141 39 147" opacity="0.70" />
+            <path d="M25 141 C31 143 34 140 35 134" opacity="0.58" />
+            <path d="M60 149 C67 156 77 155 82 147" />
+            <path d="M67 147 C72 141 79 142 79 151" opacity="0.70" />
+            <path d="M71 134 C72 140 75 143 81 141" opacity="0.58" />
+            <path d="M53 33 C67 59 67 113 53 139 C39 113 39 59 53 33Z" opacity="0.48" />
+            <path d="M25 86 C41 73 65 73 81 86 C65 99 41 99 25 86Z" opacity="0.28" />
+            <path d="M31 79 C42 64 62 63 75 78" opacity="0.20" />
+            <path d="M31 93 C42 108 62 109 75 94" opacity="0.20" />
+            <path d="M33 39 C44 63 45 110 33 133" opacity="0.16" />
+            <path d="M73 39 C62 63 61 110 73 133" opacity="0.16" />
+            <path d="M53 37 L53 134" opacity="0.18" />
+            <path d="M29 50 C44 43 62 43 77 50" opacity="0.18" />
+            <path d="M29 122 C44 129 62 129 77 122" opacity="0.18" />
           </g>
-          <g fill="#fff7dc" opacity="0.68">
+          <g fill="#fff7dc" opacity="0.76">
             <circle cx="31" cy="58" r="1" />
             <circle cx="43" cy="45" r="0.85" />
             <circle cx="57" cy="55" r="0.92" />
             <circle cx="73" cy="43" r="0.85" />
+            <circle cx="68" cy="67" r="0.72" />
+            <circle cx="37" cy="76" r="0.64" />
+            <circle cx="78" cy="83" r="0.74" />
             <circle cx="30" cy="124" r="0.78" />
             <circle cx="46" cy="112" r="0.86" />
             <circle cx="58" cy="121" r="0.78" />
             <circle cx="76" cy="111" r="0.86" />
           </g>
-          <circle cx="53" cy="86" r="34" fill="url(#reference-card-star)" opacity="0.42" />
-          <g fill="#fff4cf" opacity="0.95">
-            <path d="M53 56 L58 80 L83 86 L58 92 L53 116 L48 92 L23 86 L48 80Z" />
-            <path d="M53 45 L55 82 L63 86 L55 90 L53 127 L51 90 L43 86 L51 82Z" opacity="0.48" />
-            <circle cx="53" cy="86" r="3.7" />
+          <circle cx="53" cy="86" r="34" fill="url(#reference-card-star)" opacity="0.24" />
+          <g stroke="#f5d399" strokeOpacity="0.46" strokeLinecap="round" strokeWidth="0.54">
+            <path d="M53 62 L53 110" />
+            <path d="M31 86 L75 86" />
+            <path d="M38 71 L68 101" />
+            <path d="M68 71 L38 101" />
+            <path d="M45 65 L61 107" opacity="0.46" />
+            <path d="M61 65 L45 107" opacity="0.46" />
+            <path d="M34 76 L72 96" opacity="0.42" />
+            <path d="M72 76 L34 96" opacity="0.42" />
+          </g>
+          <g fill="#fff3c8" opacity="0.92">
+            <path d="M53 57 L58 80.5 L80 86 L58 91.5 L53 115 L48 91.5 L26 86 L48 80.5Z" />
+            <path d="M53 43 L55.4 82 L64 86 L55.4 90 L53 129 L50.6 90 L42 86 L50.6 82Z" opacity="0.56" />
+            <circle cx="53" cy="86" r="4.1" />
             <circle cx="32" cy="36" r="1.1" />
             <circle cx="78" cy="51" r="0.9" />
             <circle cx="72" cy="132" r="1.05" />
             <circle cx="35" cy="116" r="0.85" />
           </g>
-          <g stroke="#fff7de" strokeOpacity="0.78" strokeLinecap="round" strokeWidth="0.75">
+          <g stroke="#fff7de" strokeOpacity="0.92" strokeLinecap="round" strokeWidth="0.78">
             <path d="M27 69 L27 75 M24 72 L30 72" />
             <path d="M80 99 L80 107 M76 103 L84 103" />
             <path d="M68 31 L68 35 M66 33 L70 33" opacity="0.72" />
+            <path d="M38 101 L38 105 M36 103 L40 103" opacity="0.58" />
+            <path d="M74 72 L74 76 M72 74 L76 74" opacity="0.58" />
           </g>
         </svg>
         <span
@@ -2579,15 +2842,15 @@ function ReferenceHeroArt({
 }) {
   return (
     <div
-      className={["pointer-events-none grid place-items-center overflow-hidden rounded-[28px]", className].join(" ")}
+      className={["pointer-events-none grid place-items-center overflow-hidden rounded-[30px]", className].join(" ")}
       style={{ position: "absolute", inset: 0 }}
     >
       <span
         aria-hidden
-        className="absolute inset-y-0 right-0 w-full"
+        className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(90deg, rgba(250,224,235,0) 0%, rgba(238,205,226,0.13) 34%, rgba(185,139,199,0.38) 66%, rgba(119,82,158,0.72) 100%)",
+            "linear-gradient(90deg, rgba(246,226,222,0.10) 0%, rgba(232,205,216,0.15) 34%, rgba(193,159,190,0.30) 66%, rgba(151,120,173,0.48) 100%)",
         }}
       />
       <span
@@ -2595,37 +2858,60 @@ function ReferenceHeroArt({
         className="absolute inset-0 opacity-[0.78]"
         style={{
           background:
-            "radial-gradient(circle at 72% 58%, rgba(255,247,205,0.36), transparent 25%), radial-gradient(circle at 83% 24%, rgba(255,255,255,0.22), transparent 18%), radial-gradient(circle at 61% 42%, rgba(214,174,218,0.18), transparent 48%), linear-gradient(90deg, rgba(253,226,236,0) 0%, rgba(239,204,224,0.09) 32%, rgba(126,90,160,0.62) 100%)",
+            "radial-gradient(circle at 74% 62%, rgba(255,244,203,0.34), transparent 24%), radial-gradient(circle at 83% 24%, rgba(255,255,255,0.16), transparent 18%), radial-gradient(circle at 61% 42%, rgba(220,184,222,0.18), transparent 48%), linear-gradient(90deg, rgba(253,226,236,0) 0%, rgba(241,207,224,0.08) 32%, rgba(143,109,166,0.38) 100%)",
         }}
       />
-      <svg viewBox="0 0 208 232" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
+      <span
+        aria-hidden
+        className="absolute inset-0 opacity-[0.32]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 12% 20%, rgba(90,61,49,0.05) 0 0.45px, transparent 0.8px), radial-gradient(circle at 66% 64%, rgba(255,245,226,0.18) 0 0.55px, transparent 1px), radial-gradient(circle at 88% 42%, rgba(80,55,94,0.08) 0 0.5px, transparent 0.9px)",
+          backgroundSize: "7px 7px, 9px 9px, 13px 13px",
+          mixBlendMode: "overlay",
+        }}
+      />
+      <svg viewBox="0 0 380 248" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
         <g fill="none" strokeLinecap="round">
-          <path d="M22 129 C68 78 150 70 205 109" stroke="rgba(255,237,194,0.22)" strokeWidth="0.95" />
-          <path d="M38 157 C91 130 151 129 206 154" stroke="rgba(255,249,224,0.24)" strokeWidth="0.82" />
-          <path d="M80 72 C125 43 170 44 210 69" stroke="rgba(255,244,215,0.10)" strokeWidth="0.7" />
-          <ellipse cx="142" cy="128" rx="96" ry="27" transform="rotate(-23 142 128)" stroke="rgba(255,247,218,0.22)" strokeWidth="0.66" />
-          <ellipse cx="143" cy="130" rx="75" ry="19" transform="rotate(18 143 130)" stroke="rgba(255,236,199,0.16)" strokeWidth="0.68" />
-          <path d="M55 186 C91 211 170 208 211 169" stroke="rgba(255,248,224,0.13)" strokeWidth="0.68" />
+          <path d="M179 5 C150 45 139 78 139 119 C139 157 157 189 192 223" stroke="rgba(255,255,255,0.22)" strokeWidth="0.65" />
+          <path d="M157 101 C203 52 301 47 375 83" stroke="rgba(255,236,197,0.19)" strokeWidth="0.72" />
+          <path d="M180 155 C226 127 307 126 380 153" stroke="rgba(255,248,224,0.24)" strokeWidth="0.76" />
+          <path d="M250 75 C294 48 342 49 383 75" stroke="rgba(255,244,215,0.12)" strokeWidth="0.58" />
+          <ellipse cx="300" cy="132" rx="88" ry="24" transform="rotate(-24 300 132)" stroke="rgba(255,247,218,0.34)" strokeWidth="0.72" />
+          <ellipse cx="301" cy="135" rx="74" ry="18" transform="rotate(18 301 135)" stroke="rgba(255,236,199,0.27)" strokeWidth="0.68" />
+          <path d="M226 197 C261 219 333 216 372 179" stroke="rgba(255,248,224,0.15)" strokeWidth="0.64" />
+          <path d="M223 67 L235 84 L254 77 L270 103 L292 92 L310 124 L338 108" stroke="rgba(255,255,255,0.22)" strokeWidth="0.48" />
+          <path d="M209 127 L226 111 L252 119 L269 99" stroke="rgba(255,255,255,0.18)" strokeWidth="0.44" />
         </g>
-        <g fill="rgba(255,248,220,0.48)">
-          <circle cx="62" cy="96" r="1.5" />
-          <circle cx="162" cy="70" r="1.3" />
-          <circle cx="178" cy="137" r="1.5" />
-          <circle cx="124" cy="186" r="1.2" />
-          <circle cx="98" cy="82" r="1" />
-          <circle cx="190" cy="176" r="0.9" />
-          <circle cx="43" cy="161" r="1.1" />
+        <g fill="rgba(255,248,220,0.66)">
+          <circle cx="206" cy="96" r="1.35" />
+          <circle cx="310" cy="70" r="1.15" />
+          <circle cx="331" cy="136" r="1.45" />
+          <circle cx="284" cy="195" r="1.1" />
+          <circle cx="248" cy="83" r="0.9" />
+          <circle cx="355" cy="177" r="0.9" />
+          <circle cx="188" cy="160" r="1" />
+          <circle cx="237" cy="147" r="0.75" />
+          <circle cx="349" cy="108" r="0.85" />
         </g>
-        <g stroke="rgba(255,245,212,0.36)" strokeLinecap="round">
-          <path d="M54 68 L54 78 M49 73 L59 73" />
-          <path d="M182 93 L182 101 M178 97 L186 97" />
-          <path d="M96 113 L96 119 M93 116 L99 116" opacity="0.54" />
+        <g fill="rgba(255,255,255,0.62)">
+          <circle cx="235" cy="84" r="1.3" />
+          <circle cx="270" cy="103" r="1.2" />
+          <circle cx="338" cy="108" r="1.3" />
+          <circle cx="226" cy="111" r="1" />
+          <circle cx="252" cy="119" r="0.9" />
+        </g>
+        <g stroke="rgba(255,245,212,0.44)" strokeLinecap="round">
+          <path d="M180 67 L180 77 M175 72 L185 72" />
+          <path d="M335 96 L335 104 M331 100 L339 100" />
+          <path d="M252 116 L252 122 M249 119 L255 119" opacity="0.54" />
+          <path d="M206 171 L206 177 M203 174 L209 174" opacity="0.58" />
         </g>
       </svg>
       <motion.svg
         aria-hidden
         viewBox="0 0 210 188"
-        className="absolute right-[20px] top-[38px] z-[2] h-[176px] w-[214px]"
+        className="absolute right-[24px] top-[38px] z-[2] h-[182px] w-[230px]"
         animate={{
           opacity: revealing ? [0.42, 0.72, 0.58] : [0.24, 0.40, 0.24],
           rotate: revealing ? [0, 10, 0] : [0, 2, 0],
@@ -2633,10 +2919,10 @@ function ReferenceHeroArt({
         transition={{ duration: revealing ? 1.05 : 6.4, repeat: revealing ? 0 : Infinity, ease: "easeInOut" }}
       >
         <g fill="none" strokeLinecap="round">
-          <ellipse cx="118" cy="100" rx="88" ry="25" transform="rotate(-24 118 100)" stroke="#fff2c9" strokeOpacity="0.18" strokeWidth="0.8" />
-          <ellipse cx="120" cy="106" rx="79" ry="19" transform="rotate(19 120 106)" stroke="#fff6db" strokeOpacity="0.20" strokeWidth="0.72" />
-          <ellipse cx="115" cy="132" rx="74" ry="15" stroke="#ffe4bd" strokeOpacity="0.13" strokeWidth="0.72" />
-          <path d="M33 128 C63 148 154 150 198 119" stroke="#fff2c9" strokeOpacity="0.10" strokeWidth="0.7" />
+          <ellipse cx="118" cy="100" rx="92" ry="26" transform="rotate(-24 118 100)" stroke="#fff2c9" strokeOpacity="0.30" strokeWidth="0.82" />
+          <ellipse cx="120" cy="106" rx="82" ry="20" transform="rotate(19 120 106)" stroke="#fff6db" strokeOpacity="0.30" strokeWidth="0.74" />
+          <ellipse cx="115" cy="132" rx="78" ry="15" stroke="#ffe4bd" strokeOpacity="0.22" strokeWidth="0.74" />
+          <path d="M33 128 C63 148 154 150 198 119" stroke="#fff2c9" strokeOpacity="0.16" strokeWidth="0.7" />
         </g>
         <g fill="#fff3cf" opacity="0.38">
           <circle cx="48" cy="72" r="1.3" />
@@ -2652,26 +2938,56 @@ function ReferenceHeroArt({
         report={report}
         onActivate={onCardActivate}
       />
+      <motion.svg
+        aria-hidden
+        viewBox="0 0 230 182"
+        className="absolute right-[5px] top-[48px] z-[18] h-[176px] w-[254px]"
+        animate={{ opacity: revealing ? [0.54, 0.82, 0.62] : [0.42, 0.58, 0.42] }}
+        transition={{ duration: revealing ? 1 : 5.6, repeat: revealing ? 0 : Infinity, ease: "easeInOut" }}
+        style={{ transform: "perspective(620px) rotateY(-20deg) rotateZ(-2deg)" }}
+      >
+        <g fill="none" strokeLinecap="round">
+          <path
+            d="M16 135 C70 80 158 70 222 102"
+            stroke="rgba(255,248,222,0.68)"
+            strokeWidth="1.08"
+          />
+          <path
+            d="M23 140 C75 164 171 159 220 113"
+            stroke="rgba(239,202,150,0.34)"
+            strokeWidth="0.82"
+          />
+        </g>
+        <g fill="rgba(255,246,214,0.78)">
+          <circle cx="42" cy="128" r="1.7" />
+          <circle cx="128" cy="101" r="2.1" />
+          <circle cx="199" cy="105" r="2.8" />
+        </g>
+        <g stroke="rgba(255,246,218,0.62)" strokeLinecap="round" strokeWidth="0.78">
+          <path d="M199 99 L199 111 M193 105 L205 105" />
+          <path d="M42 124 L42 132 M38 128 L46 128" opacity="0.72" />
+        </g>
+      </motion.svg>
       <span
         aria-hidden
-        className="absolute bottom-[22px] right-[28px] h-[54px] w-[194px] rounded-full"
+        className="absolute bottom-[18px] right-[38px] h-[58px] w-[190px] rounded-full"
         style={{
-          background: "radial-gradient(ellipse, rgba(255,248,222,0.72), rgba(255,229,190,0.27) 52%, transparent 74%)",
-          filter: "blur(1.4px)",
+          background: "radial-gradient(ellipse, rgba(255,249,224,0.38), rgba(255,229,190,0.14) 52%, transparent 76%)",
+          filter: "blur(1px)",
         }}
       />
       <span
         aria-hidden
-        className="absolute bottom-[45px] right-[82px] h-2.5 w-20 rounded-full"
-        style={{ background: "rgba(255,248,219,0.42)", filter: "blur(3px)" }}
+        className="absolute bottom-[43px] right-[86px] h-3 w-[96px] rounded-full"
+        style={{ background: "rgba(255,249,222,0.32)", filter: "blur(2px)" }}
       />
       <motion.svg
         viewBox="0 0 182 58"
-        className="absolute bottom-[18px] right-[32px] h-[58px] w-[182px]"
+        className="absolute bottom-[16px] right-[32px] h-[62px] w-[202px]"
         animate={{ opacity: revealing ? [0.42, 0.74, 0.58] : [0.28, 0.44, 0.28], scale: revealing ? [0.94, 1.05, 1] : [1, 1.018, 1] }}
         transition={{ duration: revealing ? 1 : 4.8, repeat: revealing ? 0 : Infinity, ease: "easeInOut" }}
       >
-        <g fill="none" stroke="rgba(255,235,199,0.25)" strokeWidth="0.82">
+        <g fill="none" stroke="rgba(255,235,199,0.36)" strokeWidth="0.86">
           <ellipse cx="84" cy="27" rx="62" ry="11" />
           <ellipse cx="84" cy="27" rx="79" ry="18" />
           <ellipse cx="84" cy="27" rx="44" ry="7" />
@@ -2682,7 +2998,7 @@ function ReferenceHeroArt({
       <span
         aria-hidden
         className="absolute inset-y-0 left-0 w-[78%]"
-        style={{ background: "linear-gradient(90deg, rgba(255,248,244,0.46), rgba(250,235,238,0.26) 42%, rgba(250,235,238,0.08) 70%, rgba(250,235,238,0))" }}
+        style={{ background: "linear-gradient(90deg, rgba(255,248,244,0.52), rgba(250,235,238,0.30) 42%, rgba(250,235,238,0.09) 70%, rgba(250,235,238,0))" }}
       />
       <span
         aria-hidden
@@ -2693,6 +3009,450 @@ function ReferenceHeroArt({
         }}
       />
     </div>
+  );
+}
+
+function ReferenceDailyRevealOverlay({
+  open,
+  revealing,
+  report,
+  onClose,
+  onCardRevealed,
+}: {
+  open: boolean;
+  revealing: boolean;
+  report: DailyReport;
+  onClose: () => void;
+  onCardRevealed: () => void;
+}) {
+  const reading = useMemo(() => referenceDailyCardReading(report), [report]);
+  const cardImage = referenceDailyCardImage(report.card.cardId);
+  const keyword = report.card.keyword?.split("·")[0]?.trim() || report.card.cardName;
+  const [flipped, setFlipped] = useState(false);
+  const [detailsReady, setDetailsReady] = useState(false);
+  const didAnnounceRevealRef = useRef(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setFlipped(false);
+    setDetailsReady(false);
+    didAnnounceRevealRef.current = false;
+  }, [open, report.card.cardId]);
+
+  useEffect(() => {
+    if (!open || !flipped) return;
+    const timer = window.setTimeout(() => setDetailsReady(true), 680);
+    return () => window.clearTimeout(timer);
+  }, [flipped, open]);
+
+  useEffect(() => {
+    if (!open || revealing || flipped) return;
+    const timer = window.setTimeout(() => {
+      triggerFeedback("reveal");
+      setFlipped(true);
+    }, 620);
+    return () => window.clearTimeout(timer);
+  }, [flipped, open, revealing]);
+
+  useEffect(() => {
+    if (!detailsReady || didAnnounceRevealRef.current) return;
+    didAnnounceRevealRef.current = true;
+    onCardRevealed();
+  }, [detailsReady, onCardRevealed]);
+
+  function handleFlipCard() {
+    if (revealing || flipped) return;
+    triggerFeedback("reveal");
+    setFlipped(true);
+  }
+
+  if (!open || typeof document === "undefined") return null;
+
+  return createPortal(
+    <motion.div
+      className="fixed inset-0 z-[200] overflow-hidden px-5 pb-[calc(1.1rem+var(--hint-safe-bottom))] pt-[calc(1.35rem+var(--hint-safe-top))]"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Today's tarot card: ${report.card.cardName}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 34%, rgba(255,223,162,0.15), transparent 34%), radial-gradient(circle at 52% 61%, rgba(181,133,190,0.10), transparent 42%), rgba(16, 14, 17, 0.70)",
+          backdropFilter: "blur(13px) saturate(0.84)",
+          WebkitBackdropFilter: "blur(13px) saturate(0.84)",
+        }}
+      />
+      <span
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(0,0,0,0.20), transparent 20%, rgba(0,0,0,0.16) 100%), radial-gradient(circle at 50% 48%, rgba(255,241,197,0.08), transparent 36%)",
+        }}
+      />
+      <span
+        aria-hidden
+        className="absolute left-1/2 top-[20%] h-[36rem] w-[28rem] -translate-x-1/2 rounded-full opacity-70"
+        style={{
+          background: "radial-gradient(ellipse, rgba(255,222,153,0.16), rgba(118,82,133,0.08) 44%, transparent 72%)",
+          filter: "blur(22px)",
+        }}
+      />
+      <button
+        type="button"
+        aria-label="Close today's tarot reveal"
+        disabled={revealing}
+        className="hint-pressable absolute z-20 grid h-10 w-10 place-items-center rounded-full border disabled:opacity-60"
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          left: "1.75rem",
+          top: "calc(1.45rem + var(--hint-safe-top))",
+          color: "rgba(255,248,236,0.92)",
+          background: "rgba(255,244,222,0.050)",
+          borderColor: "rgba(236,205,154,0.42)",
+          boxShadow: "0 10px 26px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.13)",
+          backdropFilter: "blur(5px)",
+          WebkitBackdropFilter: "blur(5px)",
+        }}
+      >
+        <ArrowLeft size={20} strokeWidth={1.8} />
+      </button>
+      <button
+        type="button"
+        aria-label="Save today's tarot card"
+        className="hint-pressable absolute z-20 grid h-10 w-10 place-items-center rounded-full border"
+        style={{
+          position: "absolute",
+          right: "1.75rem",
+          top: "calc(1.45rem + var(--hint-safe-top))",
+          color: "rgba(255,248,236,0.90)",
+          background: "rgba(255,244,222,0.050)",
+          borderColor: "rgba(236,205,154,0.38)",
+          boxShadow: "0 10px 26px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.13)",
+          backdropFilter: "blur(5px)",
+          WebkitBackdropFilter: "blur(5px)",
+        }}
+      >
+        <Bookmark size={18} strokeWidth={1.7} />
+      </button>
+
+      <motion.div
+        className="relative z-10 mx-auto flex min-h-full w-full max-w-[430px] flex-col items-center text-center"
+        initial={{ y: 18, scale: 0.97, filter: "blur(6px)" }}
+        animate={{ y: 0, scale: 1, filter: "blur(0px)" }}
+        transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div
+          className="relative mt-[68px] h-[370px] w-[230px] min-[420px]:mt-[70px] min-[420px]:h-[390px] min-[420px]:w-[242px]"
+          style={{ perspective: "1300px" }}
+        >
+          <motion.span
+            aria-hidden
+            className="absolute inset-[-42px] rounded-full"
+            style={{
+              background: "radial-gradient(ellipse at 50% 52%, rgba(255,226,154,0.38), rgba(224,178,103,0.16) 42%, transparent 70%)",
+              filter: "blur(13px)",
+            }}
+            animate={{ opacity: flipped ? [0.58, 0.88, 0.62] : [0.24, 0.44, 0.28], scale: [0.96, 1.03, 0.98] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute left-[-22px] top-[5%] h-[86%] w-[34px] rounded-full"
+            style={{
+              background: "linear-gradient(180deg, transparent, rgba(255,226,158,0.44) 18%, rgba(255,240,197,0.34) 54%, rgba(255,213,132,0.30) 82%, transparent)",
+              filter: "blur(12px)",
+            }}
+            animate={{ opacity: flipped ? [0.34, 0.66, 0.42] : 0.18 }}
+            transition={{ duration: 2.2, repeat: flipped ? Infinity : 0, ease: "easeInOut" }}
+          />
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute right-[-24px] top-[4%] h-[88%] w-[38px] rounded-full"
+            style={{
+              background: "linear-gradient(180deg, transparent, rgba(255,230,164,0.52) 16%, rgba(255,244,207,0.42) 55%, rgba(255,214,130,0.34) 84%, transparent)",
+              filter: "blur(13px)",
+            }}
+            animate={{ opacity: flipped ? [0.42, 0.78, 0.48] : 0.20 }}
+            transition={{ duration: 2.4, repeat: flipped ? Infinity : 0, ease: "easeInOut", delay: 0.1 }}
+          />
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-[9%] h-[82%] w-[118%] -translate-x-1/2 rounded-[28px]"
+            style={{
+              background: "radial-gradient(ellipse at 50% 48%, transparent 42%, rgba(255,232,169,0.16) 62%, transparent 78%)",
+              filter: "blur(8px)",
+            }}
+            animate={{ opacity: flipped ? [0.20, 0.42, 0.24] : 0.10 }}
+            transition={{ duration: 2.7, repeat: flipped ? Infinity : 0, ease: "easeInOut" }}
+          />
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-[-22px] h-[42px] w-[104%] -translate-x-1/2 rounded-full"
+            style={{
+              background: "linear-gradient(90deg, transparent 1%, rgba(255,226,158,0.42) 12%, rgba(255,246,213,0.58) 50%, rgba(255,226,158,0.42) 88%, transparent 99%)",
+              filter: "blur(10px)",
+            }}
+            animate={{ opacity: flipped ? [0.46, 0.84, 0.52] : 0.16 }}
+            transition={{ duration: 2.35, repeat: flipped ? Infinity : 0, ease: "easeInOut" }}
+          />
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-[-5px] h-[4px] w-[96%] -translate-x-1/2 rounded-full"
+            style={{
+              background: "linear-gradient(90deg, transparent, rgba(255,245,210,0.84) 16%, rgba(255,226,146,0.98) 50%, rgba(255,245,210,0.84) 84%, transparent)",
+              boxShadow: "0 0 16px rgba(255,228,153,0.72), 0 0 34px rgba(239,190,103,0.32)",
+            }}
+            animate={{ opacity: flipped ? [0.58, 1, 0.66] : 0.22 }}
+            transition={{ duration: 1.9, repeat: flipped ? Infinity : 0, ease: "easeInOut" }}
+          />
+          {REFERENCE_REVEAL_DUST.map((dot, index) => (
+            <motion.span
+              key={`reference-reveal-dust-${index}`}
+              aria-hidden
+              className="pointer-events-none absolute z-[2] rounded-full"
+              style={{
+                left: dot.left,
+                top: dot.top,
+                height: dot.size,
+                width: dot.size,
+                background: "rgba(255,226,150,0.92)",
+                boxShadow: `0 0 ${8 + dot.size * 3}px rgba(255,222,137,${dot.glow})`,
+              }}
+              animate={{
+                opacity: flipped ? [0.18, 0.86, 0.26] : [0.05, 0.36, 0.10],
+                scale: flipped ? [0.78, 1.42, 0.90] : [0.72, 1.12, 0.80],
+                y: flipped ? [0, -3, 0] : [0, -2, 0],
+              }}
+              transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut", delay: dot.delay }}
+            />
+          ))}
+          <button
+            type="button"
+            disabled={revealing || flipped}
+            onClick={handleFlipCard}
+            className="hint-pressable relative z-10 h-full w-full rounded-[20px] border-0 bg-transparent p-0 text-left disabled:cursor-default"
+            aria-label={flipped ? `${report.card.cardName} revealed` : "Today's tarot card is turning"}
+          >
+            <motion.div
+              className="relative h-full w-full"
+              initial={{ rotateY: 0, rotateZ: -2.5, y: 10, scale: 0.94 }}
+              animate={{
+                rotateY: flipped ? 180 : 0,
+                rotateZ: flipped ? 0 : [-2.5, -1.4, -2.5],
+                y: flipped ? 0 : [10, 4, 10],
+                scale: flipped ? 1 : 0.96,
+              }}
+              transition={{
+                rotateY: { duration: 0.86, ease: [0.18, 0.9, 0.2, 1] },
+                rotateZ: { duration: flipped ? 0.86 : 3.2, repeat: flipped ? 0 : Infinity, ease: "easeInOut" },
+                y: { duration: flipped ? 0.86 : 3.2, repeat: flipped ? 0 : Infinity, ease: "easeInOut" },
+                scale: { duration: 0.64, ease: "easeOut" },
+              }}
+              style={{ transformStyle: "preserve-3d" }}
+            >
+              <div
+                className="absolute inset-0 overflow-hidden rounded-[20px] border-[1.5px]"
+                style={{
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
+                  borderColor: "rgba(255,222,152,0.88)",
+                  background: "linear-gradient(155deg, #071423, #0b1120 54%, #151123)",
+                  boxShadow:
+                    "0 0 0 1px rgba(255,246,214,0.28) inset, 0 0 20px rgba(255,216,139,0.32), 0 24px 58px rgba(0,0,0,0.34)",
+                }}
+              >
+                {SKY_DECK_CARD_BACK_IMAGE ? (
+                  <SafeImage
+                    src={SKY_DECK_CARD_BACK_IMAGE}
+                    alt="Tarot card back"
+                    loading="eager"
+                    className="h-full w-full object-cover"
+                    fallbackClassName="h-full w-full rounded-[20px]"
+                    fallbackLabel="Hint"
+                  />
+                ) : null}
+                <span
+                  aria-hidden
+                  className="absolute inset-[-2px] rounded-[21px]"
+                  style={{
+                    boxShadow: "inset 0 0 0 2px rgba(255,231,171,0.48), 0 0 22px rgba(255,220,145,0.25)",
+                  }}
+                />
+              </div>
+              <div
+                className="reference-today-card-reveal absolute inset-0 overflow-hidden rounded-[20px] border-[2px]"
+                style={{
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
+                  transform: "rotateY(180deg)",
+                  borderColor: "rgba(255,228,164,0.96)",
+                  background: "var(--hint-deck-card-bg)",
+                  boxShadow:
+                    "0 0 0 1px rgba(255,255,255,0.30) inset, 0 0 28px rgba(255,230,162,0.72), 0 0 68px rgba(239,190,103,0.30), 0 0 104px rgba(255,214,128,0.13), 0 28px 60px rgba(0,0,0,0.36)",
+                }}
+              >
+                {cardImage ? (
+                  <SafeImage
+                    src={cardImage}
+                    alt={report.card.cardName}
+                    loading="eager"
+                    className="h-full w-full object-cover"
+                    fallbackClassName="h-full w-full rounded-[20px]"
+                    fallbackLabel={report.card.cardName}
+                  />
+                ) : (
+                  <CardSigil cardId={report.card.cardId} />
+                )}
+                <span
+                  aria-hidden
+                  className="absolute inset-0 rounded-[18px]"
+                  style={{
+                    background:
+                      "linear-gradient(180deg, rgba(3,14,28,0.20), transparent 28%, rgba(4,14,28,0.18)), radial-gradient(circle at 50% 36%, transparent 38%, rgba(1,10,22,0.18) 100%)",
+                    mixBlendMode: "multiply",
+                  }}
+                />
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-[-3px] rounded-[22px]"
+                  style={{
+                    boxShadow:
+                      "inset 0 0 0 2px rgba(255,240,198,0.82), 0 0 20px rgba(255,230,168,0.72), 0 0 44px rgba(244,199,112,0.30)",
+                  }}
+                  animate={{ opacity: flipped ? [0.78, 1, 0.82] : 0.64 }}
+                  transition={{ duration: 1.65, repeat: flipped ? Infinity : 0, ease: "easeInOut" }}
+                />
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-y-[-18%] left-[-48%] w-[18%] rotate-12 rounded-full"
+                  style={{
+                    background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.28), rgba(255,231,170,0.18), transparent)",
+                    filter: "blur(6px)",
+                  }}
+                  animate={flipped ? { x: ["0%", "620%"], opacity: [0, 0.34, 0] } : { opacity: 0 }}
+                  transition={{ duration: 3.2, repeat: flipped ? Infinity : 0, repeatDelay: 1.45, ease: "easeInOut" }}
+                />
+              </div>
+            </motion.div>
+          </button>
+          <motion.svg
+            viewBox="0 0 320 104"
+            className="pointer-events-none absolute -bottom-[60px] left-1/2 z-[3] h-[108px] w-[330px] -translate-x-1/2 min-[420px]:w-[366px]"
+            aria-hidden
+            animate={{ opacity: flipped ? [0.76, 1, 0.82] : [0.30, 0.48, 0.34], scale: flipped ? [0.98, 1.035, 1] : [0.94, 1, 0.96] }}
+            transition={{ duration: 2.35, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <defs>
+              <radialGradient id="referenceRevealBaseGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="rgba(255,249,224,0.95)" />
+                <stop offset="38%" stopColor="rgba(255,224,154,0.42)" />
+                <stop offset="68%" stopColor="rgba(224,176,100,0.14)" />
+                <stop offset="100%" stopColor="rgba(255,220,152,0)" />
+              </radialGradient>
+              <filter id="referenceRevealBaseBlur" x="-20%" y="-80%" width="140%" height="260%">
+                <feGaussianBlur stdDeviation="2.4" />
+              </filter>
+            </defs>
+            <ellipse cx="160" cy="54" rx="106" ry="25" fill="url(#referenceRevealBaseGlow)" filter="url(#referenceRevealBaseBlur)" />
+            <ellipse cx="160" cy="50" rx="76" ry="14" fill="rgba(255,249,226,0.20)" />
+            <g fill="none" strokeLinecap="round">
+              <ellipse cx="160" cy="52" rx="98" ry="18" stroke="rgba(255,246,213,0.82)" strokeWidth="1.15" />
+              <ellipse cx="160" cy="52" rx="132" ry="31" stroke="rgba(236,197,128,0.48)" strokeWidth="0.92" />
+              <ellipse cx="160" cy="52" rx="154" ry="39" stroke="rgba(223,176,101,0.20)" strokeWidth="0.72" />
+              <ellipse cx="160" cy="50" rx="69" ry="9" stroke="rgba(255,252,238,0.68)" strokeWidth="0.72" />
+            </g>
+          </motion.svg>
+          <motion.span
+            aria-hidden
+            className="absolute -bottom-[6px] left-1/2 h-px w-[82px] -translate-x-1/2 rounded-full"
+            style={{ background: "rgba(255,241,204,0.72)", boxShadow: "0 0 18px rgba(255,222,150,0.65)" }}
+            animate={{
+              opacity: flipped ? [0.50, 0.98, 0.64] : [0.24, 0.42, 0.28],
+            }}
+            transition={{ duration: 1.7, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
+
+        {!detailsReady ? (
+          <motion.div
+            className="mt-[64px] min-h-[142px]"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.36, ease: "easeOut" }}
+          >
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: "rgba(224,187,237,0.86)" }}>
+              {revealing ? "Preparing today’s tarot" : "Choosing today’s tarot"}
+            </p>
+            <p className="mt-2 font-serif text-[24px] font-medium leading-tight text-white/90">
+              {revealing ? "Your card is arriving." : "The card is turning."}
+            </p>
+            <p className="mx-auto mt-3 max-w-[16rem] font-serif text-[14px] font-medium leading-snug text-white/58">
+              {revealing ? "One soft second while the daily pull settles." : "The back comes forward first, then opens into today’s message."}
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            className="mt-[50px] w-full"
+            initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.46, ease: "easeOut" }}
+          >
+            <p className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.24em]" style={{ color: "rgba(224,187,237,0.90)" }}>
+              Today’s tarot
+            </p>
+            <h2 className="mt-2 font-serif text-[35px] font-medium leading-none text-white min-[420px]:text-[38px]">
+              {report.card.cardName}
+            </h2>
+            <p className="mx-auto mt-3 max-w-[17rem] font-sans text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: "rgba(219,181,232,0.88)" }}>
+              {keyword}
+            </p>
+            <p className="mx-auto mt-4 max-w-[21.25rem] font-serif text-[15.5px] font-medium leading-[1.34] text-white/78 min-[420px]:text-[16px]">
+              {reading.shortAnswer}
+            </p>
+
+            <div className="mx-auto mt-4 grid w-full max-w-[286px] gap-2.5">
+              <Link
+                href="/app/daily"
+                className="hint-pressable inline-flex h-11 items-center justify-center gap-2 rounded-full font-sans text-[13px] font-semibold"
+                style={{
+                  color: "rgba(86,62,96,0.90)",
+                  background: "linear-gradient(145deg, rgba(244,211,247,0.96) 0%, rgba(214,174,224,0.96) 48%, rgba(192,151,207,0.94) 100%)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.58), 0 18px 34px rgba(0,0,0,0.20), 0 0 24px rgba(226,181,232,0.25)",
+                }}
+              >
+                Read interpretation
+                <Sparkles size={15} strokeWidth={1.5} />
+              </Link>
+              <button
+                type="button"
+                disabled={revealing}
+                onClick={onClose}
+                className="hint-pressable h-10 rounded-full border font-sans text-[13px] font-semibold disabled:opacity-60"
+                style={{
+                  color: "rgba(235,198,139,0.86)",
+                  background: "rgba(255,244,222,0.035)",
+                  borderColor: "rgba(229,193,138,0.42)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+                  backdropFilter: "blur(5px)",
+                  WebkitBackdropFilter: "blur(5px)",
+                }}
+              >
+                Return to Today
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+    </motion.div>,
+    document.body,
   );
 }
 
@@ -2709,28 +3469,24 @@ function ReferenceHero({
   receiptReady: boolean;
   onReveal: () => void | Promise<void>;
 }) {
+  const reading = useMemo(() => referenceDailyCardReading(report), [report]);
+  const cardImage = referenceDailyCardImage(report.card.cardId);
+  const keyword = report.card.keyword?.split("·")[0]?.trim() || report.card.cardName;
+
   function handleRevealClick() {
     triggerFeedback(revealed ? "tap" : "reveal");
-    if (revealed) {
-      document.getElementById("today-summary")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
-    void Promise.resolve(onReveal()).then(() => {
-      window.setTimeout(() => {
-        document.getElementById("today-summary")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 720);
-    });
+    void Promise.resolve(onReveal());
   }
 
   return (
     <section
-      className="relative mb-2.5 overflow-hidden rounded-[31px] border"
+      className="relative mx-1 min-w-0 overflow-hidden rounded-[29px] border"
       style={{
-        minHeight: 270,
+        minHeight: 238,
         background:
-          "radial-gradient(circle at 72% 72%, rgba(255,235,194,0.31), transparent 30%), radial-gradient(circle at 82% 20%, rgba(255,255,255,0.20), transparent 18%), linear-gradient(105deg, rgba(255,248,244,0.95) 0%, rgba(250,228,236,0.76) 44%, rgba(174,132,188,0.66) 100%)",
-        borderColor: "rgba(204, 142, 183, 0.26)",
-        boxShadow: "0 26px 62px rgba(116, 80, 120, 0.092), 0 1px 0 rgba(255,255,255,0.84) inset, inset 0 -22px 52px rgba(107,76,119,0.042)",
+          "radial-gradient(circle at 76% 74%, rgba(255,235,194,0.25), transparent 30%), radial-gradient(circle at 16% 8%, rgba(255,247,242,0.56), transparent 42%), linear-gradient(105deg, rgba(238,218,216,0.96) 0%, rgba(230,205,216,0.80) 42%, rgba(186,153,184,0.62) 72%, rgba(145,115,168,0.58) 100%)",
+        borderColor: "rgba(196, 133, 185, 0.20)",
+        boxShadow: "0 20px 48px rgba(116, 80, 120, 0.055), 0 1px 0 rgba(255,255,255,0.74) inset, inset 0 -18px 42px rgba(107,76,119,0.026)",
       }}
     >
       <span
@@ -2743,45 +3499,134 @@ function ReferenceHero({
         className="absolute bottom-[-4rem] right-[5.5rem] h-36 w-36 rounded-full blur-2xl"
         style={{ background: "rgba(255,235,197,0.18)" }}
       />
-      <div className="relative min-h-[270px]">
-        <div className="relative z-10 flex min-h-[270px] w-[58%] flex-col pl-7 pr-0 pt-[48px]">
-          <h2 className="font-serif text-[35px] leading-[1.04]" style={{ color: "#2f2b37" }}>
-            Your Hint<br />
-            is <span className="italic" style={{ color: "#a982b0" }}>waiting.</span>
-          </h2>
-          <p
-            className="mt-3 max-w-[9.75rem] font-serif text-[14px] leading-snug"
-            style={{ color: "#4c4650" }}
-          >
-            The universe left you a little note.
-          </p>
+      <span
+        aria-hidden
+        className="absolute inset-0 opacity-[0.22]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 18% 34%, rgba(84,54,46,0.050) 0 0.45px, transparent 0.85px), radial-gradient(circle at 76% 58%, rgba(255,255,255,0.16) 0 0.55px, transparent 0.95px)",
+          backgroundSize: "6px 6px, 8px 8px",
+          mixBlendMode: "overlay",
+        }}
+      />
+      {revealed ? (
+        <motion.div
+          className="relative z-10 grid min-h-[238px] grid-cols-[minmax(0,1fr)_96px] items-center gap-3 px-5 py-6 min-[420px]:grid-cols-[minmax(0,1fr)_106px] min-[420px]:gap-3.5 min-[420px]:px-5 min-[420px]:py-5"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.42, ease: "easeOut" }}
+        >
+          <div className="min-w-0 pr-1">
+            <p className="font-sans text-[8.4px] font-semibold uppercase tracking-[0.20em] min-[420px]:text-[9px]" style={{ color: REFERENCE_TYPE.purple }}>
+              Today’s tarot
+            </p>
+            <h2 className="mt-1 font-serif text-[26px] font-medium leading-none min-[420px]:text-[29px]" style={{ color: REFERENCE_TYPE.ink }}>
+              {report.card.cardName}
+            </h2>
+            <p className="mt-1.5 line-clamp-1 font-sans text-[9px] font-semibold uppercase tracking-[0.12em]" style={{ color: REFERENCE_TYPE.faint }}>
+              {keyword}
+            </p>
+            <p className="mt-3 line-clamp-4 font-serif text-[13.8px] font-medium leading-[1.28] min-[420px]:text-[14.8px]" style={{ color: REFERENCE_TYPE.body }}>
+              {reading.shortAnswer}
+            </p>
+            <button
+              type="button"
+              onClick={handleRevealClick}
+              className="hint-pressable mt-4 inline-flex h-8 items-center rounded-full border px-3.5 font-sans text-[10.5px] font-semibold"
+              style={{
+                color: REFERENCE_TYPE.purpleDeep,
+                background: "rgba(255,252,247,0.46)",
+                borderColor: "rgba(198,165,142,0.16)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.50), 0 9px 18px rgba(104,72,119,0.07)",
+              }}
+            >
+              View card again
+            </button>
+          </div>
           <button
             type="button"
-            disabled={!receiptReady || revealing}
             onClick={handleRevealClick}
-            aria-busy={revealing ? "true" : "false"}
-            className={[
-              "hint-pressable mt-4 inline-flex h-[42px] w-full max-w-[178px] items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 font-serif text-[13.5px] active:scale-[0.98] disabled:opacity-75",
-            ].join(" ")}
-            style={{
-              color: "#fff8f4",
-              background: "linear-gradient(145deg, #9b78ac 0%, #805f95 48%, #684879 100%)",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -8px 16px rgba(67,42,80,0.16), 0 18px 32px rgba(104,72,119,0.25)",
-            }}
+            className="hint-pressable relative mx-auto h-[164px] w-[96px] overflow-visible rounded-[15px] border-0 bg-transparent p-0 active:scale-[0.98] min-[420px]:h-[178px] min-[420px]:w-[106px]"
+            aria-label={`Open today's tarot reveal for ${report.card.cardName}`}
           >
-            {revealing ? "Opening Today’s Hint" : receiptReady ? "Reveal Today’s Hint" : "Preparing Today’s Hint"}
-            <span aria-hidden className="shrink-0 text-[16px] leading-none">✦</span>
+            <span
+              aria-hidden
+              className="absolute -bottom-5 left-1/2 h-10 w-[128px] -translate-x-1/2 rounded-full min-[420px]:w-[138px]"
+              style={{
+                background: "radial-gradient(ellipse, rgba(255,246,218,0.42), rgba(255,226,190,0.16) 48%, transparent 72%)",
+                filter: "blur(1px)",
+              }}
+            />
+            <span
+              className="relative block h-full w-full overflow-hidden rounded-[15px] border-2"
+              style={{
+                borderColor: "rgba(255,239,204,0.88)",
+                background: "var(--hint-deck-card-bg)",
+                boxShadow:
+                  "0 18px 30px rgba(75,50,88,0.14), 0 0 18px rgba(255,225,168,0.26), inset 0 1px 0 rgba(255,255,255,0.62)",
+              }}
+            >
+              {cardImage ? (
+                <SafeImage
+                  src={cardImage}
+                  alt={report.card.cardName}
+                  loading="eager"
+                  className="h-full w-full object-cover"
+                  fallbackClassName="h-full w-full rounded-[15px]"
+                  fallbackLabel={report.card.cardName}
+                />
+              ) : (
+                <CardSigil cardId={report.card.cardId} />
+              )}
+              <motion.span
+                aria-hidden
+                className="absolute inset-[-2px] rounded-[16px]"
+                style={{ boxShadow: "inset 0 0 0 2px rgba(255,242,214,0.78), 0 0 14px rgba(255,225,168,0.36)" }}
+                animate={{ opacity: [0.56, 0.92, 0.60] }}
+                transition={{ duration: 1.7, repeat: Infinity, ease: "easeInOut" }}
+              />
+            </span>
           </button>
+        </motion.div>
+      ) : (
+        <div className="relative min-h-[238px]">
+          <div className="relative z-10 flex min-h-[238px] w-[55%] flex-col pl-6 pr-0 pt-[40px]">
+            <h2 className="font-serif text-[35px] font-medium leading-[0.98]" style={{ color: REFERENCE_TYPE.ink }}>
+              Your Hint<br />
+              is <span className="italic" style={{ color: REFERENCE_TYPE.purple }}>waiting.</span>
+            </h2>
+            <p
+              className="mt-3 max-w-[9.8rem] font-serif text-[14.5px] font-medium leading-[1.25]"
+              style={{ color: REFERENCE_TYPE.body }}
+            >
+              The universe left you a little note.
+            </p>
+            <button
+              type="button"
+              disabled={!receiptReady || revealing}
+              onClick={handleRevealClick}
+              aria-busy={revealing ? "true" : "false"}
+              className="hint-pressable mt-[17px] inline-flex h-[38px] w-full max-w-[170px] items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 font-serif text-[13.5px] active:scale-[0.98] disabled:opacity-75"
+              style={{
+                color: "#fff8f4",
+                background: "linear-gradient(145deg, #9d7daf 0%, #87689d 48%, #725584 100%)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.36), inset 0 -8px 16px rgba(67,42,80,0.11), 0 13px 22px rgba(104,72,119,0.14)",
+              }}
+            >
+              {revealing ? "Opening Today’s Hint" : receiptReady ? "Reveal Today’s Hint" : "Preparing Today’s Hint"}
+              <span aria-hidden className="shrink-0 text-[16px] leading-none">✦</span>
+            </button>
+          </div>
+          <ReferenceHeroArt
+            className="absolute inset-0"
+            revealed={false}
+            revealing={revealing}
+            receiptReady={receiptReady}
+            report={report}
+            onCardActivate={handleRevealClick}
+          />
         </div>
-        <ReferenceHeroArt
-          className="absolute inset-0"
-          revealed={revealed}
-          revealing={revealing}
-          receiptReady={receiptReady}
-          report={report}
-          onCardActivate={handleRevealClick}
-        />
-      </div>
+      )}
     </section>
   );
 }
@@ -2790,14 +3635,21 @@ function ReferenceScoreItem({ score, isLast }: { score: DailyScore; isLast: bool
   const Icon = REFERENCE_SCORE_ICONS[score.key];
 
   return (
-    <div className={["min-w-0 px-0.5 text-center", isLast ? "" : "border-r"].join(" ")} style={{ borderColor: "rgba(198, 165, 142, 0.095)" }}>
+    <div className={["min-w-0 px-1 text-center", isLast ? "" : "border-r"].join(" ")} style={{ borderColor: "rgba(198, 165, 142, 0.085)" }}>
       <div className="flex min-w-0 items-center justify-center gap-1">
-        <Icon className="shrink-0" size={14.5} strokeWidth={1.7} style={{ color: score.tone }} />
-        <p className="whitespace-nowrap font-sans text-[9.5px] font-medium leading-none" style={{ color: "#5e5860" }}>
+        <Icon className="shrink-0" size={14.5} strokeWidth={1.6} style={{ color: score.tone }} />
+        <p className="whitespace-nowrap font-sans text-[9.4px] font-medium leading-none min-[420px]:text-[10px]" style={{ color: REFERENCE_TYPE.body }}>
           {score.label}
         </p>
       </div>
-      <p className="mt-1.5 text-center font-serif text-[19px] leading-none tabular-nums" style={{ color: "#2f2b37" }}>
+      <p
+        className="mt-1.5 flex h-[20px] items-center justify-center text-center font-serif text-[18px] leading-none tabular-nums min-[420px]:text-[19px]"
+        style={{
+          color: REFERENCE_TYPE.ink,
+          fontVariantNumeric: "lining-nums tabular-nums",
+          fontFeatureSettings: '"lnum" 1, "tnum" 1',
+        }}
+      >
         {score.score}
       </p>
     </div>
@@ -2806,33 +3658,33 @@ function ReferenceScoreItem({ score, isLast }: { score: DailyScore; isLast: bool
 
 function ReferenceEnergyValue({ score }: { score: number }) {
   return (
-    <div className="relative mt-2.5 h-[68px] w-[112px]">
+    <div className="relative ml-1.5 mt-2 h-[64px] w-[104px] min-[420px]:ml-2 min-[420px]:h-[70px] min-[420px]:w-[116px]">
       <span
         aria-hidden
-        className="absolute left-2 top-2 size-11 rounded-full"
+        className="absolute left-3 top-2 size-10 rounded-full min-[420px]:left-4 min-[420px]:size-11"
         style={{
           background: "radial-gradient(circle, rgba(255,247,223,0.58), rgba(255,232,205,0.14) 58%, transparent 72%)",
-          filter: "blur(2px)",
+          filter: "blur(1.2px)",
         }}
       />
       <span
         aria-hidden
-        className="absolute right-3 top-4 text-[21px]"
+        className="absolute right-1 top-[19px] text-[17px] min-[420px]:right-2 min-[420px]:top-[21px] min-[420px]:text-[18px]"
         style={{
           color: "rgba(214,160,95,0.30)",
-          textShadow: "0 0 16px rgba(255,232,189,0.60)",
+          textShadow: "0 0 12px rgba(255,232,189,0.44)",
         }}
       >
         ✦
       </span>
-      <div className="absolute left-0 top-[9px] flex items-end">
+      <div className="absolute left-1.5 top-[8px] flex items-end">
         <span
-          className="font-serif text-[52px] leading-[0.78] tabular-nums"
-          style={{ color: "#b17ca7", textShadow: "0 10px 22px rgba(177,124,167,0.12)" }}
+          className="font-serif text-[52px] leading-[0.76] min-[420px]:text-[58px]"
+          style={{ color: REFERENCE_TYPE.score, fontVariantNumeric: "proportional-nums lining-nums" }}
         >
           {score}
         </span>
-        <span className="mb-[4px] ml-1 font-sans text-[12px] font-semibold leading-none" style={{ color: "#777079" }}>
+        <span className="mb-[6px] ml-1 font-sans text-[11px] font-medium leading-none min-[420px]:mb-[7px] min-[420px]:ml-1.5 min-[420px]:text-[12px]" style={{ color: REFERENCE_TYPE.muted }}>
           /100
         </span>
       </div>
@@ -2844,10 +3696,10 @@ function ReferenceMoonScene() {
   return (
     <div
       aria-hidden
-      className="relative size-[76px] shrink-0 overflow-hidden rounded-full"
+      className="relative size-[72px] shrink-0 overflow-hidden rounded-full min-[420px]:size-[82px]"
       style={{
         background: "linear-gradient(145deg, rgba(60, 38, 80, 0.72), rgba(34, 28, 54, 0.92))",
-        boxShadow: "0 18px 30px rgba(72, 46, 84, 0.13), inset 0 1px 0 rgba(255,255,255,0.20), inset 0 0 0 1px rgba(255,255,255,0.08)",
+        boxShadow: "0 14px 24px rgba(72, 46, 84, 0.07), inset 0 1px 0 rgba(255,255,255,0.18)",
       }}
     >
       <SafeImage
@@ -2873,15 +3725,14 @@ function ReferenceEnergyPanel({
   revealed: boolean;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const scores = report.scores.map((score) => ({
-    ...score,
-    score: REFERENCE_HOME_COPY.scores[score.key],
-  }));
+  const scores = report.scores;
+  const themeTitle = referenceThemeTitle(report);
+  const themeLine = referenceThemeLine(report);
 
   return (
     <section
       id="today-summary"
-      className="relative mb-2.5 overflow-hidden rounded-[26px] border px-4 py-3"
+      className="relative min-w-0 overflow-hidden rounded-[28px] border px-5 pb-2.5 pt-4"
       style={{
         background: REFERENCE_CARD_BACKGROUND,
         borderColor: REFERENCE_CARD_BORDER,
@@ -2893,28 +3744,30 @@ function ReferenceEnergyPanel({
         className="absolute inset-x-8 top-0 h-px rounded-full"
         style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.52), transparent)" }}
       />
-      <div className="relative grid grid-cols-[112px_minmax(0,1fr)_76px] items-center gap-2.5">
+      <div className="relative grid grid-cols-[104px_minmax(0,1fr)_72px] items-start gap-3 min-[420px]:grid-cols-[116px_minmax(0,1fr)_82px] min-[420px]:gap-4">
         <div className="relative min-w-0">
-          <p className="font-sans text-[9.5px] font-black uppercase tracking-[0.13em]" style={{ color: "#6c646c" }}>
+          <p className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.20em]" style={{ color: REFERENCE_TYPE.label }}>
             Today’s energy
           </p>
-          <ReferenceEnergyValue score={REFERENCE_HOME_COPY.scores.overall} />
+          <ReferenceEnergyValue score={report.overallScore} />
         </div>
         <div
-          className="min-w-0 border-l pl-3"
-          style={{ borderColor: "rgba(198, 158, 129, 0.13)" }}
+          className="min-w-0 border-l pl-3 min-[420px]:pl-4"
+          style={{ borderColor: "rgba(198, 158, 129, 0.10)" }}
         >
-          <p className="font-sans text-[9.5px] font-black uppercase tracking-[0.13em]" style={{ color: "#6c646c" }}>
+          <p className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.20em]" style={{ color: REFERENCE_TYPE.label }}>
             Today’s theme
           </p>
-          <p className="mt-2 font-serif text-[25px] leading-none" style={{ color: "#2f2a35" }}>
-            {REFERENCE_HOME_COPY.theme}
+          <p className="mt-1.5 font-serif text-[26px] font-medium leading-none min-[420px]:mt-2 min-[420px]:text-[28px]" style={{ color: REFERENCE_TYPE.ink }}>
+            {themeTitle}
           </p>
-          <p className="mt-2 font-serif text-[13px] leading-[1.32]" style={{ color: "#756d75" }}>
-            {REFERENCE_HOME_COPY.themeLine}
+          <p className="mt-1.5 font-serif text-[13px] font-medium leading-[1.23] min-[420px]:mt-2 min-[420px]:text-[14px] min-[420px]:leading-[1.25]" style={{ color: REFERENCE_TYPE.muted }}>
+            {themeLine}
           </p>
         </div>
-        <ReferenceMoonScene />
+        <div className="self-start">
+          <ReferenceMoonScene />
+        </div>
       </div>
       <button
         type="button"
@@ -2924,11 +3777,11 @@ function ReferenceEnergyPanel({
         }}
         aria-expanded={detailsOpen}
         aria-label="Tap to see more details"
-        className="hint-pressable relative mt-3 flex w-full items-center gap-2 rounded-[20px] border px-2 py-2 text-left active:scale-[0.99]"
+        className="hint-pressable relative mt-[14px] flex w-full items-center gap-2 rounded-[22px] border px-3.5 py-2.5 text-left active:scale-[0.99]"
         style={{
-          background: "linear-gradient(145deg, rgba(255,252,248,0.80), rgba(250,242,236,0.50))",
-          borderColor: "rgba(199, 160, 128, 0.20)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.74), 0 14px 26px rgba(96, 75, 61, 0.042)",
+          background: "rgba(255,253,249,0.68)",
+          borderColor: "rgba(199, 160, 128, 0.10)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 20px rgba(96, 75, 61, 0.014)",
         }}
       >
         <div className="grid min-w-0 flex-1 grid-cols-5 items-center">
@@ -2940,8 +3793,8 @@ function ReferenceEnergyPanel({
           className="grid size-7 shrink-0 place-items-center rounded-full"
           style={{
             color: "#fff8fb",
-            background: "linear-gradient(145deg, rgba(202, 145, 196, 0.76), rgba(166, 103, 178, 0.86))",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.42), 0 8px 18px rgba(146,86,154,0.10)",
+            background: "linear-gradient(145deg, rgba(205, 158, 201, 0.70), rgba(174, 120, 183, 0.78))",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.46), 0 8px 18px rgba(146,86,154,0.075)",
           }}
         >
           <motion.span animate={{ rotate: detailsOpen ? 180 : 0 }} transition={{ duration: 0.22, ease: "easeOut" }}>
@@ -2955,7 +3808,7 @@ function ReferenceEnergyPanel({
           triggerFeedback("select");
           setDetailsOpen((open) => !open);
         }}
-        className="hint-pressable mx-auto mt-1.5 flex items-center justify-center gap-2 px-2 py-0.5 font-sans text-[10px]"
+        className="hint-pressable mx-auto mt-0.5 flex items-center justify-center gap-2 px-2 py-0.5 font-sans text-[10px] font-medium"
         style={{ color: "#91878e" }}
       >
         <span aria-hidden style={{ color: "rgba(214, 160, 95, 0.48)" }}>
@@ -2985,14 +3838,14 @@ function ReferenceEnergyPanel({
           >
             ✦
           </span>
-          <p className="font-serif text-[16px] leading-snug" style={{ color: "#3a3440" }}>
+          <p className="font-serif text-[16px] leading-snug" style={{ color: REFERENCE_TYPE.inkSoft }}>
             {report.title}
           </p>
           <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5">
             {scores.map((score) => (
-              <p key={score.key} className="flex items-center justify-between gap-3 font-sans text-[11px]" style={{ color: "#746970" }}>
+              <p key={score.key} className="flex items-center justify-between gap-3 font-sans text-[11px]" style={{ color: REFERENCE_TYPE.muted }}>
                 <span>{score.label}</span>
-                <span className="font-serif text-[15px] tabular-nums" style={{ color: "#2f2b37" }}>{score.score}</span>
+                <span className="font-serif text-[15px] tabular-nums" style={{ color: REFERENCE_TYPE.ink }}>{score.score}</span>
               </p>
             ))}
           </div>
@@ -3004,47 +3857,48 @@ function ReferenceEnergyPanel({
 
 function ReferenceSkyEvidenceArt() {
   return (
-    <div aria-hidden className="pointer-events-none relative h-[46px] w-[76px] overflow-visible">
-      <span
-        className="absolute right-4 top-2.5 size-[38px] rounded-full"
-        style={{
-          background: "radial-gradient(circle at 34% 24%, #f7dee3 0%, #ead4df 36%, #c4a2d0 74%, #9f78ad 100%)",
-          boxShadow: "0 14px 26px rgba(142, 96, 154, 0.13), inset 0 1px 0 rgba(255,255,255,0.62)",
-        }}
-      />
-      <svg viewBox="0 0 112 78" className="absolute inset-0 h-full w-full overflow-visible">
+    <div aria-hidden className="pointer-events-none relative h-[48px] w-[88px] overflow-visible">
+      <svg viewBox="0 0 118 72" className="absolute inset-0 h-full w-full overflow-visible" style={{ transform: "rotate(-8deg)" }}>
+        <defs>
+          <radialGradient id="sky-evidence-planet-fill" cx="32%" cy="22%" r="82%">
+            <stop offset="0" stopColor="#fff0df" />
+            <stop offset="0.34" stopColor="#edd8dc" />
+            <stop offset="0.68" stopColor="#d6b9d2" />
+            <stop offset="1" stopColor="#b58ebe" />
+          </radialGradient>
+        </defs>
+        <g fill="rgba(214, 160, 95, 0.38)">
+          <circle cx="18" cy="38" r="1" />
+          <circle cx="103" cy="23" r="0.9" />
+          <circle cx="35" cy="12" r="0.75" />
+          <circle cx="95" cy="52" r="0.85" />
+        </g>
+        <g stroke="rgba(226, 178, 124, 0.34)" strokeLinecap="round">
+          <path d="M22 49 L22 55 M19 52 L25 52" />
+          <path d="M109 39 L109 43 M107 41 L111 41" opacity="0.70" />
+        </g>
+        <path
+          d="M18 40 C45 28 84 28 110 37"
+          fill="none"
+          stroke="rgba(221, 170, 112, 0.26)"
+          strokeLinecap="round"
+          strokeWidth="0.78"
+        />
+        <circle
+          cx="64"
+          cy="35"
+          r="22"
+          fill="url(#sky-evidence-planet-fill)"
+          filter="drop-shadow(0 10px 16px rgba(125, 86, 132, 0.08))"
+        />
+        <path d="M48 21 C58 28 72 32 84 31" fill="none" stroke="rgba(255,255,255,0.20)" strokeLinecap="round" strokeWidth="0.68" />
+        <path d="M47 48 C58 43 74 44 83 50" fill="none" stroke="rgba(116,77,132,0.14)" strokeLinecap="round" strokeWidth="0.8" />
+        <circle cx="64" cy="35" r="22" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="0.72" />
         <g fill="none" strokeLinecap="round">
-          <path
-            d="M16 46 C37 30 76 24 100 34 C82 56 39 60 16 46Z"
-            stroke="rgba(220, 169, 111, 0.40)"
-            strokeWidth="1"
-          />
-          <path
-            d="M12 48 C37 57 78 54 103 38"
-            stroke="rgba(244, 214, 174, 0.68)"
-            strokeWidth="1.15"
-          />
-          <path
-            d="M24 51 C50 36 78 35 101 45"
-            stroke="rgba(199, 151, 195, 0.30)"
-            strokeWidth="1"
-          />
-        </g>
-        <g fill="rgba(214, 160, 95, 0.54)">
-          <circle cx="16" cy="47" r="1.3" />
-          <circle cx="93" cy="36" r="1.1" />
-          <circle cx="34" cy="22" r="0.9" />
-          <circle cx="73" cy="17" r="1" />
-        </g>
-        <g stroke="rgba(226, 178, 124, 0.48)" strokeLinecap="round">
-          <path d="M7 25 L7 31 M4 28 L10 28" />
-          <path d="M102 57 L102 63 M99 60 L105 60" />
+          <path d="M14 41 C41 52 85 51 111 36" stroke="rgba(246, 212, 168, 0.62)" strokeWidth="0.92" />
+          <path d="M25 39 C50 32 82 31 104 36" stroke="rgba(210, 158, 118, 0.28)" strokeWidth="0.68" />
         </g>
       </svg>
-      <span
-        className="absolute bottom-1 right-9 size-1.5 rounded-full"
-        style={{ background: "#f8e5bf", boxShadow: "0 0 16px rgba(248,229,191,0.86)" }}
-      />
     </div>
   );
 }
@@ -3058,8 +3912,169 @@ function polishSkyLogicLine(line: string, cardId: string | undefined, cardName: 
   return line.replace(new RegExp(`\\b${escapeRegExp(cardId)}\\b`, "i"), cardName);
 }
 
+const SKY_BODY_COPY: Record<string, { why: string; brings: string }> = {
+  sun: {
+    why: "The Sun describes identity, clarity, and the part of you that wants to be seen plainly.",
+    brings: "It can bring confidence, visibility, and a clearer sense of direction.",
+  },
+  moon: {
+    why: "The Moon describes emotional rhythm, instinct, and what your body notices before your mind explains it.",
+    brings: "It can bring mood, intuition, memory, and a need for emotional honesty.",
+  },
+  mercury: {
+    why: "Mercury describes language, timing, questions, and the way information moves through the day.",
+    brings: "It can bring messages, decisions, useful conversations, or a cleaner way to say the truth.",
+  },
+  venus: {
+    why: "Venus describes affection, desire, self-worth, pleasure, and the values behind your choices.",
+    brings: "It can bring relationship mirrors, money/value questions, softness, attraction, or a need to receive better.",
+  },
+  mars: {
+    why: "Mars describes will, friction, momentum, and the part of you that wants to act.",
+    brings: "It can bring courage, urgency, tension, or the energy to move something forward.",
+  },
+  jupiter: {
+    why: "Jupiter describes growth, belief, perspective, and where life wants more room.",
+    brings: "It can bring openings, generosity, learning, or a bigger frame for the situation.",
+  },
+  saturn: {
+    why: "Saturn describes limits, responsibility, patience, and what needs to become real.",
+    brings: "It can bring boundaries, commitment, maturity, delayed timing, or the need to choose carefully.",
+  },
+  neptune: {
+    why: "Neptune describes dreams, sensitivity, longing, and places where the facts can blur.",
+    brings: "It can bring imagination, compassion, confusion, or a reminder to check the story against reality.",
+  },
+  pluto: {
+    why: "Pluto describes attachment, release, power, and the pattern underneath the obvious pattern.",
+    brings: "It can bring transformation, intensity, truth beneath the surface, or a clean ending.",
+  },
+};
+
+const SKY_ASPECT_COPY: Record<NonNullable<SkySignal["aspect"]>, { why: string; brings: string }> = {
+  conjunct: {
+    why: "A conjunction blends two signals together, so the theme becomes louder and harder to ignore.",
+    brings: "It can bring concentration: one issue asks for your full attention.",
+  },
+  sextile: {
+    why: "A sextile opens a quieter door; the signal is useful if you choose to work with it.",
+    brings: "It can bring cooperation, small openings, and a chance to make something easier.",
+  },
+  square: {
+    why: "A square creates pressure, which is why this signal may feel impossible to dismiss.",
+    brings: "It can bring friction, motivation, and a practical need to adjust your approach.",
+  },
+  trine: {
+    why: "A trine lets energy flow more naturally, so the signal may arrive as ease or support.",
+    brings: "It can bring grace, recovery, and a smoother path through the theme.",
+  },
+  opposite: {
+    why: "An opposition puts two sides across from each other, asking for contrast and balance.",
+    brings: "It can bring reflection, relationship mirrors, distance, or a choice that needs honesty.",
+  },
+};
+
+const SKY_HOUSE_FOCUS: Record<number, string> = {
+  1: "identity, first impressions, and what you are ready to claim",
+  2: "self-worth, money, comfort, and what feels genuinely valuable",
+  3: "messages, learning, siblings, neighbors, and the next honest conversation",
+  4: "home, family, privacy, memory, and emotional roots",
+  5: "creativity, desire, play, romance, and what wants to be expressed",
+  6: "routines, health, service, and the small habits that change the day",
+  7: "partnership, projection, attraction, and one-to-one dynamics",
+  8: "intimacy, trust, shared resources, fear, and transformation",
+  9: "meaning, belief, study, travel, and the bigger truth behind the moment",
+  10: "career, direction, responsibility, and what is visible to others",
+  11: "friends, community, hopes, networks, and the future you are moving toward",
+  12: "rest, dreams, hidden feelings, closure, and what needs quiet space",
+};
+
+function formatEvidenceList(values: string[], fallback: string) {
+  const unique = Array.from(new Set(values.filter(Boolean)));
+  if (unique.length === 0) return fallback;
+  if (unique.length === 1) return unique[0]!;
+  if (unique.length === 2) return `${unique[0]} and ${unique[1]}`;
+  return `${unique.slice(0, -1).join(", ")}, and ${unique[unique.length - 1]}`;
+}
+
+function evidenceFallbackSignals(): SkySignal[] {
+  return [
+    {
+      id: "reference-venus-saturn",
+      label: "Venus conjunct Saturn",
+      bodies: ["venus", "saturn"],
+      aspect: "conjunct",
+      strength: 78,
+      themes: ["relationshipTension", "selfWorth", "boundary", "waiting"],
+    },
+    {
+      id: "reference-moon-9th",
+      label: "Moon in the 9th house",
+      bodies: ["moon"],
+      house: 9,
+      strength: 74,
+      themes: ["emotionalFear", "healing", "growth", "truth"],
+    },
+  ];
+}
+
+function skySignalSymbol(signal: SkySignal, index: number) {
+  const bodies = signal.bodies.map((body) => body.toLowerCase());
+  if (bodies.includes("moon")) return "☽";
+  if (bodies.includes("venus")) return "♀";
+  if (bodies.includes("mercury")) return "☿";
+  if (bodies.includes("sun")) return "☉";
+  if (bodies.includes("saturn")) return "♄";
+  return index === 0 ? "☉" : "☽";
+}
+
+function themeLabelsForSignal(signal: SkySignal, fallbackLabels: string[]) {
+  const labels = (signal.themes ?? []).map((theme) => THEME_LABELS[theme]).filter(Boolean);
+  return labels.length > 0 ? labels : fallbackLabels;
+}
+
+function skySignalExplanation({
+  signal,
+  report,
+  fallbackThemeLabels,
+}: {
+  signal: SkySignal;
+  report: DailyReport;
+  fallbackThemeLabels: string[];
+}) {
+  const bodies = signal.bodies.map((body) => body.toLowerCase());
+  const bodyWhy = bodies.map((body) => SKY_BODY_COPY[body]?.why).filter(Boolean);
+  const bodyBrings = bodies.map((body) => SKY_BODY_COPY[body]?.brings).filter(Boolean);
+  const aspect = signal.aspect ? SKY_ASPECT_COPY[signal.aspect] : null;
+  const houseFocus = signal.house ? SKY_HOUSE_FOCUS[signal.house] : null;
+  const themes = formatEvidenceList(themeLabelsForSignal(signal, fallbackThemeLabels).slice(0, 3), "today's strongest theme");
+  const bodyLine = formatEvidenceList(bodyWhy.slice(0, 2), "This is one of today's stronger sky signals.");
+  const bringsLine = formatEvidenceList(bodyBrings.slice(0, 2), "It can make today's pattern easier to notice.");
+
+  return {
+    why: [
+      `${signal.label} is one of the signals Hint used for today's card.`,
+      bodyLine,
+      aspect?.why,
+      houseFocus ? `The house placement points it toward ${houseFocus}.` : null,
+      `That is why ${report.card.cardName} leans toward ${themes}.`,
+    ]
+      .filter(Boolean)
+      .join(" "),
+    brings: [
+      `It may bring ${themes} into focus today.`,
+      bringsLine,
+      aspect?.brings,
+      "Use it as context for the hint, not as a fixed prediction.",
+    ]
+      .filter(Boolean)
+      .join(" "),
+  };
+}
+
 function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
   const [expanded, setExpanded] = useState(false);
+  const [activeEvidenceId, setActiveEvidenceId] = useState<string | null>(null);
   const sky = report.card.skyGuided;
   const reading = useMemo(
     () =>
@@ -3070,18 +4085,32 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
             cardWhisper: report.card.whisper,
             sky,
             tone: sky.tone,
-          })
+      })
         : null,
     [report.card.cardId, report.card.cardName, report.card.whisper, sky],
   );
-  const evidenceLabels = [...REFERENCE_HOME_COPY.evidence];
+  const evidenceSignals = useMemo(() => (sky?.evidence?.length ? sky.evidence.slice(0, 2) : evidenceFallbackSignals()), [sky?.evidence]);
+  const activeEvidence = evidenceSignals.find((signal) => signal.id === activeEvidenceId) ?? null;
+  const activeEvidenceExplanation = activeEvidence
+    ? skySignalExplanation({
+        signal: activeEvidence,
+        report,
+        fallbackThemeLabels: sky?.themeLabels ?? [],
+      })
+    : null;
   const detailLines = (reading?.whyThisCard ?? [report.astrologyNote, report.summary])
     .slice(0, 3)
     .map((line) => polishSkyLogicLine(line, sky?.selectedCardId ?? report.card.cardId, report.card.cardName));
 
+  useEffect(() => {
+    if (activeEvidenceId && !evidenceSignals.some((signal) => signal.id === activeEvidenceId)) {
+      setActiveEvidenceId(null);
+    }
+  }, [activeEvidenceId, evidenceSignals]);
+
   return (
     <section
-      className="relative mb-2.5 overflow-hidden rounded-[23px] border px-5 py-3"
+      className="relative min-w-0 rounded-[24px] border px-5 py-3"
       style={{
         background: REFERENCE_CARD_BACKGROUND,
         borderColor: REFERENCE_CARD_BORDER,
@@ -3093,30 +4122,73 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
         className="absolute inset-x-10 top-0 h-px rounded-full"
         style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.48), transparent)" }}
       />
-      <div className="min-h-[60px] pr-[98px]">
+      <div className="min-h-[58px] pr-[82px] min-[420px]:pr-[108px]">
         <div className="min-w-0">
-          <h3 className="font-serif text-[17px] leading-none" style={{ color: "#2f2b37" }}>
+          <h3 className="font-serif text-[19px] font-medium leading-none" style={{ color: REFERENCE_TYPE.ink }}>
             Why this hint?
           </h3>
-          <div className="mt-2 flex flex-nowrap gap-2">
-            {evidenceLabels.map((label, index) => (
-              <span
-                key={`${label}-${index}`}
-                className="inline-flex min-h-[24px] max-w-full min-w-0 items-center gap-1.5 rounded-full border px-2.5 font-sans text-[8.8px] leading-none"
-                style={{
-                  color: "#777077",
-                  background: "rgba(255, 250, 246, 0.56)",
-                  borderColor: "rgba(198, 165, 142, 0.14)",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.54)",
-                }}
-              >
-                <span style={{ color: index === 0 ? "#d39b69" : "#a77caf" }}>{index === 0 ? "☉" : "☽"}</span>
-                <span className="whitespace-nowrap">{label}</span>
-              </span>
-            ))}
+          <div className="mt-2.5 flex flex-nowrap gap-2.5">
+            {evidenceSignals.map((signal, index) => {
+              const selected = activeEvidenceId === signal.id;
+              return (
+                <button
+                  type="button"
+                  key={signal.id}
+                  aria-pressed={selected}
+                  onClick={() => {
+                    triggerFeedback("select");
+                    setActiveEvidenceId((current) => (current === signal.id ? null : signal.id));
+                  }}
+                  className="hint-pressable inline-flex min-h-[25px] max-w-full min-w-0 items-center gap-1 rounded-full border px-2 font-sans text-[8.4px] leading-none active:scale-[0.98] min-[420px]:gap-1.5 min-[420px]:px-2.5 min-[420px]:text-[9.4px]"
+                  style={{
+                    color: selected ? REFERENCE_TYPE.inkSoft : REFERENCE_TYPE.muted,
+                    background: selected ? "rgba(255, 253, 250, 0.86)" : "rgba(255, 250, 246, 0.50)",
+                    borderColor: selected ? "rgba(178, 127, 184, 0.22)" : "rgba(198, 165, 142, 0.085)",
+                    boxShadow: selected
+                      ? "inset 0 1px 0 rgba(255,255,255,0.58), 0 8px 18px rgba(145, 102, 143, 0.045)"
+                      : "inset 0 1px 0 rgba(255,255,255,0.46)",
+                  }}
+                >
+                  <span style={{ color: index === 0 ? "#d39b69" : "#a77caf" }}>{skySignalSymbol(signal, index)}</span>
+                  <span className="truncate whitespace-nowrap">{signal.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
+
+      {activeEvidence && activeEvidenceExplanation ? (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="relative mt-2 rounded-[17px] border px-3 py-2.5"
+          style={{
+            background: "rgba(255,253,249,0.58)",
+            borderColor: "rgba(198, 165, 142, 0.075)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.52)",
+          }}
+        >
+          <p className="font-sans text-[8.4px] font-semibold uppercase tracking-[0.16em]" style={{ color: REFERENCE_TYPE.faint }}>
+            {activeEvidence.label}
+          </p>
+          <div className="mt-1.5 grid gap-1.5">
+            <p className="font-sans text-[10px] font-medium leading-snug" style={{ color: REFERENCE_TYPE.body }}>
+              <span className="mr-1 font-semibold uppercase tracking-[0.12em]" style={{ color: REFERENCE_TYPE.purpleDeep }}>
+                Why
+              </span>
+              {activeEvidenceExplanation.why}
+            </p>
+            <p className="font-sans text-[10px] font-medium leading-snug" style={{ color: REFERENCE_TYPE.muted }}>
+              <span className="mr-1 font-semibold uppercase tracking-[0.12em]" style={{ color: "#b58d71" }}>
+                Brings
+              </span>
+              {activeEvidenceExplanation.brings}
+            </p>
+          </div>
+        </motion.div>
+      ) : null}
 
       <button
         type="button"
@@ -3125,10 +4197,10 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
           setExpanded((open) => !open);
         }}
         aria-expanded={expanded}
-        className="hint-pressable absolute right-5 top-2 flex w-[112px] flex-col items-end text-right active:scale-[0.98]"
-        style={{ position: "absolute", right: 20, top: 8 }}
+        className="hint-pressable absolute right-4 top-3 flex w-[102px] flex-col items-end text-right active:scale-[0.98] min-[420px]:right-5 min-[420px]:w-[116px]"
+        style={{ position: "absolute", color: REFERENCE_TYPE.purpleDeep }}
       >
-        <span className="inline-flex items-center gap-1 whitespace-nowrap font-serif text-[13px]" style={{ color: "#a36b9a" }}>
+        <span className="inline-flex items-center gap-1 whitespace-nowrap font-serif text-[14.5px]" style={{ color: REFERENCE_TYPE.purpleDeep }}>
           Sky Evidence ✦
           <ChevronDown
             size={12}
@@ -3136,7 +4208,7 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
             style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 180ms ease" }}
           />
         </span>
-        <span className="mt-2">
+        <span className="-mt-1.5">
           <ReferenceSkyEvidenceArt />
         </span>
       </button>
@@ -3155,7 +4227,7 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
         >
           <div className="grid gap-2">
             {detailLines.map((line, index) => (
-              <p key={`${line}-${index}`} className="font-sans text-[11px] leading-snug" style={{ color: "#5a5058" }}>
+              <p key={`${line}-${index}`} className="font-sans text-[11px] leading-snug" style={{ color: REFERENCE_TYPE.body }}>
                 <span className="mr-1.5 text-[9px] uppercase tracking-[0.14em]" style={{ color: "#b58d71" }}>
                   {index + 1}
                 </span>
@@ -3199,32 +4271,26 @@ function ReferenceEvidencePanel({ report }: { report: DailyReport }) {
 
 function ReferenceSpaces({ cards }: { cards: RoomShortcutData[] }) {
   return (
-    <section className="mb-3.5">
-      <div className="mb-2 flex items-center gap-3 px-2">
-        <p className="shrink-0 font-sans text-[10.5px] font-black uppercase tracking-[0.18em]" style={{ color: "#8d8284" }}>
-          Your spaces
-        </p>
-        <span className="h-px flex-1" style={{ background: "rgba(191, 159, 132, 0.09)" }} />
-        <span style={{ color: "#d1a56f" }}>✦</span>
-      </div>
-      <div className="grid grid-cols-4 gap-2">
+    <section className="min-w-0">
+      <div className="grid min-w-0 grid-cols-4 gap-2.5">
         {cards.map((card, index) => {
           const Icon = card.icon;
           return (
             <motion.div
-              key={card.href}
+              key={card.title}
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.35 }}
               transition={{ delay: index * 0.05, duration: 0.38, ease: "easeOut" }}
+              className="min-w-0"
             >
               <Link href={card.href} onPointerDown={() => triggerFeedback("select")} className="block h-full">
                 <div
-                  className="hint-pressable relative isolate flex h-[122px] flex-col overflow-hidden rounded-[19px] border px-2.5 py-2.5 active:scale-[0.98]"
+                  className="hint-pressable relative isolate flex h-[150px] flex-col items-center overflow-hidden rounded-[21px] border px-2.5 py-3 text-center active:scale-[0.98] min-[420px]:h-[154px] min-[420px]:px-3"
                   style={{
                     background: REFERENCE_CARD_BACKGROUND,
                     borderColor: REFERENCE_CARD_BORDER,
-                    boxShadow: "0 16px 34px rgba(100,77,60,0.044), 0 5px 12px rgba(151,112,154,0.020), inset 0 1px 0 rgba(255,255,255,0.58)",
+                    boxShadow: "0 12px 26px rgba(100,77,60,0.024), inset 0 1px 0 rgba(255,255,255,0.48)",
                   }}
                 >
                   <span
@@ -3233,12 +4299,12 @@ function ReferenceSpaces({ cards }: { cards: RoomShortcutData[] }) {
                     style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.46), transparent)" }}
                   />
                   <span
-                    className="relative mx-auto grid size-[50px] shrink-0 place-items-center overflow-hidden rounded-full border"
+                    className="relative mx-auto grid size-[50px] shrink-0 place-items-center overflow-hidden rounded-full border min-[420px]:size-[53px]"
                     style={{
                       color: card.color,
-                      background: `radial-gradient(circle at 33% 24%, rgba(255,255,255,0.70), transparent 34%), radial-gradient(circle at 70% 78%, color-mix(in srgb, ${card.color} 20%, transparent), transparent 52%), ${card.tint}`,
-                      borderColor: `color-mix(in srgb, ${card.color} 9%, rgba(188,156,132,0.08))`,
-                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.40), 0 10px 18px color-mix(in srgb, ${card.color} 7%, transparent)`,
+                      background: `radial-gradient(circle at 33% 24%, rgba(255,255,255,0.78), transparent 34%), radial-gradient(circle at 68% 78%, color-mix(in srgb, ${card.color} 16%, transparent), transparent 52%), ${card.tint}`,
+                      borderColor: `color-mix(in srgb, ${card.color} 8%, rgba(188,156,132,0.075))`,
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -10px 18px rgba(98,72,92,0.035), 0 8px 16px color-mix(in srgb, ${card.color} 4%, transparent)`,
                     }}
                   >
                     <span
@@ -3246,19 +4312,12 @@ function ReferenceSpaces({ cards }: { cards: RoomShortcutData[] }) {
                       className="absolute inset-[7px] rounded-full border"
                       style={{ borderColor: "rgba(255,255,255,0.30)" }}
                     />
-                    <Icon size={22} strokeWidth={1.35} />
+                    <Icon size={22} strokeWidth={1.25} />
                   </span>
-                  <span
-                    aria-hidden
-                    className="absolute right-3 top-[56px] text-[13px]"
-                    style={{ color: "rgba(214, 160, 95, 0.38)" }}
-                  >
-                    ✦
-                  </span>
-                  <h3 className="mt-2 whitespace-nowrap font-serif text-[11.7px] leading-tight" style={{ color: "#2f2b37" }}>
+                  <h3 className="mt-2.5 w-full text-center font-serif text-[12.7px] font-medium leading-tight min-[420px]:text-[13.5px]" style={{ color: REFERENCE_TYPE.ink }}>
                     {card.title}
                   </h3>
-                  <p className="mt-1 line-clamp-2 font-sans text-[8.4px] leading-[1.2]" style={{ color: "#777077" }}>
+                  <p className="mx-auto mt-1 max-w-[70px] text-center font-sans text-[8.4px] font-medium leading-[1.22] min-[420px]:max-w-[78px] min-[420px]:text-[9px] min-[420px]:leading-[1.24]" style={{ color: REFERENCE_TYPE.muted }}>
                     {card.body}
                   </p>
                 </div>
@@ -3279,7 +4338,10 @@ function ReferenceHomePage({
   dailyCardRevealed,
   dailyCardRevealing,
   dailyReceiptReady,
+  dailyRevealOverlayOpen,
   onReveal,
+  onCloseRevealOverlay,
+  onCardRevealed,
 }: {
   report: DailyReport;
   date: string;
@@ -3288,44 +4350,67 @@ function ReferenceHomePage({
   dailyCardRevealed: boolean;
   dailyCardRevealing: boolean;
   dailyReceiptReady: boolean;
+  dailyRevealOverlayOpen: boolean;
   onReveal: () => void | Promise<void>;
+  onCloseRevealOverlay: () => void;
+  onCardRevealed: () => void;
 }) {
   return (
     <div
-      className="relative h-full w-full overflow-y-auto overscroll-none pb-[calc(7.25rem+var(--hint-safe-bottom))]"
+      className="reference-home-crisp relative h-full w-full overflow-x-hidden overflow-y-auto overscroll-none pb-[calc(8.75rem+var(--hint-safe-bottom))]"
       style={{
         background:
-          "radial-gradient(520px 380px at 8% -4%, rgba(237,222,213,0.52), transparent 72%), radial-gradient(460px 340px at 94% 4%, rgba(230,203,167,0.36), transparent 74%), radial-gradient(430px 360px at 90% 44%, rgba(205,176,215,0.16), transparent 70%), radial-gradient(560px 480px at 52% 55%, rgba(216,196,185,0.16), transparent 76%), linear-gradient(180deg, #fbf7f0 0%, #f8f1e9 52%, #f4ede5 100%)",
+          "radial-gradient(520px 380px at 8% -4%, rgba(237,222,213,0.34), transparent 72%), radial-gradient(460px 340px at 94% 4%, rgba(230,203,167,0.20), transparent 74%), radial-gradient(560px 480px at 52% 55%, rgba(216,196,185,0.085), transparent 76%), linear-gradient(180deg, #fcf8f2 0%, #f8f2eb 52%, #f4eee6 100%)",
       }}
     >
       <ReferenceOrbitBackdrop />
-      <div className="relative z-10 mx-auto w-full max-w-[var(--hint-app-width)] px-6 pt-[calc(2rem+var(--hint-safe-top))]">
-        <header className="mb-3 flex items-start justify-between gap-5">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 20% 30%, rgba(95, 72, 51, 0.030) 0 0.45px, transparent 0.7px), radial-gradient(circle at 70% 72%, rgba(126, 93, 68, 0.022) 0 0.55px, transparent 0.9px), linear-gradient(90deg, rgba(255,255,255,0.18), transparent 42%, rgba(120,86,60,0.018))",
+          backgroundSize: "7px 7px, 11px 11px, 100% 100%",
+          opacity: 0.50,
+          mixBlendMode: "multiply",
+        }}
+      />
+      <div className="relative z-10 mx-auto w-full max-w-[430px] px-[18px] pt-[calc(1.65rem+var(--hint-safe-top))]">
+        <header className="mb-5 flex items-start justify-between gap-5">
           <div className="min-w-0">
-            <p className="font-sans text-[11px] font-black uppercase tracking-[0.18em]" style={{ color: "#625b61", textShadow: "0 1px 0 rgba(255,255,255,0.65)" }}>
-              {REFERENCE_HOME_COPY.date}
+            <p className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.22em]" style={{ color: REFERENCE_TYPE.label }}>
+              {formatReferenceDate(date, language)}
             </p>
-            <h1 className="mt-2 font-serif text-[40px] leading-[0.9]" style={{ color: "#2d2934", textShadow: "0 14px 30px rgba(61,45,57,0.07)" }}>
+            <h1 className="mt-1.5 font-serif text-[38px] font-medium leading-[0.90]" style={{ color: REFERENCE_TYPE.ink }}>
               Today
             </h1>
-            <p className="mt-1.5 font-serif text-[15px] leading-none" style={{ color: "#6f6770" }}>
+            <p className="mt-1.5 font-serif text-[14.5px] font-medium leading-none" style={{ color: REFERENCE_TYPE.muted }}>
               A small signal from today’s sky.
             </p>
           </div>
           <ReferenceHintLogo />
         </header>
 
-        <ReferenceHero
-          report={report}
-          revealed={dailyCardRevealed}
-          revealing={dailyCardRevealing}
-          receiptReady={dailyReceiptReady}
-          onReveal={onReveal}
-        />
-        <ReferenceEnergyPanel report={report} revealed={dailyCardRevealed} />
-        <ReferenceEvidencePanel report={report} />
-        <ReferenceSpaces cards={roomShortcuts} />
+        <div className="grid min-w-0 gap-4">
+          <ReferenceHero
+            report={report}
+            revealed={dailyCardRevealed}
+            revealing={dailyCardRevealing}
+            receiptReady={dailyReceiptReady}
+            onReveal={onReveal}
+          />
+          <ReferenceEnergyPanel report={report} revealed={dailyCardRevealed} />
+          <ReferenceEvidencePanel report={report} />
+          <ReferenceSpaces cards={roomShortcuts} />
+        </div>
       </div>
+      <ReferenceDailyRevealOverlay
+        open={dailyRevealOverlayOpen}
+        revealing={dailyCardRevealing}
+        report={report}
+        onClose={onCloseRevealOverlay}
+        onCardRevealed={onCardRevealed}
+      />
     </div>
   );
 }
@@ -3341,22 +4426,24 @@ export function HomeDashboard() {
   const [ritual, setRitual] = useState(() => getRitualProgress());
   const [dailyCardRevealed, setDailyCardRevealed] = useState(initialDailySignalComplete);
   const [dailyCardRevealing, setDailyCardRevealing] = useState(false);
+  const [dailyRevealOverlayOpen, setDailyRevealOverlayOpen] = useState(false);
   const [signalIntroComplete, setSignalIntroComplete] = useState(initialDailySignalComplete);
   const [dailyReceipt, setDailyReceipt] = useState<DailyReceipt | null>(null);
   const [dailyReceiptReady, setDailyReceiptReady] = useState(false);
-  const activeBirthDetails = profile?.birthDate
+  const activeBirthDetails = profile?.birthDate || birthProfile
     ? {
-        birthDate: profile.birthDate,
-        birthTime: profile.birthTime,
-        birthPlace: profile.birthPlace,
+        birthDate: profile?.birthDate ?? birthProfile?.birthDate,
+        birthTime: profile?.birthTime ?? birthProfile?.birthTime,
+        birthPlace: profile?.birthPlace ?? birthProfile?.birthPlace,
+        latitude: birthProfile?.latitude,
+        longitude: birthProfile?.longitude,
+        timezoneOffset: birthProfile?.timezoneOffset,
       }
-    : birthProfile
-      ? {
-          birthDate: birthProfile.birthDate,
-          birthTime: birthProfile.birthTime,
-          birthPlace: birthProfile.birthPlace,
-        }
-      : null;
+    : null;
+  const dailyHistory = useMemo(
+    () => listLocalDailyReadingMemory().slice(0, 30),
+    [dailyCardRevealed, dailyReceipt?.dailyKey],
+  );
   const report = useMemo(
     () => {
       const baseReport = getDailyReport({
@@ -3364,6 +4451,7 @@ export function HomeDashboard() {
         date: dailyReceipt?.dailyKey ? parseServerDailyKey(dailyReceipt.dailyKey) : undefined,
         language,
         birthDetails: activeBirthDetails ?? undefined,
+        dailyHistory,
         ritualStreak: ritual.currentStreak,
       });
       if (!dailyReceipt?.assignedCardId) return baseReport;
@@ -3379,6 +4467,10 @@ export function HomeDashboard() {
       activeBirthDetails?.birthDate,
       activeBirthDetails?.birthPlace,
       activeBirthDetails?.birthTime,
+      activeBirthDetails?.latitude,
+      activeBirthDetails?.longitude,
+      activeBirthDetails?.timezoneOffset,
+      dailyHistory,
       dailyReceipt?.assignedCardId,
       dailyReceipt?.dailyKey,
       language,
@@ -3423,17 +4515,27 @@ export function HomeDashboard() {
   }, []);
 
   async function revealDailyCard() {
-    if (dailyCardRevealed || dailyCardRevealing) return;
+    if (dailyCardRevealing) return;
+    if (dailyCardRevealed) {
+      setDailyRevealOverlayOpen(true);
+      return;
+    }
     setDailyCardRevealing(true);
-    setDailyCardRevealed(true);
+    setDailyRevealOverlayOpen(true);
     try {
       const openedReceipt = await openDailyReceipt("daily-card", {
         fallbackAssignedCardId: report.card.cardId,
       });
       markDailySignalIntroComplete(openedReceipt.anonId || getAnonId(), openedReceipt.dailyKey);
       setDailyReceipt(openedReceipt);
+      const openedCard = openedReceipt.assignedCardId
+        ? {
+            ...getDailyPullById(openedReceipt.assignedCardId, language),
+            skyGuided: report.card.skyGuided,
+          }
+        : report.card;
       saveLocalDailyReading(
-        report.card,
+        openedCard,
         openedReceipt.dailyKey ? parseServerDailyKey(openedReceipt.dailyKey) : new Date(),
       );
     } finally {
@@ -3444,6 +4546,16 @@ export function HomeDashboard() {
   function completeSignalIntro() {
     markDailySignalIntroComplete(dailyReceipt?.anonId || getAnonId(), dailyReceipt?.dailyKey ?? getLocalDateString());
     setSignalIntroComplete(true);
+  }
+
+  function closeDailyRevealOverlay() {
+    completeSignalIntro();
+    setDailyRevealOverlayOpen(false);
+  }
+
+  function markDailyCardRevealed() {
+    completeSignalIntro();
+    setDailyCardRevealed(true);
   }
 
   function handleToggleRitualTask(index: number) {
@@ -3458,32 +4570,32 @@ export function HomeDashboard() {
       body: "Ask a question, pull a spread",
       href: "/app/tarot",
       icon: Sparkles,
-      color: "#9f83be",
-      tint: "rgba(174, 145, 202, 0.34)",
+      color: "#9b82b7",
+      tint: "linear-gradient(145deg, rgba(205,188,222,0.46), rgba(169,136,198,0.26))",
     },
     {
       title: "Astrology",
       body: "Your chart and tonight's transits",
       href: "/app/astrology",
       icon: Moon,
-      color: "#d8a17d",
-      tint: "rgba(229, 169, 133, 0.30)",
+      color: "#c99b82",
+      tint: "linear-gradient(145deg, rgba(237,203,185,0.46), rgba(218,157,126,0.22))",
     },
     {
       title: "Collection",
       body: "Cards and readings you've kept",
       href: "/app/collection",
       icon: Library,
-      color: "#c9a05f",
-      tint: "rgba(225, 190, 120, 0.32)",
+      color: "#bd985a",
+      tint: "linear-gradient(145deg, rgba(237,213,163,0.48), rgba(215,175,102,0.20))",
     },
     {
       title: "Personalities",
       body: "Your inner types and patterns",
       href: "/app/personalities",
       icon: UsersRound,
-      color: "#7ba898",
-      tint: "rgba(144, 190, 176, 0.30)",
+      color: "#759c91",
+      tint: "linear-gradient(145deg, rgba(198,224,215,0.48), rgba(133,181,166,0.20))",
     },
   ];
 
@@ -3496,7 +4608,10 @@ export function HomeDashboard() {
       dailyCardRevealed={dailyCardRevealed}
       dailyCardRevealing={dailyCardRevealing}
       dailyReceiptReady={dailyReceiptReady}
+      dailyRevealOverlayOpen={dailyRevealOverlayOpen}
       onReveal={revealDailyCard}
+      onCloseRevealOverlay={closeDailyRevealOverlay}
+      onCardRevealed={markDailyCardRevealed}
     />
   );
 }

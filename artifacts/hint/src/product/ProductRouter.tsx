@@ -1,5 +1,4 @@
-import { Link, useLocation } from "wouter";
-import { AppScreen, GlassPanel } from "../components/app/AppChrome";
+import { useLocation } from "wouter";
 import { HomeDashboard } from "../modules/home";
 import { AskHint } from "../modules/ask";
 import { LoginView } from "../modules/auth";
@@ -49,31 +48,8 @@ export function ProductRouter() {
   if (path === "/personalities") return <PersonalitiesView />;
 
   return (
-    <AppScreen>
-      <div className="flex min-h-[70vh] items-center">
-        <GlassPanel hero className="w-full text-center">
-          <p className="font-sans text-[10px] font-black uppercase tracking-[0.22em] text-[var(--hint-rose)]">
-            Room not found
-          </p>
-          <h1 className="mt-3 font-serif text-[30px] leading-tight text-[var(--hint-text)]">
-            This door is not open yet.
-          </h1>
-          <p className="mx-auto mt-3 max-w-[18rem] font-sans text-[13px] leading-relaxed text-[var(--hint-muted)]">
-            Return to Today and choose one of the available Hint spaces.
-          </p>
-          <Link
-            href="/app"
-            className="hint-tap-sparkle mt-5 inline-flex h-11 items-center justify-center rounded-full px-5 font-sans text-[13px] font-black"
-            style={{
-              color: "var(--hint-special-action-text)",
-              background: "var(--hint-special-action-bg)",
-              boxShadow: "0 14px 28px color-mix(in srgb, var(--hint-rose) 16%, transparent)",
-            }}
-          >
-            Back to Today
-          </Link>
-        </GlassPanel>
-      </div>
-    </AppScreen>
+    <div className="min-h-full flex items-center justify-center font-serif text-white/20 text-sm">
+      -
+    </div>
   );
 }

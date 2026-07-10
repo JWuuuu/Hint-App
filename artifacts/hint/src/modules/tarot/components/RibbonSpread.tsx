@@ -41,6 +41,7 @@ type WheelGeometry = {
   centerX: number;
   centerY: number;
   radius: number;
+  numberRadius: number;
   startAngle: number;
 };
 
@@ -69,12 +70,14 @@ function getWheelGeometry(zoomed: boolean, size: StageSize): WheelGeometry {
         centerX,
         centerY,
         radius: size.width * 0.70,
+        numberRadius: size.width * 0.70 + CARD_H_ZOOM / 2 + 20,
         startAngle: -Math.PI * 0.51,
       }
     : {
         centerX,
         centerY,
         radius: size.width * 0.64,
+        numberRadius: 0,
         startAngle: -Math.PI * 0.51,
       };
 }
@@ -97,6 +100,27 @@ function getWheelFanLayout(
     opacity: 1,
     zIndex: Math.round(y),
     angle,
+  };
+}
+
+function getWheelNumberLayout(
+  index: number,
+  rotation: number,
+  total: number,
+  geometry: WheelGeometry,
+  size: StageSize,
+) {
+  const angle = geometry.startAngle + rotation + index * wheelFanStep(total);
+  const x = geometry.centerX + Math.cos(angle) * geometry.numberRadius;
+  const y = geometry.centerY + Math.sin(angle) * geometry.numberRadius;
+  const hidden = x < -48 || x > size.width + 64 || y < -52 || y > size.height + 18;
+
+  return {
+    x,
+    y,
+    rotate: angle + Math.PI / 2,
+    opacity: hidden ? 0 : 1,
+    zIndex: Math.round(y) + 200,
   };
 }
 
@@ -799,7 +823,7 @@ export function RibbonSpread({
                   aria-label={`Choose face-down card ${index + 1}`}
                   disabled={selected || Boolean(poppingVisualId)}
                   onClick={selected ? undefined : () => chooseCard(card)}
-                  className="absolute block overflow-visible rounded-[10px] border outline-none transition-[box-shadow,filter] duration-150"
+                  className="absolute block overflow-hidden rounded-[10px] border outline-none transition-[box-shadow,filter] duration-150"
                   style={{
                     left: layout.x,
                     top: layout.y,
@@ -823,24 +847,31 @@ export function RibbonSpread({
                     transform: `translate(${-cardWidth / 2}px, ${-cardHeight / 2}px) rotate(${layout.rotate}rad) translateY(${popping ? "-24px" : "0px"}) scale(${popping ? 1.28 : layout.scale})`,
                   }}
                 >
-                  {zoomed && !selected && !popping ? (
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute left-1/2 top-[-2rem] z-20 font-serif text-[17px] font-black leading-none text-[#4a3422]"
-                      style={{
-                        transform: `translateX(-50%) rotate(${-layout.rotate}rad)`,
-                        textShadow:
-                          "0 1px 0 rgba(255,250,230,0.94), 0 7px 16px rgba(80,52,34,0.18)",
-                      }}
-                    >
-                      {index + 1}
-                    </span>
-                  ) : null}
-                  <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-[10px]">
-                    <span className="absolute inset-[8px] rounded-[8px] border border-white/12" />
-                    <span className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.12),transparent_28%),linear-gradient(140deg,rgba(255,255,255,0.08),transparent_42%)]" />
-                  </span>
+                  <span className="pointer-events-none absolute inset-[8px] rounded-[8px] border border-white/12" />
+                  <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.12),transparent_28%),linear-gradient(140deg,rgba(255,255,255,0.08),transparent_42%)]" />
                 </button>
+              );
+            })}
+
+            {zoomed && finalDeckOrder.map((card, index) => {
+              const selected = selectedIds.has(card.visualId);
+              const popping = poppingVisualId === card.visualId;
+              const numberLayout = getWheelNumberLayout(index, fanRotation, finalDeckOrder.length, geometry, stageSize);
+              return (
+                <span
+                  key={`number-${card.visualId}`}
+                  aria-hidden
+                  className="pointer-events-none absolute h-[14px] w-[26px] text-center font-sans text-[13px] font-bold text-[#a59db8]"
+                  style={{
+                    left: numberLayout.x,
+                    top: numberLayout.y,
+                    zIndex: numberLayout.zIndex,
+                    opacity: selected || popping ? 0 : numberLayout.opacity,
+                    transform: `translate(-13px, -7px) rotate(${numberLayout.rotate}rad)`,
+                  }}
+                >
+                  {index + 1}
+                </span>
               );
             })}
           </div>

@@ -8,7 +8,10 @@ import type {
 } from "../types/home.types";
 import { getDailyPullById } from "./dailyPulls";
 import type { HintLanguage } from "../../../lib/i18n";
-import { selectSkyGuidedTarot } from "../../../lib/tarot/skyGuidedTarot";
+import {
+  selectSkyGuidedTarot,
+  type DailyCardMemory,
+} from "../../../lib/tarot/skyGuidedTarot";
 
 const SCORE_BASE: Array<Omit<DailyScore, "score" | "label"> & { offset: number }> = [
   { key: "love", tone: "#d98aaa", offset: 13 },
@@ -30,6 +33,9 @@ type BirthDetails = {
   birthDate?: string | null;
   birthTime?: string | null;
   birthPlace?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  timezoneOffset?: number | null;
 };
 
 const TITLES = [
@@ -916,12 +922,14 @@ export function getDailyReport({
   date = new Date(),
   language = "en",
   birthDetails,
+  dailyHistory,
   ritualStreak,
 }: {
   anonId?: string;
   date?: Date;
   language?: HintLanguage;
   birthDetails?: BirthDetails;
+  dailyHistory?: DailyCardMemory[];
   ritualStreak?: number;
 } = {}): DailyReport {
   const dateString = getLocalDateString(date);
@@ -938,7 +946,7 @@ export function getDailyReport({
     anonId,
     date,
     birthDetails,
-    tone: "honest",
+    history: dailyHistory,
   });
   const card = {
     ...getDailyPullById(skyGuided.selectedCardId, language),

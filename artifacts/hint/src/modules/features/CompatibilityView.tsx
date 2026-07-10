@@ -192,7 +192,7 @@ function BirthDetailsForm({
               {placeLoading ? "Finding..." : "Find place"}
             </button>
           </div>
-          {placeMode ? <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: "var(--hint-faint)" }}>{placeMode === "live" ? "AstrologyAPI place match" : "Saved place match"}</p> : null}
+          {placeMode ? <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: "var(--hint-faint)" }}>{placeMode === "live" ? "AstrologyAPI place match" : "Fallback place match"}</p> : null}
           {placeError ? <p className="mt-2 text-[12px] font-semibold" style={{ color: "var(--hint-rose)" }}>{placeError}</p> : null}
           {placeResults.length ? (
             <div className="mt-3 grid gap-2">

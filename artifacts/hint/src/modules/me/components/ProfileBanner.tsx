@@ -9,13 +9,12 @@ export function ProfileBanner() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.992 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      initial={{ opacity: 0, y: 8 }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.34, ease: [0.2, 0.78, 0.2, 1] }}
-      className="transform-gpu"
+      transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      <Link href="/app/readings" className="hint-pressable block rounded-[8px]">
+      <Link href="/app/readings" className="block">
         <div
           className="relative rounded-[8px] overflow-hidden p-5 flex items-center gap-4"
           style={{

@@ -55,7 +55,7 @@ export async function generateDailySkyDeck({
   userId = "guest",
   date = new Date(),
   birthProfile = null,
-  tone = "honest",
+  tone,
   cardIdOverride,
 }: {
   userId?: string;
@@ -101,7 +101,7 @@ export async function generateDailySkyDeck({
     cardName: dailyCard.cardName,
     cardWhisper: dailyCard.whisper,
     sky: lockedSky,
-    tone,
+    tone: lockedSky.tone,
   });
   const bars = scoreBars(seed, evidence);
   const overall = Math.round(bars.reduce((total, item) => total + item.score, 0) / bars.length);

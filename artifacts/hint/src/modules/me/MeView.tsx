@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { UserRound } from "lucide-react";
-import { AppScreen, GlassPanel, ScreenHeader, SectionLabel } from "../../components/app/AppChrome";
+import { motion } from "framer-motion";
+import { GLASS } from "../hold/atmosphere";
+import { AppScreen, GlassPanel, SectionLabel } from "../../components/app/AppChrome";
 import { useProfile } from "../../lib/useProfile";
 import { saveBirthProfileFromAccountProfile } from "../../lib/astro/userBirthProfile";
 import { getAnonId } from "../../lib/identity";
@@ -27,14 +28,22 @@ export function MeView() {
 
   return (
     <AppScreen>
-      <ScreenHeader
-        eyebrow="Personal room"
-        title={t("me.settings")}
-        subtitle={t("me.settings.subtitle")}
-        sigil={UserRound}
-        backHref="/app"
-        backLabel={t("common.home")}
-      />
+      {/* Header */}
+      <motion.header
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="mb-4 px-1 pt-1"
+      >
+        <div>
+          <h1 className="font-serif text-[34px] leading-none" style={{ color: GLASS.text }}>
+            {t("me.settings")}
+          </h1>
+          <p className="mt-2 max-w-md font-sans text-[13px] leading-relaxed" style={{ color: GLASS.faint }}>
+            {t("me.settings.subtitle")}
+          </p>
+        </div>
+      </motion.header>
 
       {editing ? (
         <section className="mb-8">

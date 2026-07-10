@@ -123,72 +123,52 @@ export function TarotCardVisual({
   const accessibleLabel = ariaLabel ?? (isFront && card
     ? `${card.name}, ${card.orientation === "reversed" ? "reversed" : "upright"}`
     : "Face-down tarot card");
-  const shellClassName = `relative block shrink-0 rounded-[12px] outline-none ${compact ? "h-[82px] w-[54px] sm:h-[98px] sm:w-[64px] md:h-[112px] md:w-[72px]" : "h-[218px] w-[132px] sm:h-[264px] sm:w-[160px] md:h-[294px] md:w-[178px]"} ${className}`;
-  const shellAnimation = {
-    y: selected ? -18 : 0,
-    scale: selected ? 1.035 : 1,
-  };
-  const shellStyle = {
-    boxShadow: active
-      ? "0 0 0 1px rgba(232,195,118,0.42), 0 0 30px rgba(232,195,118,0.22), 0 18px 32px rgba(0,0,0,0.44)"
-      : "0 8px 16px rgba(0,0,0,0.34)",
-  };
-  const cardBody = (
-    <motion.div
-      className="absolute inset-0 rounded-[10px]"
-      animate={{ rotateY: isFront ? 180 : 0 }}
-      transition={{ duration: 0.92, ease: [0.2, 0.74, 0.18, 1] }}
-      style={{ transformStyle: "preserve-3d" }}
-    >
-      <div className="absolute inset-0 backface-hidden">
-        <BackDesign compact={compact} subtle={subtleBack} backStyle={backStyle} cardBackId={cardBackId} />
-      </div>
-      {isFront && card && (
-        <div
-          className="absolute inset-0 backface-hidden"
-          style={{ transform: "rotateY(180deg)" }}
-        >
-          <HintTarotCardFront
-            card={card}
-            compact={compact}
-            backStyle={backStyle}
-            cardArtId={cardArtId}
-            positionLabel={positionLabel}
-            showCaption={showFrontCaption}
-          />
-        </div>
-      )}
-    </motion.div>
-  );
-
-  if (!onClick) {
-    return (
-      <motion.div
-        role="img"
-        aria-label={accessibleLabel}
-        className={shellClassName}
-        animate={shellAnimation}
-        transition={{ type: "spring", stiffness: 220, damping: 24 }}
-        style={shellStyle}
-      >
-        {cardBody}
-      </motion.div>
-    );
-  }
 
   return (
     <motion.button
       type="button"
       onClick={onClick}
+      disabled={!onClick}
       aria-label={accessibleLabel}
-      className={shellClassName}
-      animate={shellAnimation}
-      whileHover={{ y: -12, scale: 1.04 }}
-      whileTap={{ y: -18, scale: 1.025 }}
+      className={`relative block shrink-0 rounded-[12px] outline-none ${!onClick ? "pointer-events-none" : ""} ${compact ? "h-[82px] w-[54px] sm:h-[98px] sm:w-[64px] md:h-[112px] md:w-[72px]" : "h-[218px] w-[132px] sm:h-[264px] sm:w-[160px] md:h-[294px] md:w-[178px]"} ${className}`}
+      animate={{
+        y: selected ? -18 : 0,
+        scale: selected ? 1.035 : 1,
+      }}
+      whileHover={onClick ? { y: -12, scale: 1.04 } : undefined}
+      whileTap={onClick ? { y: -18, scale: 1.025 } : undefined}
       transition={{ type: "spring", stiffness: 220, damping: 24 }}
-      style={shellStyle}
+      style={{
+        boxShadow: active
+          ? "0 0 0 1px rgba(232,195,118,0.42), 0 0 30px rgba(232,195,118,0.22), 0 18px 32px rgba(0,0,0,0.44)"
+          : "0 8px 16px rgba(0,0,0,0.34)",
+      }}
     >
-      {cardBody}
+      <motion.div
+        className="absolute inset-0 rounded-[10px]"
+        animate={{ rotateY: isFront ? 180 : 0 }}
+        transition={{ duration: 0.92, ease: [0.2, 0.74, 0.18, 1] }}
+        style={{ transformStyle: "preserve-3d" }}
+      >
+        <div className="absolute inset-0 backface-hidden">
+          <BackDesign compact={compact} subtle={subtleBack} backStyle={backStyle} cardBackId={cardBackId} />
+        </div>
+        {isFront && card && (
+          <div
+            className="absolute inset-0 backface-hidden"
+            style={{ transform: "rotateY(180deg)" }}
+          >
+            <HintTarotCardFront
+              card={card}
+              compact={compact}
+              backStyle={backStyle}
+              cardArtId={cardArtId}
+              positionLabel={positionLabel}
+              showCaption={showFrontCaption}
+            />
+          </div>
+        )}
+      </motion.div>
     </motion.button>
   );
 }

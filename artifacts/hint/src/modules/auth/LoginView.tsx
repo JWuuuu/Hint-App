@@ -1,47 +1,32 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   AlertCircle,
   ArrowRight,
-  CalendarDays,
-  ChevronLeft,
   Check,
-  Clock3,
   KeyRound,
   LogIn,
   Mail,
-  MapPin,
   Phone,
   ShieldCheck,
   UserPlus,
 } from "lucide-react";
-import { AppScreen } from "../../components/app/AppChrome";
-import { ACCENT } from "../hold/atmosphere";
+import { AppScreen, GlassPanel, ScreenHeader, SectionLabel } from "../../components/app/AppChrome";
+import { ACCENT, GLASS } from "../hold/atmosphere";
 import { clearLocalAccount, saveLocalAccount, useLocalAccount, type LocalAccount } from "../../lib/auth";
 import { saveBirthProfile, saveBirthProfileFromAccountProfile } from "../../lib/astro/userBirthProfile";
-import {
-  confirmFirebasePhoneVerification,
-  firebaseAuthErrorMessage,
-  isFirebaseAuthConfigured,
-  requestFirebasePhoneVerification,
-  signInWithFirebaseSocial,
-  type FirebasePhoneConfirmation,
-} from "../../lib/firebaseAuth";
 import { ASTROLOGY_TESTER_ACCOUNT } from "../../lib/testerAccount";
 import { useProfile } from "../../lib/useProfile";
 import { useLanguage } from "../../lib/i18n";
-import "./login-view.css";
 
 type AuthMode = "login" | "signup";
 type AuthMethod = "email" | "phone";
-type SignupStep = "account" | "birth";
 type SocialProvider = "apple" | "google" | "facebook";
 
 type PendingVerification = {
-  code?: string;
+  code: string;
   method: AuthMethod;
   target: string;
-  firebaseConfirmation?: FirebasePhoneConfirmation;
 };
 
 const SOCIAL_AUTH_URLS: Record<SocialProvider, string | undefined> = {
@@ -107,21 +92,11 @@ function providerLabel(provider: LocalAccount["provider"]) {
   return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
-function isOnboardingSource() {
-  if (typeof window === "undefined") return false;
-  return new URLSearchParams(window.location.search).get("from") === "onboarding";
-}
-
 export function LoginView() {
   const { t } = useLanguage();
   const [, navigate] = useLocation();
   const account = useLocalAccount();
   const { anonId, saveProfile } = useProfile();
-  const fromOnboarding = isOnboardingSource();
-  const firebaseReady = isFirebaseAuthConfigured();
-  const visibleSocialProviders = SOCIAL_PROVIDERS;
-  const showTesterAccount = import.meta.env.DEV && !fromOnboarding;
-  const showSecondaryActions = showTesterAccount || visibleSocialProviders.length > 0;
   const [mode, setMode] = useState<AuthMode>(() => readInitialMode(Boolean(account)));
   const [method, setMethod] = useState<AuthMethod>(account?.provider === "phone" ? "phone" : "email");
   const [email, setEmail] = useState(account?.email ?? "");
@@ -130,50 +105,15 @@ export function LoginView() {
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [birthPlace, setBirthPlace] = useState("");
-  const [signupStep, setSignupStep] = useState<SignupStep>("account");
   const [verificationCode, setVerificationCode] = useState("");
   const [pending, setPending] = useState<PendingVerification | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [authBusy, setAuthBusy] = useState(false);
 
   const target = methodTarget(method, email, phone);
-  const methodIsValid = method === "email" ? emailIsValid(email) : phoneIsValid(phone);
-  const hasBirthDetails = birthDateIsValid(birthDate) && birthTime.trim().length > 0 && birthPlace.trim().length > 0;
-  const canContinueSignupAccount = name.trim().length > 0 && methodIsValid;
   const canRequestCode =
-    methodIsValid &&
-    (mode === "login" || (name.trim().length > 0 && hasBirthDetails));
-  const primaryDisabled = pending
-    ? authBusy || verificationCode.trim().length !== 6
-    : mode === "signup" && signupStep === "account"
-      ? authBusy || !canContinueSignupAccount
-      : authBusy || !canRequestCode;
-  const primaryLabel = authBusy
-    ? "Working..."
-    : pending
-    ? t("login.verifyCode")
-    : mode === "signup" && signupStep === "account"
-      ? "Continue to Sky"
-      : t("login.requestCode");
-  const authTitle = account
-    ? "Private space ready."
-    : pending
-      ? "Check your code."
-    : mode === "signup"
-      ? signupStep === "account"
-        ? "Create your private space."
-        : "Set your sky."
-      : "Welcome back.";
-  const authSubtitle = account
-    ? "Your readings, sky profile, and deck memory can stay connected here."
-    : pending
-      ? `Enter the verification code for ${target}.`
-    : mode === "signup"
-      ? signupStep === "account"
-        ? "Save your readings, sky profile, and deck memory in one quiet place."
-        : "Birth details power Astrology and the Sky Deck, so collect them before Today opens."
-      : "Use the email or phone tied to your Hint profile.";
+    (method === "email" ? emailIsValid(email) : phoneIsValid(phone)) &&
+    (mode === "login" || (name.trim().length > 0 && birthDateIsValid(birthDate)));
 
   function resetVerification(nextMethod = method) {
     setPending(null);
@@ -183,58 +123,18 @@ export function LoginView() {
     setMethod(nextMethod);
   }
 
-  async function saveSignupBirthProfileIfReady(accountName = name.trim()) {
-    if (mode !== "signup" || !accountName || !hasBirthDetails) return;
-    const profileInput = {
-      name: accountName,
-      birthDate,
-      birthTime: birthTime.trim() || undefined,
-      birthPlace: birthPlace.trim() || undefined,
-    };
-    await saveProfile(profileInput);
-    saveBirthProfileFromAccountProfile({ anonId, ...profileInput }, anonId);
-  }
-
-  async function handleRequestCode(event: React.FormEvent) {
+  function handleRequestCode(event: React.FormEvent) {
     event.preventDefault();
     if (mode === "signup" && !name.trim()) {
       setError(t("login.error.name"));
-      return;
-    }
-    if (!methodIsValid) {
-      setError(method === "email" ? t("login.error.email") : t("login.error.phone"));
-      return;
-    }
-    if (mode === "signup" && signupStep === "account") {
-      setSignupStep("birth");
-      setError(null);
-      setNotice(null);
       return;
     }
     if (mode === "signup" && !birthDateIsValid(birthDate)) {
       setError(t("login.error.birthDate"));
       return;
     }
-    if (mode === "signup" && (!birthTime.trim() || !birthPlace.trim())) {
-      setError("Enter birth time and birth place so Hint can build your sky profile.");
-      return;
-    }
-
-    if (method === "phone" && firebaseReady) {
-      setAuthBusy(true);
-      setError(null);
-      setNotice("Sending a secure SMS code...");
-      try {
-        const confirmation = await requestFirebasePhoneVerification(target);
-        setPending({ method, target, firebaseConfirmation: confirmation });
-        setVerificationCode("");
-        setNotice(t("login.notice.codeRequested").replace("{target}", target));
-      } catch (authError) {
-        setError(firebaseAuthErrorMessage(authError));
-        setNotice(null);
-      } finally {
-        setAuthBusy(false);
-      }
+    if (!canRequestCode) {
+      setError(method === "email" ? t("login.error.email") : t("login.error.phone"));
       return;
     }
 
@@ -253,36 +153,33 @@ export function LoginView() {
       setError(t("login.error.requestFirst"));
       return;
     }
-
-    if (!pending.firebaseConfirmation && verificationCode.trim() !== pending.code) {
+    if (verificationCode.trim() !== pending.code) {
       setError(t("login.error.codeMismatch"));
       return;
     }
 
-    setAuthBusy(true);
-    try {
-      const verifiedAt = new Date().toISOString();
-      const firebaseAccount = pending.firebaseConfirmation
-        ? await confirmFirebasePhoneVerification(pending.firebaseConfirmation, verificationCode.trim())
-        : null;
-      const nextName = mode === "signup" ? name.trim() : account?.name;
-      saveLocalAccount({
-        provider: pending.method,
-        identifier: firebaseAccount?.phone || pending.target,
-        email: pending.method === "email" ? pending.target : firebaseAccount?.email,
-        phone: pending.method === "phone" ? firebaseAccount?.phone || pending.target : undefined,
-        name: nextName || firebaseAccount?.name,
-        verifiedAt: firebaseAccount?.verifiedAt || verifiedAt,
-      });
-      await saveSignupBirthProfileIfReady(nextName || firebaseAccount?.name || "");
-      setError(null);
-      setNotice(null);
-      navigate(fromOnboarding ? "/app" : "/app/profile");
-    } catch (authError) {
-      setError(firebaseAuthErrorMessage(authError));
-    } finally {
-      setAuthBusy(false);
+    const verifiedAt = new Date().toISOString();
+    saveLocalAccount({
+      provider: pending.method,
+      identifier: pending.target,
+      email: pending.method === "email" ? pending.target : undefined,
+      phone: pending.method === "phone" ? pending.target : undefined,
+      name: mode === "signup" ? name : account?.name,
+      verifiedAt,
+    });
+    if (mode === "signup") {
+      const profileInput = {
+        name: name.trim(),
+        birthDate,
+        birthTime: birthTime.trim() || undefined,
+        birthPlace: birthPlace.trim() || undefined,
+      };
+      await saveProfile(profileInput);
+      saveBirthProfileFromAccountProfile({ anonId, ...profileInput }, anonId);
     }
+    setError(null);
+    setNotice(null);
+    navigate("/app/profile");
   }
 
   async function handleUseTesterAccount() {
@@ -297,7 +194,7 @@ export function LoginView() {
     saveBirthProfile({ ...ASTROLOGY_TESTER_ACCOUNT.birthProfile });
     setError(null);
     setNotice(t("login.notice.testerLoaded"));
-    navigate(fromOnboarding ? "/app" : "/app/astrology?tab=birth");
+    navigate("/app/astrology?tab=birth");
   }
 
   function handleSignOut() {
@@ -309,45 +206,12 @@ export function LoginView() {
     setBirthTime("");
     setBirthPlace("");
     setMode("signup");
-    setSignupStep("account");
     resetVerification("email");
   }
 
-  async function handleSocialProvider(provider: SocialProvider) {
+  function handleSocialProvider(provider: SocialProvider) {
     const url = SOCIAL_AUTH_URLS[provider];
     const label = SOCIAL_PROVIDERS.find((item) => item.id === provider)?.label ?? provider;
-
-    if (provider === "google" || provider === "apple") {
-      if (!firebaseReady && !url) {
-        setError(null);
-        setNotice("Add the VITE_FIREBASE_* values and enable this provider in Firebase Auth before this can create a real account.");
-        return;
-      }
-
-      if (firebaseReady) {
-        setAuthBusy(true);
-        setError(null);
-        setNotice(`Opening ${label} sign-in...`);
-        try {
-          const firebaseAccount = await signInWithFirebaseSocial(provider);
-          const accountName = name.trim() || firebaseAccount.name;
-          saveLocalAccount({
-            ...firebaseAccount,
-            name: accountName,
-          });
-          await saveSignupBirthProfileIfReady(accountName || "");
-          setNotice(null);
-          navigate(fromOnboarding ? "/app" : "/app/profile");
-        } catch (authError) {
-          setError(firebaseAuthErrorMessage(authError));
-          setNotice(null);
-        } finally {
-          setAuthBusy(false);
-        }
-        return;
-      }
-    }
-
     if (!url) {
       setError(null);
       setNotice(
@@ -364,335 +228,229 @@ export function LoginView() {
 
   return (
     <AppScreen>
-      <div className="hint-auth-background" data-hint-theme={fromOnboarding ? "bright" : undefined} aria-hidden="true" />
-      <div className="hint-auth-page" data-hint-theme={fromOnboarding ? "bright" : undefined}>
-        <header className="hint-auth-header">
-          <button
-            type="button"
-            onClick={() => {
-              if (fromOnboarding) {
-                window.history.back();
-                return;
-              }
-              navigate("/app/profile");
-            }}
-            className="hint-auth-back hint-pressable"
-          >
-            <ChevronLeft size={17} />
-            {fromOnboarding ? "Back" : t("me.settings")}
-          </button>
-          <div className="hint-auth-brand">
-            <span className="hint-auth-sigil">
-              {account ? <ShieldCheck size={20} /> : mode === "signup" ? <UserPlus size={20} /> : <LogIn size={20} />}
-            </span>
-            <div>
-              <p>{fromOnboarding ? "Your space" : t("me.account")}</p>
-              <h1>{authTitle}</h1>
-            </div>
-          </div>
-          <p className="hint-auth-subtitle">{authSubtitle}</p>
-        </header>
+      <ScreenHeader
+        eyebrow={t("me.account")}
+        title={account ? t("login.accountSaved") : t("login.title")}
+        subtitle={t("login.subtitle")}
+        sigil={account ? ShieldCheck : LogIn}
+        backHref="/app/profile"
+        backLabel={t("me.settings")}
+      />
 
-        {account ? (
-          <section className="hint-auth-card hint-auth-account-card">
-            <div className="hint-auth-account-row">
-              <span className="hint-auth-account-icon">
-                <ShieldCheck size={19} />
-              </span>
-              <div>
-                <p className="hint-auth-kicker">{t("login.signedInAs")}</p>
-                <h2>{account.name || accountLabel(account)}</h2>
-                <span>{providerLabel(account.provider)} - {accountLabel(account)}</span>
+      <div className="flex flex-col gap-4">
+        <GlassPanel hero>
+          {account ? (
+            <div className="mb-5 rounded-[18px] border p-4" style={{ background: "rgba(255,255,255,0.055)", borderColor: GLASS.border }}>
+              <div className="flex items-start gap-3">
+                <span
+                  className="grid size-10 shrink-0 place-items-center rounded-[14px]"
+                  style={{ background: "rgba(100,156,158,0.12)", border: `1px solid ${GLASS.border}` }}
+                >
+                  <ShieldCheck size={18} color={ACCENT.aqua} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-serif text-[18px] leading-tight" style={{ color: GLASS.text }}>
+                    {t("login.signedInAs")}
+                  </p>
+                  <p className="mt-1 break-words font-sans text-[12.5px] leading-relaxed" style={{ color: GLASS.muted }}>
+                    {account.name || accountLabel(account)}
+                  </p>
+                  <p className="mt-1 break-words font-sans text-[11.5px]" style={{ color: GLASS.faint }}>
+                    {providerLabel(account.provider)} - {accountLabel(account)}
+                  </p>
+                </div>
               </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Link
+                  href="/app/profile"
+                  className="inline-flex h-11 items-center justify-center rounded-[8px] border font-sans text-[12px] font-black uppercase tracking-[0.1em]"
+                  style={{ background: "rgba(100,156,158,0.12)", borderColor: "rgba(100,156,158,0.28)", color: ACCENT.aqua }}
+                >
+                  {t("login.backToProfile")}
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="inline-flex h-11 items-center justify-center rounded-[8px] border font-sans text-[12px] font-black uppercase tracking-[0.1em]"
+                  style={{ background: "rgba(255,255,255,0.04)", borderColor: GLASS.border, color: GLASS.muted }}
+                >
+                  {t("account.logout")}
+                </button>
+              </div>
+              <p className="mt-3 font-sans text-[11.5px] leading-relaxed" style={{ color: GLASS.faint }}>
+                {t("login.changeAccount")}
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate(fromOnboarding ? "/app" : "/app/profile")}
-              className="hint-auth-primary hint-pressable"
-            >
-              {fromOnboarding ? "Continue to Hint" : t("login.backToProfile")}
-              <ArrowRight size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="hint-auth-secondary hint-pressable"
-            >
-              {fromOnboarding ? "Use a different account" : t("account.logout")}
-            </button>
-          </section>
-        ) : (
-          <section className="hint-auth-card">
-            {!pending ? (
-              <div className="hint-auth-mode" role="tablist" aria-label="Choose account mode">
-                {(["signup", "login"] as const).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => {
-                      setMode(item);
-                      setSignupStep("account");
-                      resetVerification(method);
-                    }}
-                    data-active={mode === item}
-                    role="tab"
-                    aria-selected={mode === item}
-                  >
-                    {item === "signup" ? t("account.signup") : t("account.login")}
-                  </button>
-                ))}
+          ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            {(["signup", "login"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => {
+                  setMode(item);
+                  resetVerification(method);
+                }}
+                className="rounded-full border px-4 py-2 font-sans text-[12px] font-black uppercase tracking-[0.12em]"
+                style={{
+                  background: mode === item ? "rgba(203,168,102,0.18)" : "rgba(255,255,255,0.04)",
+                  borderColor: mode === item ? "rgba(203,168,102,0.58)" : GLASS.border,
+                  color: mode === item ? ACCENT.gold : GLASS.muted,
+                }}
+              >
+                {item === "signup" ? t("account.signup") : t("account.login")}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-5">
+            <p className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
+              {t("login.verifyDirectly")}
+            </p>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {(["email", "phone"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => resetVerification(item)}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] border font-sans text-[12px] font-black uppercase tracking-[0.1em]"
+                style={{
+                  background: method === item ? "rgba(100,156,158,0.16)" : "rgba(255,255,255,0.04)",
+                  borderColor: method === item ? "rgba(100,156,158,0.38)" : GLASS.border,
+                  color: method === item ? ACCENT.aqua : GLASS.muted,
+                }}
+              >
+                {item === "email" ? <Mail size={14} /> : <Phone size={14} />}
+                {item === "email" ? t("login.email") : t("login.phone")}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={pending ? handleVerify : handleRequestCode} className="mt-4 grid gap-4">
+            {mode === "signup" ? (
+              <label className="block">
+                <span className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
+                  {t("birthProfile.name")}
+                </span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder={t("login.namePlaceholder")}
+                  autoComplete="name"
+                  aria-invalid={error === t("login.error.name")}
+                  className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
+                  style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                  data-testid="input-login-name"
+                />
+              </label>
+            ) : null}
+
+            {mode === "signup" ? (
+              <div className="grid gap-4">
+                <label className="block">
+                  <span className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
+                    {t("birthProfile.birthDate")}
+                  </span>
+                  <input
+                    type="text"
+                    value={birthDate}
+                    onChange={(event) => setBirthDate(formatBirthDateInput(event.target.value))}
+                    placeholder="YYYY-MM-DD"
+                    autoComplete="bday"
+                    inputMode="numeric"
+                    maxLength={10}
+                    pattern="\d{4}-\d{2}-\d{2}"
+                    aria-invalid={error === t("login.error.birthDate")}
+                    className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
+                    style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                    data-testid="input-login-birthdate"
+                  />
+                </label>
+                <label className="block">
+                  <span className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
+                    {t("birthProfile.birthTime")}
+                  </span>
+                  <input
+                    value={birthTime}
+                    onChange={(event) => setBirthTime(event.target.value)}
+                    type="time"
+                    className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
+                    style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                    data-testid="input-login-birthtime"
+                  />
+                </label>
+                <label className="block">
+                  <span className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
+                    {t("birthProfile.birthPlace")}
+                  </span>
+                  <input
+                    type="text"
+                    value={birthPlace}
+                    onChange={(event) => setBirthPlace(event.target.value)}
+                    placeholder={t("login.birthPlacePlaceholder")}
+                    autoComplete="address-level2"
+                    className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
+                    style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                    data-testid="input-login-birthplace"
+                  />
+                  <p className="mt-2 font-sans text-[11px] leading-relaxed" style={{ color: GLASS.faint }}>
+                    {t("login.birthHelp")}
+                  </p>
+                </label>
               </div>
             ) : null}
 
-            <form onSubmit={pending ? handleVerify : handleRequestCode} className="hint-auth-form">
-              {mode === "signup" ? (
-                <div className="hint-auth-stepper" aria-label="Signup progress">
-                  {[
-                    { id: "account", label: "Account" },
-                    { id: "birth", label: "Sky" },
-                    { id: "code", label: "Code" },
-                  ].map((step, index) => {
-                    const active =
-                      (step.id === "account" && signupStep === "account" && !pending) ||
-                      (step.id === "birth" && signupStep === "birth" && !pending) ||
-                      (step.id === "code" && Boolean(pending));
-                    const complete =
-                      (step.id === "account" && signupStep === "birth") ||
-                      (step.id !== "code" && Boolean(pending));
-                    return (
-                      <span key={step.id} data-active={active ? "true" : "false"} data-complete={complete ? "true" : "false"}>
-                        <i>{index + 1}</i>
-                        {step.label}
-                      </span>
-                    );
-                  })}
-                </div>
-              ) : null}
-
-              {mode === "signup" && signupStep === "account" ? (
-                <div className="hint-auth-profile-pass">
-                  <span>H</span>
-                  <div>
-                    <p>Private ritual</p>
-                    <strong>Readings, astrology, and Sky Deck saved in your space.</strong>
-                  </div>
-                </div>
-              ) : null}
-
-              {mode === "signup" && signupStep === "birth" ? (
-                <div className="hint-auth-account-summary">
-                  <div>
-                    <span>Account</span>
-                    <strong>{name.trim() || "Your profile"}</strong>
-                    <p>{target || "Verification destination"}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSignupStep("account");
-                      setPending(null);
-                      setNotice(null);
-                      setError(null);
-                    }}
-                  >
-                    Edit
-                  </button>
-                </div>
-              ) : null}
-
-              {mode === "signup" && signupStep === "account" ? (
-                <>
-                  <label className="hint-auth-field">
-                    <span>{t("birthProfile.name")}</span>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      placeholder={t("login.namePlaceholder")}
-                      autoComplete="name"
-                      aria-invalid={error === t("login.error.name")}
-                      className="hint-auth-input"
-                      data-testid="input-login-name"
-                    />
-                  </label>
-
-                  <div className="hint-auth-method" role="tablist" aria-label="Choose verification method">
-                    {(["email", "phone"] as const).map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => resetVerification(item)}
-                        data-active={method === item}
-                        role="tab"
-                        aria-selected={method === item}
-                      >
-                        {item === "email" ? <Mail size={14} /> : <Phone size={14} />}
-                        {item === "email" ? t("login.email") : t("login.phone")}
-                      </button>
-                    ))}
-                  </div>
-
-                  {method === "email" ? (
-                    <label className="hint-auth-field">
-                      <span>{t("login.email")}</span>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(event) => {
-                          resetVerification("email");
-                          setEmail(event.target.value);
-                        }}
-                        placeholder="you@example.com"
-                        autoComplete="email"
-                        inputMode="email"
-                        aria-invalid={error === t("login.error.email")}
-                        className="hint-auth-input"
-                        data-testid="input-login-email"
-                      />
-                    </label>
-                  ) : (
-                    <label className="hint-auth-field">
-                      <span>{t("login.phone")}</span>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(event) => {
-                          resetVerification("phone");
-                          setPhone(event.target.value);
-                        }}
-                        placeholder="+1 555 123 4567"
-                        autoComplete="tel"
-                        inputMode="tel"
-                        aria-invalid={error === t("login.error.phone")}
-                        className="hint-auth-input"
-                        data-testid="input-login-phone"
-                      />
-                    </label>
-                  )}
-                </>
-              ) : null}
-
-              {mode === "signup" && signupStep === "birth" && !pending ? (
-                <div className="hint-auth-birth-panel">
-                  <div className="hint-auth-sky-preview" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <div className="hint-auth-field-grid">
-                    <label className="hint-auth-field">
-                      <span>
-                        <CalendarDays size={12} />
-                        {t("birthProfile.birthDate")}
-                      </span>
-                      <input
-                        type="text"
-                        value={birthDate}
-                        onChange={(event) => setBirthDate(formatBirthDateInput(event.target.value))}
-                        placeholder="YYYY-MM-DD"
-                        autoComplete="bday"
-                        inputMode="numeric"
-                        maxLength={10}
-                        pattern="\d{4}-\d{2}-\d{2}"
-                        aria-invalid={error === t("login.error.birthDate")}
-                        className="hint-auth-input"
-                        data-testid="input-login-birthdate"
-                      />
-                    </label>
-                    <label className="hint-auth-field">
-                      <span>
-                        <Clock3 size={12} />
-                        {t("birthProfile.birthTime")}
-                      </span>
-                      <input
-                        value={birthTime}
-                        onChange={(event) => setBirthTime(event.target.value)}
-                        type="time"
-                        className="hint-auth-input"
-                        data-testid="input-login-birthtime"
-                      />
-                    </label>
-                    <label className="hint-auth-field hint-auth-field-full">
-                      <span>
-                        <MapPin size={12} />
-                        {t("birthProfile.birthPlace")}
-                      </span>
-                      <input
-                        type="text"
-                        value={birthPlace}
-                        onChange={(event) => setBirthPlace(event.target.value)}
-                        placeholder={t("login.birthPlacePlaceholder")}
-                        autoComplete="address-level2"
-                        className="hint-auth-input"
-                        data-testid="input-login-birthplace"
-                      />
-                      <p>{t("login.birthHelp")}</p>
-                    </label>
-                  </div>
-                </div>
-              ) : null}
-
-              {mode === "login" ? (
-                <>
-                  <div className="hint-auth-method" role="tablist" aria-label="Choose verification method">
-                    {(["email", "phone"] as const).map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => resetVerification(item)}
-                        data-active={method === item}
-                        role="tab"
-                        aria-selected={method === item}
-                      >
-                        {item === "email" ? <Mail size={14} /> : <Phone size={14} />}
-                        {item === "email" ? t("login.email") : t("login.phone")}
-                      </button>
-                    ))}
-                  </div>
-
-                  {method === "email" ? (
-                    <label className="hint-auth-field">
-                      <span>{t("login.email")}</span>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(event) => {
-                          resetVerification("email");
-                          setEmail(event.target.value);
-                        }}
-                        placeholder="you@example.com"
-                        autoComplete="email"
-                        inputMode="email"
-                        aria-invalid={error === t("login.error.email")}
-                        className="hint-auth-input"
-                        data-testid="input-login-email"
-                      />
-                    </label>
-                  ) : (
-                    <label className="hint-auth-field">
-                      <span>{t("login.phone")}</span>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(event) => {
-                          resetVerification("phone");
-                          setPhone(event.target.value);
-                        }}
-                        placeholder="+1 555 123 4567"
-                        autoComplete="tel"
-                        inputMode="tel"
-                        aria-invalid={error === t("login.error.phone")}
-                        className="hint-auth-input"
-                        data-testid="input-login-phone"
-                      />
-                    </label>
-                  )}
-                </>
-              ) : null}
+            {method === "email" ? (
+              <label className="block">
+                <span className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
+                  {t("login.email")}
+                </span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => {
+                    resetVerification("email");
+                    setEmail(event.target.value);
+                  }}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  inputMode="email"
+                  aria-invalid={error === t("login.error.email")}
+                  className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
+                  style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                  data-testid="input-login-email"
+                />
+              </label>
+            ) : (
+              <label className="block">
+                <span className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
+                  {t("login.phone")}
+                </span>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => {
+                    resetVerification("phone");
+                    setPhone(event.target.value);
+                  }}
+                  placeholder="+1 555 123 4567"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  aria-invalid={error === t("login.error.phone")}
+                  className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
+                  style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
+                  data-testid="input-login-phone"
+                />
+              </label>
+            )}
 
             {pending ? (
-              <label className="hint-auth-field">
-                <span>
+              <label className="block">
+                <span className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
                   {t("login.verificationCode")}
                 </span>
                 <input
@@ -704,104 +462,111 @@ export function LoginView() {
                   autoComplete="one-time-code"
                   maxLength={6}
                   aria-invalid={error === t("login.error.codeMismatch")}
-                  className="hint-auth-input"
+                  className="mt-2 h-12 w-full rounded-[8px] bg-transparent px-4 font-serif text-[15px] outline-none"
+                  style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${GLASS.border}`, color: GLASS.text }}
                   data-testid="input-login-code"
                 />
-                <p>
-                  {pending.firebaseConfirmation ? (
-                    "A secure SMS code was sent by Firebase. It may take a few seconds to arrive."
-                  ) : (
-                    <>
-                      {t("login.betaCodePrefix")} <span style={{ color: ACCENT.gold }}>{pending.code}</span>. {t("login.betaCodeSuffix")}
-                    </>
-                  )}
+                <p className="mt-2 font-sans text-[11px] leading-relaxed" style={{ color: GLASS.faint }}>
+                  {t("login.betaCodePrefix")} <span style={{ color: ACCENT.gold }}>{pending.code}</span>. {t("login.betaCodeSuffix")}
                 </p>
               </label>
             ) : null}
 
             {notice ? (
-              <p className="hint-auth-callout">
+              <p className="flex gap-2 rounded-[8px] border p-3 font-sans text-[12px] leading-relaxed" style={{ borderColor: GLASS.border, color: GLASS.muted }}>
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
                 {notice}
               </p>
             ) : null}
-            {error ? <p className="hint-auth-error">{error}</p> : null}
+            {error ? <p className="font-sans text-[12px]" style={{ color: ACCENT.lavender }}>{error}</p> : null}
 
             <button
               type="submit"
-              className="hint-auth-primary hint-pressable"
-              disabled={primaryDisabled}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-[8px] font-serif text-[12px] uppercase tracking-[0.22em] transition-opacity disabled:opacity-45"
+              style={{
+                background: "rgba(206,178,110,0.14)",
+                border: "1px solid rgba(206,178,110,0.34)",
+                color: ACCENT.gold,
+              }}
+              disabled={!pending && !canRequestCode}
             >
               {pending ? <KeyRound size={15} /> : mode === "signup" ? <UserPlus size={15} /> : <Mail size={15} />}
-              {primaryLabel}
+              {pending ? t("login.verifyCode") : t("login.requestCode")}
             </button>
           </form>
 
-            {showSecondaryActions ? (
-              <div className="hint-auth-secondary-block">
-                {showTesterAccount ? (
+          <div className="mt-5 grid gap-4 border-t pt-5" style={{ borderColor: GLASS.border }}>
+            <button
+              type="button"
+              onClick={() => void handleUseTesterAccount()}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border font-serif text-[11px] uppercase tracking-[0.16em] transition-opacity hover:opacity-85"
+              style={{
+                background: "rgba(100,156,158,0.12)",
+                borderColor: "rgba(100,156,158,0.3)",
+                color: ACCENT.aqua,
+              }}
+              data-testid="button-use-tester-account"
+            >
+              <ShieldCheck size={14} />
+              {t("login.useTester")}
+            </button>
+
+            <section>
+              <p className="font-serif text-[10px] uppercase tracking-[0.28em]" style={{ color: GLASS.muted }}>
+                {t("login.continueWith")}
+              </p>
+              <div className="mt-3 grid gap-2">
+                {SOCIAL_PROVIDERS.map((provider) => (
                   <button
+                    key={provider.id}
                     type="button"
-                    onClick={() => void handleUseTesterAccount()}
-                    className="hint-auth-secondary hint-pressable"
-                    data-testid="button-use-tester-account"
+                    onClick={() => handleSocialProvider(provider.id)}
+                    className="flex h-11 items-center justify-center gap-2 rounded-[8px] border font-sans text-[12px] font-black transition-opacity hover:opacity-85"
+                    style={{
+                      background: "rgba(255,255,255,0.045)",
+                      borderColor: GLASS.border,
+                      color: GLASS.text,
+                    }}
                   >
-                    <ShieldCheck size={14} />
-                    {t("login.useTester")}
+                    <span className="grid size-5 place-items-center rounded-full border text-[11px]" style={{ borderColor: GLASS.border }}>
+                      {provider.mark}
+                    </span>
+                    {provider.label}
                   </button>
-                ) : null}
-
-                {visibleSocialProviders.length > 0 ? (
-                  <section>
-                    <p className="hint-auth-kicker">{t("login.continueWith")}</p>
-                    <div className="hint-auth-social-grid">
-                      {visibleSocialProviders.map((provider) => (
-                        <button
-                          key={provider.id}
-                          type="button"
-                          onClick={() => void handleSocialProvider(provider.id)}
-                          className="hint-auth-secondary hint-pressable"
-                          disabled={authBusy}
-                        >
-                          <span>{provider.mark}</span>
-                          {provider.label}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div id="hint-firebase-recaptcha" className="hint-auth-recaptcha" aria-hidden="true" />
-
-            {!fromOnboarding ? (
-              <div className="hint-auth-save-list">
-                {[
-                  t("login.saves.item1"),
-                  t("login.saves.item3"),
-                ].map((item) => (
-                  <div key={item}>
-                    <Check size={14} />
-                    <span>{item}</span>
-                  </div>
                 ))}
               </div>
-            ) : null}
-          </section>
-        )}
-        {account || !fromOnboarding ? (
-          <section className="hint-auth-mini-preview" aria-label="What Hint unlocks">
-            <div>
-              <span>Astrology</span>
-              <strong>Birth profile ready</strong>
+            </section>
+          </div>
+        </GlassPanel>
+
+        <section>
+          <SectionLabel>{t("login.whatThisSaves")}</SectionLabel>
+          <GlassPanel>
+            <div className="grid gap-4">
+              {[
+                t("login.saves.item1"),
+                t("login.saves.item2"),
+                t("login.saves.item3"),
+                t("login.saves.item4"),
+              ].map((item) => (
+                <div key={item} className="flex gap-3">
+                  <Check size={16} color={ACCENT.aqua} className="mt-0.5 shrink-0" />
+                  <p className="font-sans text-[12.5px] leading-relaxed" style={{ color: GLASS.muted }}>
+                    {item}
+                  </p>
+                </div>
+              ))}
             </div>
-            <div>
-              <span>Sky Deck</span>
-              <strong>Saved to your account</strong>
-            </div>
-          </section>
-        ) : null}
+            <Link
+              href="/app/profile"
+              className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[8px] font-serif text-[12px] uppercase tracking-[0.2em]"
+              style={{ background: "rgba(100,156,158,0.14)", border: "1px solid rgba(100,156,158,0.28)", color: ACCENT.aqua }}
+            >
+              {t("login.backToProfile")}
+              <ArrowRight size={15} />
+            </Link>
+          </GlassPanel>
+        </section>
       </div>
     </AppScreen>
   );

@@ -24,6 +24,11 @@ import { useProfile } from "../../../lib/useProfile";
 import { readBirthProfile } from "../../../lib/astro/userBirthProfile";
 import { LuckyIllustration } from "./LuckyIllustration";
 import { SafeImage } from "../../../shared/ui/SafeImage";
+import {
+  listLocalDailyReadingMemory,
+  subscribeToLocalDailyReadings,
+} from "../../readings/localDailyReadings";
+import type { DailyCardMemory } from "../../../lib/tarot/skyGuidedTarot";
 
 const SCORE_ICONS: Record<DailyScoreKey, typeof Heart> = {
   love: Heart,
@@ -38,6 +43,7 @@ interface DailyReportCardProps {
   detailed?: boolean;
   cardOverride?: DailyPull | null;
   dateOverride?: Date;
+  dailyHistory?: DailyCardMemory[];
 }
 
 function ScoreBar({ score }: { score: DailyScore }) {
@@ -98,7 +104,7 @@ function MiniDailyCard({ card, interactive = true }: { card: DailyPull; interact
         style={{
           background: "var(--hint-deck-card-bg)",
           border: "1px solid color-mix(in srgb, var(--hint-gold) 34%, var(--hint-border))",
-          boxShadow: "0 14px 26px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.16)",
+          boxShadow: "0 12px 24px color-mix(in srgb, var(--hint-rose) 10%, transparent), inset 0 1px 0 rgba(255,255,255,0.38)",
         }}
       >
         <SafeImage
@@ -181,7 +187,7 @@ function CardGuidanceItem({
   );
 }
 
-function CardGuidanceGrid({ card }: { card: DailyPull }) {
+function CardGuidanceGrid({ card, why }: { card: DailyPull; why?: string }) {
   const badges = [
     card.orientation === "upright" ? "Upright" : null,
     card.arcana === "major" ? "Bigger message" : card.arcana === "minor" ? "Daily guidance" : null,
@@ -217,7 +223,7 @@ function CardGuidanceGrid({ card }: { card: DailyPull }) {
         <CardGuidanceItem label="Love" value={card.love} />
         <CardGuidanceItem label="Work / study" value={card.work} />
         <CardGuidanceItem label="Self" value={card.self} />
-        <CardGuidanceItem label="Why it matters" value={card.themeNote} />
+        <CardGuidanceItem label="Why this card" value={why ?? card.themeNote} />
       </div>
     </div>
   );
@@ -228,26 +234,28 @@ export function DailyReportCard({
   detailed = false,
   cardOverride,
   dateOverride,
+  dailyHistory,
 }: DailyReportCardProps) {
   const { language, t } = useLanguage();
   const { profile } = useProfile();
   const [birthProfile, setBirthProfile] = useState(() => readBirthProfile());
+  const [historyVersion, setHistoryVersion] = useState(0);
   const dateKey = dateOverride ? getLocalDateString(dateOverride) : undefined;
-  const activeBirthDetails = profile?.birthDate
+  const activeBirthDetails = profile?.birthDate || birthProfile
     ? {
-        name: profile.name,
-        birthDate: profile.birthDate,
-        birthTime: profile.birthTime,
-        birthPlace: profile.birthPlace,
+        name: profile?.name ?? birthProfile?.name,
+        birthDate: profile?.birthDate ?? birthProfile?.birthDate,
+        birthTime: profile?.birthTime ?? birthProfile?.birthTime,
+        birthPlace: profile?.birthPlace ?? birthProfile?.birthPlace,
+        latitude: birthProfile?.latitude,
+        longitude: birthProfile?.longitude,
+        timezoneOffset: birthProfile?.timezoneOffset,
       }
-    : birthProfile
-      ? {
-          name: birthProfile.name,
-          birthDate: birthProfile.birthDate,
-          birthTime: birthProfile.birthTime,
-          birthPlace: birthProfile.birthPlace,
-        }
-      : null;
+    : null;
+  const localDailyHistory = useMemo(
+    () => dailyHistory ?? listLocalDailyReadingMemory().slice(0, 30),
+    [dailyHistory, historyVersion],
+  );
   const report = useMemo(
     () =>
       getDailyReport({
@@ -255,11 +263,23 @@ export function DailyReportCard({
         date: dateOverride,
         language,
         birthDetails: activeBirthDetails ?? undefined,
+        dailyHistory: localDailyHistory,
         ritualStreak: getRitualProgress().currentStreak,
       }),
-    [activeBirthDetails?.birthDate, activeBirthDetails?.birthPlace, activeBirthDetails?.birthTime, dateKey, language],
+    [
+      activeBirthDetails?.birthDate,
+      activeBirthDetails?.birthPlace,
+      activeBirthDetails?.birthTime,
+      activeBirthDetails?.latitude,
+      activeBirthDetails?.longitude,
+      activeBirthDetails?.timezoneOffset,
+      dateKey,
+      language,
+      localDailyHistory,
+    ],
   );
   const card = cardOverride ? localizeDailyPull(cardOverride, language) : report.card;
+  const cardWhy = card.skyGuided?.whyThisCard;
   const birthProfileLabel = activeBirthDetails?.birthDate
     ? `${activeBirthDetails.name || "Birth"} sky profile`
     : null;
@@ -276,6 +296,14 @@ export function DailyReportCard({
       window.removeEventListener("storage", syncBirthProfile);
     };
   }, []);
+
+  useEffect(
+    () =>
+      subscribeToLocalDailyReadings(() =>
+        setHistoryVersion((version) => version + 1),
+      ),
+    [],
+  );
 
   useEffect(() => {
     setChecked(report.tasks.map(() => false));
@@ -329,6 +357,11 @@ export function DailyReportCard({
             <h2 className="mt-1.5 font-serif text-[25px] leading-[1.02] sm:text-[28px] lg:mt-2 lg:text-[34px] lg:leading-none" style={{ color: "var(--hint-text)" }}>
               {report.title}
             </h2>
+            {detailed ? (
+              <p className="mt-2 max-w-xl font-sans text-[11px] leading-relaxed sm:text-[12px]" style={{ color: "var(--hint-muted)" }}>
+                {t("dailyPull.method")}
+              </p>
+            ) : null}
           </div>
           <Link
             href="/app/daily"
@@ -439,7 +472,7 @@ export function DailyReportCard({
           <MiniDailyCard card={card} interactive={!detailed} />
         </div>
 
-        {detailed && <CardGuidanceGrid card={card} />}
+        {detailed && <CardGuidanceGrid card={card} why={cardWhy} />}
 
         <div className="mt-3 grid grid-cols-3 gap-2">
           {report.lucky.map((item) => (
