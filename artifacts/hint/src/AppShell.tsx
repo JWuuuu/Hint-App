@@ -37,6 +37,7 @@ import { triggerFeedback } from "./lib/feedback";
 /** Full-screen flows own their navigation, so the global bottom nav is hidden there. */
 const NAV_HIDDEN_ROUTES = ["/tarot", "/ask", "/login", "/app/tarot", "/app/ask", "/app/login"];
 const HINT_LAUNCH_SEEN_STORAGE_KEY = "hint_launch_seen_v2";
+const HINT_ONBOARDING_COMPLETE_STORAGE_KEY = "hint_onboarding_complete_v3";
 const ENABLE_LAUNCH_INTRO = true;
 const CREAM_STYLE_ROUTES = [
   "/app/daily",
@@ -60,6 +61,15 @@ function getLaunchIntroVariant(): LaunchIntroVariant {
 function isCreamStyleRoute(location: string): boolean {
   const pathname = location.split(/[?#]/, 1)[0]?.replace(/\/+$/, "") || "/";
   return CREAM_STYLE_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
+
+function onboardingOwnsScreen(location: string): boolean {
+  if (new URLSearchParams(location.split("?", 2)[1] ?? "").get("onboarding") === "reset") return true;
+  try {
+    return window.localStorage.getItem(HINT_ONBOARDING_COMPLETE_STORAGE_KEY) !== "1";
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -90,7 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isProductRoute = !["/privacy", "/terms", "/disclaimer", "/contact", "/about"].includes(location);
   const referenceHomeRoute = location === "/app" || location === "/";
   const creamStyleRoute = !referenceHomeRoute && isCreamStyleRoute(location);
-  const showNav = isProductRoute && !NAV_HIDDEN_ROUTES.some(
+  const showNav = isProductRoute && !onboardingOwnsScreen(location) && !NAV_HIDDEN_ROUTES.some(
     (r) => location === r || location.startsWith(r + "/"),
   );
 
